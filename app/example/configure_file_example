@@ -1,0 +1,52 @@
+ #
+ #  Copyright (C) 2016, Zhang YanMing <jamincheung@126.com>
+ #
+ #  Linux recovery updater
+ #
+ #  This program is free software; you can redistribute it and/or modify it
+ #  under  the terms of the GNU General  Public License as published by the
+ #  Free Software Foundation;  either version 2 of the License, or (at your
+ #  option) any later version.
+ #
+ #  You should have received a copy of the GNU General Public License along
+ #  with this program; if not, write to the Free Software Foundation, Inc.,
+ #  675 Mass Ave, Cambridge, MA 02139, USA.
+ #
+ #
+
+bootloader={
+	name=uboot
+	upgrade=yes
+	file_path=autoupdate/u-boot-with-spl.bin
+	md5=b86349deaca60d05af41a41ccc1abbe1
+}
+
+kernel={
+	name=kernel
+	upgrade=yes
+	file_path=autoupdate/uImage
+	md5=553b7735a1a820fe6dcfcc09789ba34f
+}
+
+splash={
+	name=logo
+	upgrade=yes
+	file_path=autoupdate/logo.bmp
+	md5=9bd0a95188327584a9a084108319db53
+}
+
+rootfs={
+	name=rootfs
+	upgrade=yes
+	full_upgrade=yes
+	file_path=autoupdate/system.yaffs
+	md5=73740222579bacdd187bff60aacab4f1
+}
+
+userfs={
+	name=data
+	upgrade=yes
+	full_upgrade=yes
+	file_path=autoupdate/userfs.yaffs
+	md5=218a0bd602f9b4700bba3ca3e7451684
+}

@@ -1,0 +1,22 @@
+echo -n "Processing /etc/profile... "
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+export LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/lib:/lib/lib:/mnt/mtdblock/lib:/mnt/mtdblock/lib/device"
+
+export HOSTNAME="$(hostname)"
+export OLDPWD=/root
+export HOME=/root
+
+USERDATAPATH=/mnt/mtdblock/
+GOAHEAD_WEB_ROOT=/mnt/ramdisk/
+DATA_PATH=/mnt/mtdblock/data/
+export USERDATAPATH GOAHEAD_WEB_ROOT DATA_PATH
+export PS1='# '
+
+umask 022
+
+#This fixes the backspace when telnetting in.
+if [ "$TERM" != "linux" ]; then
+       stty erase ^H
+fi
+
+echo "Done"

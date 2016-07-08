@@ -1,0 +1,10 @@
+.cproject
+.project
+.settings
+*.o
+*.o.d
+autoconf.h
+install
+core.*
+*.d
+*.d.*
