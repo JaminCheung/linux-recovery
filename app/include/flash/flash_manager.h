@@ -17,6 +17,7 @@
 #ifndef FLASH_MANAGER_H
 #define FLASH_MANAGER_H
 
+#include <inttypes.h>
 #include <lib/libmtd.h>
 
 

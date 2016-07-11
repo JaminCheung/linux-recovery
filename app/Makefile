@@ -58,9 +58,12 @@ OBJS-y += recovery/recovery_handler.o
 OBJS-y += utils/configure_file.o        \
           utils/signal_handler.o        \
           utils/compare_string.o        \
-          utils/assert.o
+          utils/assert.o		\
+	  utils/common.o                \
+          utils/dictionary.o
 OBJS-y += net/net_interface.o
 OBJS-y += flash/flash_manager.o
+OBJS-y += flash/ubi/ubi.o
 OBJS-y += main.o
 OBJS-$(CONFIG_BOARD_HAS_EEPROM) += eeprom/eeprom_manager.o
 
@@ -71,8 +74,10 @@ LIBS-y += lib/libmtd_legacy.o           \
 LIBS-y += lib/libsmbus.o
 LIBS-y += lib/libmd5.o
 LIBS-y += lib/libcrc32.o
-LIBS-y += lib/libubi.o
-LIBS-y += lib/libubigen.o
+LIBS-y += lib/ubi/libubi.o              \
+          lib/ubi/libubigen.o           \
+          lib/ubi/libscan.o             \
+          lib/ubi/libiniparser.o
 
 LIBS := $(addprefix $(TOPDIR)/, $(LIBS-y))
 

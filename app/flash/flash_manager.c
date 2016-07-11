@@ -29,13 +29,14 @@
 #include <lib/mtd/mtd-user.h>
 #include <autoconf.h>
 #include <flash/flash_manager.h>
+#include <lib/ubi/ubi.h>
 
 #define LOG_TAG "recovery--->flash_manager"
 #define MTD_PART_HEAD "/dev/mtd"
 
 #if 0
 #define DEBUG_FLASH_MANAGER
-#define DEBUG_FLASH_NOR
+//#define DEBUG_FLASH_NOR
 #endif
 
 #define YAFFS2_TAG_SIZE 28
@@ -87,8 +88,9 @@ static struct filesystem_part filesystem_partition_name[] = {
 #ifndef DEBUG_FLASH_NOR
 static struct filesystem_part filesystem_partition_name[] = {
     {"rootfs", CONFIG_ROOTFS_TYPE},
-    {"data", "jffs2"},
-    {"recovery", "cramfs"}
+    {"data", "ubifs"},
+    {"test1", "cramfs"},
+    {"test2", "jffs2"}
 };
 #else
 static struct filesystem_part filesystem_partition_name[] = {
@@ -105,7 +107,10 @@ static struct flashwrite_params flashwrite_params;
 static struct jffs2_unknown_node cleanmarker;
 static char partition_name[64];
 static char mtd_part_name[64];
-struct flash_event process_info;
+static struct flash_event process_info;
+
+int ubi_write(struct flash_manager* this, char *mtd_part, char *imgname,
+        char *volname);
 
 static int mtd_type_is_nand_user(const struct mtd_dev_info *mtd)
 {
@@ -176,6 +181,7 @@ static int init_libmtd(struct flash_manager* this) {
 
 #ifdef DEBUG_FLASH_MANAGER
 #ifndef DEBUG_FLASH_NOR
+#if 0
     retval = this->partition_erase(this, "rootfs");
     LOGI("retval = %d", retval);
     retval = this->partition_write(this, "rootfs", "system.yaffs");
@@ -186,14 +192,19 @@ static int init_libmtd(struct flash_manager* this) {
     retval = this->partition_write(this, "kernel", "uImage.gz");
     LOGI("retval = %d", retval);
 
-    retval = this->partition_erase(this, "data");
+    retval = this->partition_erase(this, "test2");
     LOGI("retval = %d", retval);
-    retval = this->partition_write(this, "data", "userdata_test");
+    retval = this->partition_write(this, "test2", "userdata_test");
     LOGI("retval = %d", retval);
 
-    retval = this->partition_erase(this, "recovery");
+    retval = this->partition_erase(this, "test1");
     LOGI("retval = %d", retval);
-    retval = this->partition_write(this, "recovery", "cramfs_test");
+    retval = this->partition_write(this, "test1", "cramfs_test");
+    LOGI("retval = %d", retval);
+#endif
+    retval = this->partition_erase(this, "data");
+    LOGI("retval = %d", retval);
+    retval = this->partition_write(this, "data", "ubifs.img");
     LOGI("retval = %d", retval);
     exit(0);
 #else
@@ -915,7 +926,7 @@ static int set_erase_normal_params(struct flash_manager* this, char *mtd_part)
 	    jffs2 = 1;
 
 	set_erase_optional_params(&erase_params, jffs2, noskipbad, unlock);
-	return 0;
+	return ftype;
 }
 
 static int set_write_normal_params(struct flash_manager* this, char *mtd_part, unsigned long offset,
@@ -956,6 +967,7 @@ static int set_write_filesystem_params(struct flash_manager* this, char *mtd_par
         else if (mtd_type_is_nor_user(mtd_dev_info))
             set_write_optional_params(&flashwrite_params, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1);
     }else if (ftype  == UBIFS){
+        ubi_partition_update(this, mtd_part, image, partition_name);
     }
     return 0;
 }
@@ -973,7 +985,7 @@ static int set_write_params(struct flash_manager* this, char *mtd_part,
     }else
         set_write_normal_params(this, mtd_part, 0, (char*)image);
 
-    return 0;
+    return ftype;
 }
 
 static int flash_random_write(struct flash_manager* this, char* buf,
@@ -1011,7 +1023,9 @@ static int mtd_name_convert(struct flash_manager* this, const char* partition)
 static int flash_partition_erase(struct flash_manager* this, const char* partition)
 {
 	mtd_name_convert(this, partition);
-	set_erase_normal_params(this, (char*)mtd_part_name);
+	if (set_erase_normal_params(this, (char*)mtd_part_name) == UBIFS){
+	    return 0;
+	}
 
 	dump_erase_params(&erase_params);
 	return flash_erase(this, &erase_params);
@@ -1021,7 +1035,9 @@ static int flash_partition_write(struct flash_manager* this, const char* partiti
         const char* image) {
 
     mtd_name_convert(this, partition);
-    set_write_params(this, mtd_part_name, 0, (char*)image);
+    if (set_write_params(this, mtd_part_name, 0, (char*)image) == UBIFS){
+        return 0;
+    }
 
     dump_flashwrite_params(&flashwrite_params);
     return flash_write(this, &flashwrite_params);

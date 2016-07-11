@@ -82,5 +82,4 @@
       fflush(stderr);                                               \
       errno = save_errno;                                           \
     } while (0)
-
 #endif /* LOG_H_ */
