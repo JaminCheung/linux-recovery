@@ -49,6 +49,9 @@
 
 #define LOG_TAG "recovery--->recovery_handler"
 
+#define STORAGE_MEDIUM_UDISK    0
+#define STORAGE_MEDIUM_SDCARD   1
+
 #define READ_DATA_SIZE  1024
 #define MD5_SIZE        16
 #define MD5_STR_LEN     (MD5_SIZE * 2)
@@ -137,7 +140,7 @@ static void msleep(long long msec) {
     } while (err < 0 && errno == EINTR);
 }
 
-static bool check_udisk_capacity(const char* mount_point) {
+static bool check_storage_medium_capacity(const char* mount_point) {
     unsigned int free_size = 0;
     int retval = 0;
     struct statfs sb;
@@ -154,29 +157,29 @@ static bool check_udisk_capacity(const char* mount_point) {
     return true;
 }
 
-static void check_and_wait_udisk_mount(struct recovery_handler* this) {
+static void check_and_wait_storage_medium_mount(struct recovery_handler* this) {
     for (;;) {
-        pthread_mutex_lock(&this->udisk_status_lock);
-        while (!this->udisk_insert) {
-            LOGW("Please insert usb disk.");
-            pthread_cond_wait(&this->udisk_status_cond,
-                    &this->udisk_status_lock);
+        pthread_mutex_lock(&this->storage_medium_status_lock);
+        while (!this->storage_medium_insert) {
+            LOGW("Please insert storage medium.");
+            pthread_cond_wait(&this->storage_medium_status_cond,
+                    &this->storage_medium_status_lock);
         }
-        pthread_mutex_unlock(&this->udisk_status_lock);
+        pthread_mutex_unlock(&this->storage_medium_status_lock);
 
         /*
-         * wait usb disk mount
+         * wait storage_medium mount
          */
         msleep(500);
 
-        if (!is_mountpoint_mounted(this->udisk_mount_point)) {
+        if (!is_mountpoint_mounted(this->storage_medium_mount_point)) {
             LOGW("Please mount available partition at %s.",
-                    this->udisk_mount_point);
+                    this->storage_medium_mount_point);
             continue;
 
         } else {
-            if (!check_udisk_capacity(this->udisk_mount_point)) {
-                LOGW("Please ensure usb disk capacity more than %dMB",
+            if (!check_storage_medium_capacity(this->storage_medium_mount_point)) {
+                LOGW("Please ensure storage medium capacity more than %dMB",
                         CONFIG_FLASH_CAPACITY);
                 sleep(1);
                 continue;
@@ -213,14 +216,14 @@ static bool check_network_state(struct recovery_handler* this) {
     return this->ni->icmp_echo(this->ni, this->server_ip, 2000);
 }
 
-static void signal_udisk_status_changed(struct recovery_handler* this,
+static void signal_storage_medium_status_changed(struct recovery_handler* this,
         bool status) {
-    pthread_mutex_lock(&this->udisk_status_lock);
+    pthread_mutex_lock(&this->storage_medium_status_lock);
 
-    this->udisk_insert = status;
-    pthread_cond_signal(&this->udisk_status_cond);
+    this->storage_medium_insert = status;
+    pthread_cond_signal(&this->storage_medium_status_cond);
 
-    pthread_mutex_unlock(&this->udisk_status_lock);
+    pthread_mutex_unlock(&this->storage_medium_status_lock);
 }
 
 static void signal_cable_status_changed(struct recovery_handler* this,
@@ -356,7 +359,13 @@ static void handle_block_event(struct netlink_handler* nh,
     const char* dev_name = event->find_param(event, "DEVNAME");
     const int action = event->get_action(event);
 
-    if (!strcmp(dev_type, "disk") && is_prefixed_with(dev_name, "sd")) {
+#if (defined CONFIG_STORAGE_MEDIUM_TYPE) && (CONFIG_STORAGE_MEDIUM_TYPE == STORAGE_MEDIUM_UDISK)
+    const char* dev_name_prefix = "sd";
+#elif (defined CONFIG_STORAGE_MEDIUM_TYPE) && (CONFIG_STORAGE_MEDIUM_TYPE == STORAGE_MEDIUM_SDCARD)
+    const char* dev_name_prefix = "mmcblk";
+#endif
+
+    if (!strcmp(dev_type, "disk") && is_prefixed_with(dev_name, dev_name_prefix)) {
         const char* nparts_str = event->find_param(event, "NPARTS");
         int nparts = -1;
 
@@ -364,26 +373,26 @@ static void handle_block_event(struct netlink_handler* nh,
             nparts = atoi(event->find_param(event, "NPARTS"));
 
         if (action == NLACTION_ADD) {
-            LOGI("usb disk \"%s\" insert, %d partitions", dev_name, nparts);
+            LOGI("storage medium  \"%s\" insert, %d partitions", dev_name, nparts);
 
         } else if (action == NLACTION_REMOVE) {
-            LOGI("usb disk \"%s\" remove, %d partitions", dev_name, nparts);
+            LOGI("storage medium  \"%s\" remove, %d partitions", dev_name, nparts);
         }
 
     } else if (!strcmp(dev_type, "partition")
-            && is_prefixed_with(dev_name, "sd")) {
+            && is_prefixed_with(dev_name, dev_name_prefix)) {
         const char* part_str = event->find_param(event, "PARTN");
         int part = -1;
         if (part_str)
             part = atoi(event->find_param(event, "PARTN"));
 
         if (action == NLACTION_ADD) {
-            LOGI("usb disk partition %d found", part);
-            signal_udisk_status_changed(this, true);
+            LOGI("storage medium  partition %d found", part);
+            signal_storage_medium_status_changed(this, true);
 
         } else if (action == NLACTION_REMOVE) {
-            LOGI("usb disk partition %d remove", part);
-            signal_udisk_status_changed(this, false);
+            LOGI("storage medium partition %d remove", part);
+            signal_storage_medium_status_changed(this, false);
         }
     }
 }
@@ -396,7 +405,7 @@ static struct netlink_handler* get_hotplug_handler(
 static void handle_event(struct netlink_handler* nh,
         struct netlink_event* event) {
     if (!strcmp(event->get_subsystem(event), "block")) {
-        //event->dump(event);
+        event->dump(event);
         handle_block_event(nh, event);
 
     } else if (!strcmp(event->get_subsystem(event), "net")) {
@@ -847,7 +856,7 @@ static bool create_download_directory(struct recovery_handler* this,
     int retval = 0;
     DIR* dp;
 
-    start += strlen(this->udisk_mount_point) + 1;
+    start += strlen(this->storage_medium_mount_point) + 1;
 
     pos = strchr(start, '/');
     if (!pos) {
@@ -857,7 +866,7 @@ static bool create_download_directory(struct recovery_handler* this,
 
     memcpy(buf, start, pos - start);
 
-    sprintf(path, "%s/%s", this->udisk_mount_point, buf);
+    sprintf(path, "%s/%s", this->storage_medium_mount_point, buf);
 
     retval = access(path, F_OK);
     if (!retval) {
@@ -980,7 +989,7 @@ static bool upgrade_for_kernel_fail(struct recovery_handler* this) {
     char server_path[PATH_MAX] = { 0 };
     char udisk_path[PATH_MAX] = { 0 };
 
-    sprintf(udisk_path, "%s/%s", this->udisk_mount_point,
+    sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
     CONFIG_KERNEL_IMAGE_DEF_PATH);
 
     restart: if (file_exist(udisk_path)) {
@@ -1017,7 +1026,7 @@ static bool upgrade_for_rootfs_fail(struct recovery_handler* this) {
     char server_path[PATH_MAX] = { 0 };
     char udisk_path[PATH_MAX] = { 0 };
 
-    sprintf(udisk_path, "%s/%s", this->udisk_mount_point,
+    sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
     CONFIG_ROOTFS_IMAGE_DEF_PATH);
 
     restart: if (file_exist(udisk_path)) {
@@ -1053,7 +1062,7 @@ static bool do_custom_upgrade(struct recovery_handler* this) {
     char path[PATH_MAX] = { 0 };
 
     if (this->cf_data->bootloader_upgrade) {
-        sprintf(path, "%s/%s", this->udisk_mount_point,
+        sprintf(path, "%s/%s", this->storage_medium_mount_point,
                 this->cf_data->bootloader_path);
         if (!upgrade_bootloader(this, path))
             return false;
@@ -1064,7 +1073,7 @@ static bool do_custom_upgrade(struct recovery_handler* this) {
     free_cached_mem();
 
     if (this->cf_data->kernel_upgrade) {
-        sprintf(path, "%s/%s", this->udisk_mount_point,
+        sprintf(path, "%s/%s", this->storage_medium_mount_point,
                 this->cf_data->kernel_path);
         if (!upgrade_kernel(this, path))
             return false;
@@ -1075,7 +1084,7 @@ static bool do_custom_upgrade(struct recovery_handler* this) {
     free_cached_mem();
 
     if (this->cf_data->splash_upgrade) {
-        sprintf(path, "%s/%s", this->udisk_mount_point,
+        sprintf(path, "%s/%s", this->storage_medium_mount_point,
                 this->cf_data->splash_path);
         if (!upgrade_splash(this, path))
             return false;
@@ -1086,7 +1095,7 @@ static bool do_custom_upgrade(struct recovery_handler* this) {
     free_cached_mem();
 
     if (this->cf_data->rootfs_upgrade) {
-        sprintf(path, "%s/%s", this->udisk_mount_point,
+        sprintf(path, "%s/%s", this->storage_medium_mount_point,
                 this->cf_data->rootfs_path);
         if (!upgrade_rootfs(this, path, this->cf_data->rootfs_full_upgrade))
             return false;
@@ -1097,7 +1106,7 @@ static bool do_custom_upgrade(struct recovery_handler* this) {
     free_cached_mem();
 
     if (this->cf_data->userfs_upgrade) {
-        sprintf(path, "%s/%s", this->udisk_mount_point,
+        sprintf(path, "%s/%s", this->storage_medium_mount_point,
                 this->cf_data->userfs_path);
         if (!upgrade_userfs(this, path, this->cf_data->userfs_full_upgrade))
             return false;
@@ -1114,7 +1123,7 @@ static bool upgrade_for_custom(struct recovery_handler* this) {
     char server_path[PATH_MAX] = { 0 };
     char udisk_path[PATH_MAX] = { 0 };
 
-    sprintf(udisk_path, "%s/%s", this->udisk_mount_point,
+    sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
     CONFIG_CONFIGURE_FILE_PATH);
 
     if (file_exist(udisk_path)) {
@@ -1163,7 +1172,7 @@ static bool upgrade_for_custom(struct recovery_handler* this) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->bootloader_path);
 
-            sprintf(udisk_path, "%s/%s", this->udisk_mount_point,
+            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->bootloader_path);
             if (!download_bootloader(this, server_path, udisk_path))
                 return false;
@@ -1181,7 +1190,7 @@ static bool upgrade_for_custom(struct recovery_handler* this) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->kernel_path);
 
-            sprintf(udisk_path, "%s/%s", this->udisk_mount_point,
+            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->kernel_path);
             if (!download_kernel(this, server_path, udisk_path))
                 return false;
@@ -1199,7 +1208,7 @@ static bool upgrade_for_custom(struct recovery_handler* this) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->splash_path);
 
-            sprintf(udisk_path, "%s/%s", this->udisk_mount_point,
+            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->splash_path);
             if (!download_splash(this, server_path, udisk_path))
                 return false;
@@ -1217,7 +1226,7 @@ static bool upgrade_for_custom(struct recovery_handler* this) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->rootfs_path);
 
-            sprintf(udisk_path, "%s/%s", this->udisk_mount_point,
+            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->rootfs_path);
             if (!download_rootfs(this, server_path, udisk_path))
                 return false;
@@ -1235,7 +1244,7 @@ static bool upgrade_for_custom(struct recovery_handler* this) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->userfs_path);
 
-            sprintf(udisk_path, "%s/%s", this->udisk_mount_point,
+            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->userfs_path);
             if (!download_userfs(this, server_path, udisk_path))
                 return false;
@@ -1307,7 +1316,7 @@ static void *main_loop(void* param) {
     alarm(ALARM_TIME_OUT);
 
     for (;;) {
-        check_and_wait_udisk_mount(this);
+        check_and_wait_storage_medium_mount(this);
 
         clear_flag(this);
 
@@ -1370,12 +1379,13 @@ void construct_recovery_handler(struct recovery_handler* this) {
 
     this->if_name = CONFIG_NET_INTERFACE_NAME;
     this->server_ip = CONFIG_SERVER_IP;
-    this->udisk_mount_point = CONFIG_UDISK_MOUNT_POINT;
+    this->storage_medium_mount_point = CONFIG_STORAGE_MEDIUM_MOUNT_POINT;
+
     this->rootfs_mount_point = CONFIG_ROOTFS_MOUNT_POINT;
     this->userfs_mount_point = CONFIG_USERFS_MOUNT_POINT;
 
-    pthread_mutex_init(&this->udisk_status_lock, NULL);
-    pthread_cond_init(&this->udisk_status_cond, NULL);
+    pthread_mutex_init(&this->storage_medium_status_lock, NULL);
+    pthread_cond_init(&this->storage_medium_status_cond, NULL);
 
     pthread_mutex_init(&this->cable_status_lock, NULL);
     pthread_cond_init(&this->cable_status_cond, NULL);
@@ -1430,7 +1440,7 @@ void construct_recovery_handler(struct recovery_handler* this) {
 void destruct_recovery_handler(struct recovery_handler* this) {
     this->if_name = NULL;
     this->server_ip = NULL;
-    this->udisk_mount_point = NULL;
+    this->storage_medium_mount_point = NULL;
     this->rootfs_mount_point = NULL;
     this->userfs_mount_point = NULL;
     this->cf_data = NULL;
@@ -1439,8 +1449,8 @@ void destruct_recovery_handler(struct recovery_handler* this) {
 
     this->upgrade_bit_flag = 0;
 
-    pthread_cond_destroy(&this->udisk_status_cond);
-    pthread_mutex_destroy(&this->udisk_status_lock);
+    pthread_cond_destroy(&this->storage_medium_status_cond);
+    pthread_mutex_destroy(&this->storage_medium_status_lock);
 
     pthread_cond_destroy(&this->cable_status_cond);
     pthread_mutex_destroy(&this->cable_status_lock);

@@ -36,10 +36,10 @@ struct recovery_handler {
     struct configure_file* cf;
     struct flash_manager* fm;
 
-    bool udisk_insert;
-    pthread_cond_t udisk_status_cond;
-    pthread_mutex_t udisk_status_lock;
-    const char* udisk_mount_point;
+    bool storage_medium_insert;
+    pthread_cond_t storage_medium_status_cond;
+    pthread_mutex_t storage_medium_status_lock;
+    const char* storage_medium_mount_point;
     const char* rootfs_mount_point;
     const char* userfs_mount_point;
 

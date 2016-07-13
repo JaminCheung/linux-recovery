@@ -15,6 +15,13 @@
  #
 
 #
+# update file storage medium type
+# 0: udisk
+# 1: sdcard
+#
+CONFIG_STORAGE_MEDIUM_TYPE=1
+
+#
 # flash capacity unit MB
 #
 CONFIG_FLASH_CAPACITY=128
@@ -31,9 +38,9 @@ CONFIG_USERFS_TYPE=yaffs2
 CONFIG_NET_INTERFACE_NAME=eth0
 
 #
-# udisk & rootfs & userfs mount point
+# storage medium && rootfs & userfs mount point
 #
-CONFIG_UDISK_MOUNT_POINT=/mnt/usbdisk
+CONFIG_STORAGE_MEDIUM_MOUNT_POINT=/mnt/sdcard
 CONFIG_ROOTFS_MOUNT_POINT=/mnt/rootfs
 CONFIG_USERFS_MOUNT_POINT=/mnt/mtdblock
 
@@ -43,9 +50,9 @@ CONFIG_USERFS_MOUNT_POINT=/mnt/mtdblock
 CONFIG_CONFIGURE_FILE_PATH=autoupdate/autoupdate.txt
 
 # server ip address
-CONFIG_SERVER_IP=194.169.3.59
+CONFIG_SERVER_IP=194.169.2.59
 
 #
 # server url
 #
-CONFIG_SERVER_URL=http://194.169.3.59:8008
+CONFIG_SERVER_URL=http://194.169.2.59:8008
