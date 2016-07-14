@@ -303,7 +303,7 @@ static int down(struct net_interface* this) {
     return set_flags(this, 0, IFF_UP);
 }
 
-static cable_state_t cable_detect_ethtool(struct net_interface* this) {
+__attribute__((unused)) static cable_state_t cable_detect_ethtool(struct net_interface* this) {
     if (up(this)) {
         LOGE("Failed to turn on interface %s: %s\n", this->if_name,
                 strerror(errno));
@@ -405,7 +405,7 @@ __attribute__((unused)) static cable_state_t cable_detect_mii(
 }
 
 static cable_state_t get_cable_state(struct net_interface* this) {
-    return cable_detect_ethtool(this);
+    return cable_detect_iff(this);
 }
 
 static void close_socket(struct net_interface* this) {

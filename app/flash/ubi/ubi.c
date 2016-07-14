@@ -82,18 +82,18 @@ static void print_bad_eraseblocks(const struct mtd_dev_info *mtd,
     int first = 1, eb;
 
     if (si->bad_cnt == 0)
-        return;
+    return;
 
-    if (!args.quiet){
+    if (!args.quiet) {
         printf("%d bad eraseblocks found, numbers: ", si->bad_cnt);
         for (eb = 0; eb < mtd->eb_cnt; eb++) {
             if (si->ec[eb] != EB_BAD)
-                continue;
+            continue;
             if (first) {
                 printf("%d", eb);
                 first = 0;
             } else
-                printf(", %d", eb);
+            printf(", %d", eb);
         }
         printf("\n");
     }
@@ -334,7 +334,7 @@ void dump_ubi_params(struct ubi_params *params) {
     LOGI("si address: %p", params->si);
     return;
 }
-#if 0
+
 static void ubi_params_free(struct ubi_params *params) {
 
     if (params->ui) {
@@ -354,7 +354,7 @@ static void ubi_params_free(struct ubi_params *params) {
         params = NULL;
     }
 }
-#endif
+
 static int ubi_volume_params_set(struct ubi_params *params) {
     char *buf = NULL;
     static int vol_id;
@@ -382,12 +382,12 @@ static int ubi_volume_params_set(struct ubi_params *params) {
     params->vol_info = buf;
 
     sprintf(buf, "[%s-volume]\n"
-            "mode=ubi\n"
-            "image=%s\n"
-            "vol_id=%d\n"
-            "vol_size=%d\n"
-            "vol_type=dynamic\n"
-            "vol_name=%s\n", params->vol_name, params->ubifs_img_name, vol_id,
+        "mode=ubi\n"
+        "image=%s\n"
+        "vol_id=%d\n"
+        "vol_size=%d\n"
+        "vol_type=dynamic\n"
+        "vol_name=%s\n", params->vol_name, params->ubifs_img_name, vol_id,
             params->vol_size, params->vol_name);
 
     vol_id++;
@@ -434,13 +434,13 @@ static int ubi_mtd_part_check(struct mtd_dev_info* mtd_dev,
         }
         libubi_close(libubi);
     }
-//    if (!args.quiet){
-//        printf("mtd%d (%s), size ", mtd_dev->mtd_num, mtd_dev->type_str);
-//        print_bytes(mtd_dev->size, 1);
-//        printf(", %d eraseblocks of ", mtd_dev->eb_cnt);
-//        print_bytes(mtd_dev->eb_size, 1);
-//        printf(", min. I/O size %d bytes\n", mtd_dev->min_io_size);
-//    }
+    //    if (!args.quiet){
+    //        printf("mtd%d (%s), size ", mtd_dev->mtd_num, mtd_dev->type_str);
+    //        print_bytes(mtd_dev->size, 1);
+    //        printf(", %d eraseblocks of ", mtd_dev->eb_cnt);
+    //        print_bytes(mtd_dev->eb_size, 1);
+    //        printf(", min. I/O size %d bytes\n", mtd_dev->min_io_size);
+    //    }
     err = ubi_scan(mtd_dev, args.mtd_fd, &si, 0);
     if (err) {
         LOGE("failed to scan mtd%d (%s)", mtd_dev->mtd_num,
@@ -461,7 +461,7 @@ static int ubi_mtd_part_check(struct mtd_dev_info* mtd_dev,
         LOGI("%d eraseblocks are supposedly empty", si->empty_cnt);
     if (si->corrupted_cnt)
         LOGI("%d corrupted erase counters", si->corrupted_cnt);
-//    print_bad_eraseblocks(mtd_dev, si);
+    //    print_bad_eraseblocks(mtd_dev, si);
 
     if (si->alien_cnt) {
         LOGW("%d of %d eraseblocks contain non-UBI data", si->alien_cnt,
@@ -576,13 +576,12 @@ static int drop_ffs(const struct mtd_dev_info *mtd, const void *buf, int len) {
     return len;
 }
 
-static void ubi_start_eb_set(int eb)
-{
+static void ubi_start_eb_set(int eb) {
     args.start_eb = eb;
 }
 
-static int ubi_bypass_layout_vol(struct mtd_dev_info *mtd, struct ubi_scan_info *si,
-        int volume_table_size) {
+static int ubi_bypass_layout_vol(struct mtd_dev_info *mtd,
+        struct ubi_scan_info *si, int volume_table_size) {
     int eb = 0;
     int start_eb = 0;
 
@@ -597,7 +596,7 @@ static int ubi_bypass_layout_vol(struct mtd_dev_info *mtd, struct ubi_scan_info 
             break;
     }
 
-    if (eb >= mtd->eb_cnt){
+    if (eb >= mtd->eb_cnt) {
         LOGE("cannot bypass ubi layout volume");
         return -1;
     }
@@ -610,8 +609,7 @@ static int ubi_bypass_layout_vol(struct mtd_dev_info *mtd, struct ubi_scan_info 
  * Returns %-1 if consecutive bad blocks exceeds the
  * MAX_CONSECUTIVE_BAD_BLOCKS and returns %0 otherwise.
  */
-static int consecutive_bad_check(int eb)
-{
+static int consecutive_bad_check(int eb) {
     static int consecutive_bad_blocks = 1;
     static int prev_bb = -1;
 
@@ -627,15 +625,15 @@ static int consecutive_bad_check(int eb)
 
     if (consecutive_bad_blocks >= MAX_CONSECUTIVE_BAD_BLOCKS) {
         LOGE("consecutive bad blocks exceed limit: %d, bad flash?",
-                      MAX_CONSECUTIVE_BAD_BLOCKS);
+                MAX_CONSECUTIVE_BAD_BLOCKS);
         return -1;
     }
     return 0;
 }
 
 /* TODO: we should actually torture the PEB before marking it as bad */
-static int mark_bad(const struct mtd_dev_info *mtd, struct ubi_scan_info *si, int eb)
-{
+static int mark_bad(const struct mtd_dev_info *mtd, struct ubi_scan_info *si,
+        int eb) {
     int err;
 
     LOGI("marking block %d bad\n", eb);
@@ -655,22 +653,20 @@ static int mark_bad(const struct mtd_dev_info *mtd, struct ubi_scan_info *si, in
     return consecutive_bad_check(eb);
 }
 
-static int change_ech(struct ubi_ec_hdr *hdr, uint32_t image_seq,
-              long long ec)
-{
+static int change_ech(struct ubi_ec_hdr *hdr, uint32_t image_seq, long long ec) {
     uint32_t crc;
 
     /* Check the EC header */
-    if (be32_to_cpu(hdr->magic) != UBI_EC_HDR_MAGIC){
+    if (be32_to_cpu(hdr->magic) != UBI_EC_HDR_MAGIC) {
         LOGE("bad UBI magic %#08x, should be %#08x",
-                  be32_to_cpu(hdr->magic), UBI_EC_HDR_MAGIC);
+                be32_to_cpu(hdr->magic), UBI_EC_HDR_MAGIC);
         return -1;
     }
 
     crc = crc32(UBI_CRC32_INIT, hdr, UBI_EC_HDR_SIZE_CRC);
-    if (be32_to_cpu(hdr->hdr_crc) != crc){
+    if (be32_to_cpu(hdr->hdr_crc) != crc) {
         LOGE("bad CRC %#08x, should be %#08x\n",
-                  crc, be32_to_cpu(hdr->hdr_crc));
+                crc, be32_to_cpu(hdr->hdr_crc));
         return -1;
     }
 
@@ -692,17 +688,16 @@ static void set_process_info(struct flash_manager* this,
         this->listener(this->param, info);
 }
 
-static void update_show_progress(struct flash_manager* this, struct mtd_dev_info *mtd,
-        long long total, long long remained)
-{
+static void update_show_progress(struct flash_manager* this,
+        struct mtd_dev_info *mtd, long long total, long long remained) {
     static int percent_s;
     int percent = (total - remained) * 100 / total;
 
-    if (percent_s != percent){
+    if (percent_s != percent) {
         if (!args.quiet)
             LOGI("upgrading process %d%%",(int)((total - remained) * 100 / total));
-        set_process_info(this, &process_info, ACTION_WRITE,
-                percent, (char *)mtd->name);
+        set_process_info(this, &process_info, ACTION_WRITE, percent,
+                (char *) mtd->name);
         percent_s = percent;
     }
 }
@@ -715,11 +710,13 @@ int ubi_write_volume_to_mtd(libmtd_t *libmtd, struct mtd_dev_info *mtd,
     int write_flag = 0;
     long long ec;
     int err;
-    struct flash_manager *this = container_of(libmtd ,struct flash_manager, mtd_desc);
+    struct flash_manager *this =
+            container_of(libmtd ,struct flash_manager, mtd_desc);
 
     while (eb < mtd->eb_cnt) {
         args.upgrade_blks++;
-        update_show_progress(this, mtd, mtd->eb_cnt, mtd->eb_cnt-args.upgrade_blks);
+        update_show_progress(this, mtd, mtd->eb_cnt,
+                mtd->eb_cnt - args.upgrade_blks);
 
         if (si->ec[eb] == EB_BAD) {
             LOGI("block %d is bad on mtd(%d) \n", eb, mtd->mtd_num);
@@ -749,15 +746,15 @@ int ubi_write_volume_to_mtd(libmtd_t *libmtd, struct mtd_dev_info *mtd,
         else
             ec = si->mean_ec;
 
-//        printf(", change EC to %lld", ec);
-        err = change_ech((struct ubi_ec_hdr *)buf, ui->image_seq, ec);
+        //        printf(", change EC to %lld", ec);
+        err = change_ech((struct ubi_ec_hdr *) buf, ui->image_seq, ec);
         if (err) {
             LOGI("bad EC header at eraseblock %d", eb);
             return -1;
         }
         new_len = drop_ffs(mtd, buf, mtd->eb_size);
-        err = mtd_write(*libmtd, mtd, args.mtd_fd, eb, 0, buf, new_len, NULL, 0,
-                0);
+        err = mtd_write(*libmtd, mtd, args.mtd_fd, eb, 0, buf, new_len, NULL,
+                0, 0);
         if (err) {
             LOGE("cannot write eraseblock %d", eb);
 
@@ -794,8 +791,7 @@ int ubi_write_volume_to_mtd(libmtd_t *libmtd, struct mtd_dev_info *mtd,
 }
 
 static int format(struct flash_manager *this, struct ubi_params *ubi_params,
-          int start_eb, int novtbl)
-{
+        int start_eb, int novtbl) {
     int eb, err, write_size;
     struct ubi_ec_hdr *hdr;
     struct ubi_vtbl_record *vtbl;
@@ -809,7 +805,7 @@ static int format(struct flash_manager *this, struct ubi_params *ubi_params,
     write_size /= mtd->subpage_size;
     write_size *= mtd->subpage_size;
     hdr = malloc(write_size);
-    if (!hdr){
+    if (!hdr) {
         LOGE("cannot allocate %d bytes of memory", write_size);
         return -1;
     }
@@ -818,7 +814,8 @@ static int format(struct flash_manager *this, struct ubi_params *ubi_params,
     for (eb = start_eb; eb < mtd->eb_cnt; eb++) {
         long long ec;
         args.upgrade_blks++;
-        update_show_progress(this, mtd, mtd->eb_cnt, mtd->eb_cnt-args.upgrade_blks);
+        update_show_progress(this, mtd, mtd->eb_cnt,
+                mtd->eb_cnt - args.upgrade_blks);
 
         if (si->ec[eb] == EB_BAD)
             continue;
@@ -834,7 +831,7 @@ static int format(struct flash_manager *this, struct ubi_params *ubi_params,
         err = mtd_erase(this->mtd_desc, mtd, args.mtd_fd, eb);
         if (err) {
             LOGE("failed to erase eraseblock %d", eb);
-            if (errno != EIO){
+            if (errno != EIO) {
                 LOGE("fatal error on eraseblock %d", eb);
                 goto out_free;
             }
@@ -859,13 +856,13 @@ static int format(struct flash_manager *this, struct ubi_params *ubi_params,
                 write_size, NULL, 0, 0);
         if (err) {
             LOGE("cannot write EC header (%d bytes buffer) to eraseblock %d",
-                   write_size, eb);
+                    write_size, eb);
 
             if (errno != EIO) {
                 LOGE("fatal error on writeblock %d", eb);
                 if (!args.subpage_size != mtd->min_io_size)
                     LOGI("may be sub-page size is "
-                           "incorrect?");
+                            "incorrect?");
                 goto out_free;
             }
             err = mtd_torture(this->mtd_desc, mtd, args.mtd_fd, eb);
@@ -900,13 +897,12 @@ static int format(struct flash_manager *this, struct ubi_params *ubi_params,
     free(hdr);
     return 0;
 
-out_free:
-    free(hdr);
+    out_free: free(hdr);
     return -1;
 }
 
-int ubi_partition_update(struct flash_manager* this, char *mtd_part, char *imgname,
-        char *volname) {
+int ubi_partition_update(struct flash_manager* this, char *mtd_part,
+        char *imgname, char *volname) {
 
     struct ubi_params *ubi = NULL;
     struct ubi_vtbl_record *vtbl;
@@ -1081,6 +1077,7 @@ int ubi_partition_update(struct flash_manager* this, char *mtd_part, char *imgna
 
     LOGI("done");
 
+    ubi_params_free(ubi);
     free(vi);
     iniparser_freedict(args.dict);
     free(vtbl);
@@ -1092,7 +1089,7 @@ int ubi_partition_update(struct flash_manager* this, char *mtd_part, char *imgna
     out_free: free(vi);
     out_dict: iniparser_freedict(args.dict);
     out_vtbl: free(vtbl);
-
+    ubi_params_free(ubi);
     return err;
 }
 
