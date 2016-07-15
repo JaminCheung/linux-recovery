@@ -31,7 +31,7 @@
 #include <utils/assert.h>
 #include <utils/configure_file.h>
 
-#define LOG_TAG "recovery--->configure"
+#define LOG_TAG "recovery--->configure_file"
 
 #if (defined CONFIG_BASE64_ENCODE_CONFIG_FILE) && (CONFIG_BASE64_ENCODE_CONFIG_FILE == true)
 static const char encode_table[64] = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
@@ -254,7 +254,6 @@ static struct bootloader_config* read_bootloader_config(FILE* stream, int* line)
     int errors = 0;
 
     char* name = NULL;
-    char* upgrade = NULL;
     char* file_path = NULL;
     char* md5 = NULL;
 
@@ -266,13 +265,6 @@ static struct bootloader_config* read_bootloader_config(FILE* stream, int* line)
             name = strdup(get_value(pos));
             if (!name) {
                 LOGE("Failed to parase line: %d: name=?", *line);
-                errors++;
-                break;
-            }
-        } else if (!strncmp(pos, "upgrade=", 8)) {
-            upgrade = strdup(get_value(pos));
-            if (!upgrade) {
-                LOGE("Failed to parase line: %d: upgrade=?", *line);
                 errors++;
                 break;
             }
@@ -306,28 +298,19 @@ static struct bootloader_config* read_bootloader_config(FILE* stream, int* line)
     if (errors)
         goto error;
 
-    if ((strcmp(upgrade, "yes") && strcmp(upgrade, "no"))) {
-        LOGE("Failed to upgrade value: %s", upgrade);
-        goto error;
-    }
-
     config = (struct bootloader_config*) malloc(
             sizeof(struct bootloader_config));
-    config->name.key = strdup("bootloader partition name");
+    config->name.key = strdup("BOOTLOADER PART");
     config->name.value = name;
-    config->upgrade.key = strdup("bootloader upgrade");
-    config->upgrade.value = upgrade;
-    config->file_path.key = strdup("bootloader image file path");
+    config->file_path.key = strdup("BOOTLOADER IMAGE");
     config->file_path.value = file_path;
-    config->md5.key = strdup("bootloader image md5");
+    config->md5.key = strdup("BOOTLOADER MD5");
     config->md5.value = md5;
     return config;
 
 error:
     if (name)
         free(name);
-    if (upgrade)
-        free(upgrade);
     if (file_path)
         free(file_path);
     if (md5)
@@ -344,7 +327,6 @@ static struct kernel_config* read_kernel_config(FILE* stream, int* line) {
     int errors = 0;
 
     char* name = NULL;
-    char* upgrade = NULL;
     char* file_path = NULL;
     char* md5 = NULL;
 
@@ -356,13 +338,6 @@ static struct kernel_config* read_kernel_config(FILE* stream, int* line) {
             name = strdup(get_value(pos));
             if (!name) {
                 LOGE("Failed to parase line: %d: name=?", *line);
-                errors++;
-                break;
-            }
-        } else if (!strncmp(pos, "upgrade=", 8)) {
-            upgrade = strdup(get_value(pos));
-            if (!upgrade) {
-                LOGE("Failed to parase line: %d: upgrade=?", *line);
                 errors++;
                 break;
             }
@@ -396,19 +371,12 @@ static struct kernel_config* read_kernel_config(FILE* stream, int* line) {
     if (errors)
         goto error;
 
-    if ((strcmp(upgrade, "yes") && strcmp(upgrade, "no"))) {
-        LOGE("Failed to upgrade value: %s", upgrade);
-        goto error;
-    }
-
     config = (struct kernel_config*) malloc(sizeof(struct kernel_config));
-    config->name.key = strdup("kernel partition name");
+    config->name.key = strdup("KERNEL PART");
     config->name.value = name;
-    config->upgrade.key = strdup("kernel upgrade");
-    config->upgrade.value = upgrade;
-    config->file_path.key = strdup("kernel image file path");
+    config->file_path.key = strdup("KERNEL IMAGE");
     config->file_path.value = file_path;
-    config->md5.key = strdup("kernel image md5");
+    config->md5.key = strdup("KERNEL MD5");
     config->md5.value = md5;
 
     return config;
@@ -416,8 +384,6 @@ static struct kernel_config* read_kernel_config(FILE* stream, int* line) {
 error:
     if (name)
         free(name);
-    if (upgrade)
-        free(upgrade);
     if (file_path)
         free(file_path);
     if (md5)
@@ -434,7 +400,6 @@ static struct splash_config* read_splash_config(FILE* stream, int* line) {
     int errors = 0;
 
     char* name = NULL;
-    char* upgrade = NULL;
     char* file_path = NULL;
     char* md5 = NULL;
 
@@ -446,13 +411,6 @@ static struct splash_config* read_splash_config(FILE* stream, int* line) {
             name = strdup(get_value(pos));
             if (!name) {
                 LOGE("Failed to parase line: %d: name=?", *line);
-                errors++;
-                break;
-            }
-        } else if (!strncmp(pos, "upgrade=", 8)) {
-            upgrade = strdup(get_value(pos));
-            if (!upgrade) {
-                LOGE("Failed to parase line: %d: upgrade=?", *line);
                 errors++;
                 break;
             }
@@ -486,19 +444,12 @@ static struct splash_config* read_splash_config(FILE* stream, int* line) {
     if (errors)
         goto error;
 
-    if ((strcmp(upgrade, "yes") && strcmp(upgrade, "no"))) {
-        LOGE("Failed to upgrade value: %s", upgrade);
-        goto error;
-    }
-
     config = (struct splash_config*) malloc(sizeof(struct splash_config));
-    config->name.key = strdup("splash partition name");
+    config->name.key = strdup("SPLASH PART");
     config->name.value = name;
-    config->upgrade.key = strdup("splash upgrade");
-    config->upgrade.value = upgrade;
-    config->file_path.key = strdup("splash image file path");
+    config->file_path.key = strdup("SPLASH IMAGE");
     config->file_path.value = file_path;
-    config->md5.key = strdup("splash image md5");
+    config->md5.key = strdup("SPLASH MD5");
     config->md5.value = md5;
 
     return config;
@@ -506,8 +457,6 @@ static struct splash_config* read_splash_config(FILE* stream, int* line) {
 error:
     if (name)
         free(name);
-    if (upgrade)
-        free(upgrade);
     if (file_path)
         free(file_path);
     if (md5)
@@ -524,7 +473,6 @@ static struct rootfs_config* read_rootfs_config(FILE* stream, int* line) {
     int errors = 0;
 
     char* name = NULL;
-    char* upgrade = NULL;
     char* full_upgrade = NULL;
     char* file_path = NULL;
     char* md5 = NULL;
@@ -537,13 +485,6 @@ static struct rootfs_config* read_rootfs_config(FILE* stream, int* line) {
             name = strdup(get_value(pos));
             if (!name) {
                 LOGE("Failed to parase line: %d: name=?", *line);
-                errors++;
-                break;
-            }
-        } else if (!strncmp(pos, "upgrade=", 8)) {
-            upgrade = strdup(get_value(pos));
-            if (!upgrade) {
-                LOGE("Failed to parase line: %d: upgrade=?", *line);
                 errors++;
                 break;
             }
@@ -584,30 +525,22 @@ static struct rootfs_config* read_rootfs_config(FILE* stream, int* line) {
     if (errors)
         goto error;
 
-    if ((strcmp(upgrade, "yes") && strcmp(upgrade, "no"))) {
-        LOGE("Failed to read upgrade value: %s", upgrade);
-        goto error;
-    }
-
     if ((strcmp(full_upgrade, "yes") && strcmp(full_upgrade, "no"))) {
         LOGE("Failed to read full_upgrade value: %s", full_upgrade);
         goto error;
     }
 
     config = (struct rootfs_config*) malloc(sizeof(struct rootfs_config));
-    config->name.key = strdup("rootfs partition name");
+    config->name.key = strdup("ROOTFS PART");
     config->name.value = name;
 
-    config->upgrade.key = strdup("rootfs upgrade");
-    config->upgrade.value = upgrade;
-
-    config->full_upgrade.key = strdup("rootfs full upgrade");
+    config->full_upgrade.key = strdup("ROOTFS FULL UPFRADE");
     config->full_upgrade.value = full_upgrade;
 
-    config->file_path.key = strdup("rootfs file path");
+    config->file_path.key = strdup("ROOTFS IMAGE");
     config->file_path.value = file_path;
 
-    config->md5.key = strdup("rootfs file md5");
+    config->md5.key = strdup("ROOTFS MD5");
     config->md5.value = md5;
 
     return config;
@@ -615,16 +548,10 @@ static struct rootfs_config* read_rootfs_config(FILE* stream, int* line) {
 error:
     if (name)
         free(name);
-
-    if (upgrade)
-        free(upgrade);
-
     if (full_upgrade)
         free(full_upgrade);
-
     if (file_path)
         free(file_path);
-
     if (md5)
         free(md5);
 
@@ -639,7 +566,6 @@ static struct userfs_config* read_userfs_config(FILE* stream, int* line) {
     int errors = 0;
 
     char* name = NULL;
-    char* upgrade = NULL;
     char* full_upgrade = NULL;
     char* file_path = NULL;
     char* md5 = NULL;
@@ -652,13 +578,6 @@ static struct userfs_config* read_userfs_config(FILE* stream, int* line) {
             name = strdup(get_value(pos));
             if (!name) {
                 LOGE("Failed to parase line: %d: name=?", *line);
-                errors++;
-                break;
-            }
-        } else if (!strncmp(pos, "upgrade=", 8)) {
-            upgrade = strdup(get_value(pos));
-            if (!upgrade) {
-                LOGE("Failed to parase line: %d: upgrade=?", *line);
                 errors++;
                 break;
             }
@@ -699,30 +618,22 @@ static struct userfs_config* read_userfs_config(FILE* stream, int* line) {
     if (errors)
         goto error;
 
-    if ((strcmp(upgrade, "yes") && strcmp(upgrade, "no"))) {
-        LOGE("Failed to read upgrade value: %s", upgrade);
-        goto error;
-    }
-
     if ((strcmp(full_upgrade, "yes") && strcmp(full_upgrade, "no"))) {
         LOGE("Failed to read full_upgrade value: %s", full_upgrade);
         goto error;
     }
 
     config = (struct userfs_config*) malloc(sizeof(struct userfs_config));
-    config->name.key = strdup("userfs partition name");
+    config->name.key = strdup("USERFS PART");
     config->name.value = name;
 
-    config->upgrade.key = strdup("userfs upgrade");
-    config->upgrade.value = upgrade;
-
-    config->full_upgrade.key = strdup("userfs full upgrade");
+    config->full_upgrade.key = strdup("USERFS FULL UPGRADE");
     config->full_upgrade.value = full_upgrade;
 
-    config->file_path.key = strdup("userfs file path");
+    config->file_path.key = strdup("USERFS IMAGE");
     config->file_path.value = file_path;
 
-    config->md5.key = strdup("userfs file md5");
+    config->md5.key = strdup("USERFS MD5");
     config->md5.value = md5;
 
     return config;
@@ -730,16 +641,10 @@ static struct userfs_config* read_userfs_config(FILE* stream, int* line) {
 error:
     if (name)
         free(name);
-
-    if (upgrade)
-        free(upgrade);
-
     if (full_upgrade)
         free(full_upgrade);
-
     if (file_path)
         free(file_path);
-
     if (md5)
         free(md5);
 
@@ -806,64 +711,48 @@ static void install_config(struct config* config,
 
     memset(configure_data, 0, sizeof(struct configure_data));
 
-    strcpy(configure_data->bootloader_name, config->bootloader->name.value);
-    if (!strcmp(config->bootloader->upgrade.value, "yes"))
+    if (config->bootloader) {
         configure_data->bootloader_upgrade = true;
-    else
-        configure_data->bootloader_upgrade = false;
+        strcpy(configure_data->bootloader_name, config->bootloader->name.value);
+        strcpy(configure_data->bootloader_path, config->bootloader->file_path.value);
+        strcpy(configure_data->bootloader_md5, config->bootloader->md5.value);
+    }
 
-    strcpy(configure_data->bootloader_path, config->bootloader->file_path.value);
-    strcpy(configure_data->bootloader_md5, config->bootloader->md5.value);
-
-    strcpy(configure_data->kernel_name, config->kernel->name.value);
-
-    if (!strcmp(config->kernel->upgrade.value, "yes"))
+    if (config->kernel) {
         configure_data->kernel_upgrade = true;
-    else
-        configure_data->kernel_upgrade = false;
+        strcpy(configure_data->kernel_name, config->kernel->name.value);
+        strcpy(configure_data->kernel_path, config->kernel->file_path.value);
+        strcpy(configure_data->kernel_md5, config->kernel->md5.value);
+    }
 
-    strcpy(configure_data->kernel_path, config->kernel->file_path.value);
-    strcpy(configure_data->kernel_md5, config->kernel->md5.value);
-
-    strcpy(configure_data->splash_name, config->splash->name.value);
-
-    if (!strcmp(config->splash->upgrade.value, "yes"))
+    if (config->splash) {
         configure_data->splash_upgrade = true;
-    else
-        configure_data->splash_upgrade = false;
+        strcpy(configure_data->splash_name, config->splash->name.value);
+        strcpy(configure_data->splash_path, config->splash->file_path.value);
+        strcpy(configure_data->splash_md5, config->splash->md5.value);
+    }
 
-    strcpy(configure_data->splash_path, config->splash->file_path.value);
-    strcpy(configure_data->splash_md5, config->splash->md5.value);
-
-    strcpy(configure_data->rootfs_name, config->rootfs->name.value);
-
-    if (!strcmp(config->rootfs->upgrade.value, "yes"))
+    if (config->rootfs) {
         configure_data->rootfs_upgrade = true;
-    else
-        configure_data->rootfs_upgrade = false;
+        strcpy(configure_data->rootfs_name, config->rootfs->name.value);
+        if (!strcmp(config->rootfs->full_upgrade.value, "yes"))
+            configure_data->rootfs_full_upgrade = true;
+        else
+            configure_data->rootfs_full_upgrade = false;
+        strcpy(configure_data->rootfs_path, config->rootfs->file_path.value);
+        strcpy(configure_data->rootfs_md5, config->rootfs->md5.value);
+    }
 
-    if (!strcmp(config->rootfs->full_upgrade.value, "yes"))
-        configure_data->rootfs_full_upgrade = true;
-    else
-        configure_data->rootfs_full_upgrade = false;
-
-    strcpy(configure_data->rootfs_path, config->rootfs->file_path.value);
-    strcpy(configure_data->rootfs_md5, config->rootfs->md5.value);
-
-    strcpy(configure_data->userfs_name, config->userfs->name.value);
-
-    if (!strcmp(config->userfs->upgrade.value, "yes"))
+    if (config->userfs) {
         configure_data->userfs_upgrade = true;
-    else
-        configure_data->userfs_upgrade = false;
-
-    if (!strcmp(config->userfs->full_upgrade.value, "yes"))
-        configure_data->userfs_full_upgrade = true;
-    else
-        configure_data->userfs_full_upgrade = false;
-
-    strcpy(configure_data->userfs_path, config->userfs->file_path.value);
-    strcpy(configure_data->userfs_md5, config->userfs->md5.value);
+        strcpy(configure_data->userfs_name, config->userfs->name.value);
+        if (!strcmp(config->userfs->full_upgrade.value, "yes"))
+            configure_data->userfs_full_upgrade = true;
+        else
+            configure_data->userfs_full_upgrade = false;
+        strcpy(configure_data->userfs_path, config->userfs->file_path.value);
+        strcpy(configure_data->userfs_md5, config->userfs->md5.value);
+    }
 }
 
 static void clean_config(struct config* config) {
@@ -879,16 +768,6 @@ static void clean_config(struct config* config) {
         if (config->bootloader->name.value) {
             free(config->bootloader->name.value);
             config->bootloader->name.value = NULL;
-        }
-
-        if (config->bootloader->upgrade.key) {
-            free(config->bootloader->upgrade.key);
-            config->bootloader->upgrade.key = NULL;
-        }
-
-        if (config->bootloader->upgrade.value) {
-            free(config->bootloader->upgrade.value);
-            config->bootloader->upgrade.value = NULL;
         }
 
         if (config->bootloader->file_path.key) {
@@ -923,16 +802,6 @@ static void clean_config(struct config* config) {
             config->kernel->name.value = NULL;
         }
 
-        if (config->kernel->upgrade.key) {
-            free(config->kernel->upgrade.key);
-            config->kernel->upgrade.key = NULL;
-        }
-
-        if (config->kernel->upgrade.value) {
-            free(config->kernel->upgrade.value);
-            config->kernel->upgrade.value = NULL;
-        }
-
         if (config->kernel->file_path.key) {
             free(config->kernel->file_path.key);
             config->kernel->file_path.key = NULL;
@@ -958,16 +827,6 @@ static void clean_config(struct config* config) {
         if (config->splash->name.value) {
             free(config->splash->name.value);
             config->splash->name.value = NULL;
-        }
-
-        if (config->splash->upgrade.key) {
-            free(config->splash->upgrade.key);
-            config->splash->upgrade.key = NULL;
-        }
-
-        if (config->splash->upgrade.value) {
-            free(config->splash->upgrade.value);
-            config->splash->upgrade.value = NULL;
         }
 
         if (config->splash->file_path.key) {
@@ -1000,16 +859,6 @@ static void clean_config(struct config* config) {
         if (config->rootfs->name.value) {
             free(config->rootfs->name.value);
             config->rootfs->name.value = NULL;
-        }
-
-        if (config->rootfs->upgrade.key) {
-            free(config->rootfs->upgrade.key);
-            config->rootfs->upgrade.key = NULL;
-        }
-
-        if (config->rootfs->upgrade.value) {
-            free(config->rootfs->upgrade.value);
-            config->rootfs->upgrade.value = NULL;
         }
 
         if (config->rootfs->full_upgrade.key) {
@@ -1054,16 +903,6 @@ static void clean_config(struct config* config) {
             config->userfs->name.value = NULL;
         }
 
-        if (config->userfs->upgrade.key) {
-            free(config->userfs->upgrade.key);
-            config->userfs->upgrade.key = NULL;
-        }
-
-        if (config->userfs->upgrade.value) {
-            free(config->userfs->upgrade.value);
-            config->userfs->upgrade.value = NULL;
-        }
-
         if (config->userfs->full_upgrade.key) {
             free(config->userfs->full_upgrade.key);
             config->userfs->full_upgrade.key = NULL;
@@ -1105,43 +944,45 @@ static void dump_config(struct config* config) {
     LOGD("===================================");
     LOGD("Dump configure file.");
 
-    LOGD("%s: %s", config->bootloader->name.key,
-            config->bootloader->name.value);
-    LOGD("%s: %s", config->bootloader->upgrade.key,
-            config->bootloader->upgrade.value);
-    LOGD("%s: %s", config->bootloader->file_path.key,
-            config->bootloader->file_path.value);
-    LOGD("%s: %s\n", config->bootloader->md5.key, config->bootloader->md5.value);
+    if (config->bootloader) {
+        LOGD("%s: %s", config->bootloader->name.key,
+                config->bootloader->name.value);
+        LOGD("%s: %s", config->bootloader->file_path.key,
+                config->bootloader->file_path.value);
+        LOGD("%s: %s", config->bootloader->md5.key, config->bootloader->md5.value);
+    }
 
-    LOGD("%s: %s", config->kernel->name.key, config->kernel->name.value);
-    LOGD("%s: %s", config->kernel->upgrade.key,
-            config->kernel->file_path.value);
-    LOGD("%s: %s", config->kernel->file_path.key,
-            config->kernel->file_path.value);
-    LOGD("%s: %s\n", config->kernel->md5.key, config->kernel->md5.value);
+    if (config->kernel) {
+        LOGD("%s: %s", config->kernel->name.key, config->kernel->name.value);
+        LOGD("%s: %s", config->kernel->file_path.key,
+                config->kernel->file_path.value);
+        LOGD("%s: %s", config->kernel->md5.key, config->kernel->md5.value);
+    }
 
-    LOGD("%s: %s", config->splash->name.key, config->splash->name.value);
-    LOGD("%s: %s", config->splash->upgrade.key,
-            config->splash->file_path.value);
-    LOGD("%s: %s", config->splash->file_path.key,
-            config->splash->file_path.value);
-    LOGD("%s: %s\n", config->splash->md5.key, config->splash->md5.value);
+    if (config->splash) {
+        LOGD("%s: %s", config->splash->name.key, config->splash->name.value);
+        LOGD("%s: %s", config->splash->file_path.key,
+                config->splash->file_path.value);
+        LOGD("%s: %s", config->splash->md5.key, config->splash->md5.value);
+    }
 
-    LOGD("%s: %s", config->rootfs->name.key, config->rootfs->name.value);
-    LOGD("%s: %s", config->rootfs->upgrade.key, config->rootfs->upgrade.value);
-    LOGD("%s: %s", config->rootfs->full_upgrade.key,
-            config->rootfs->full_upgrade.value);
-    LOGD("%s: %s", config->rootfs->file_path.key,
-            config->rootfs->file_path.value);
-    LOGD("%s: %s\n", config->rootfs->md5.key, config->rootfs->md5.value);
+    if (config->rootfs) {
+        LOGD("%s: %s", config->rootfs->name.key, config->rootfs->name.value);
+        LOGD("%s: %s", config->rootfs->full_upgrade.key,
+                config->rootfs->full_upgrade.value);
+        LOGD("%s: %s", config->rootfs->file_path.key,
+                config->rootfs->file_path.value);
+        LOGD("%s: %s", config->rootfs->md5.key, config->rootfs->md5.value);
+    }
 
-    LOGD("%s: %s", config->userfs->name.key, config->userfs->name.value);
-    LOGD("%s: %s", config->userfs->upgrade.key, config->userfs->upgrade.value);
-    LOGD("%s: %s", config->userfs->full_upgrade.key,
-            config->userfs->full_upgrade.value);
-    LOGD("%s: %s", config->userfs->file_path.key,
-            config->userfs->file_path.value);
-    LOGD("%s: %s", config->userfs->md5.key, config->userfs->md5.value);
+    if (config->userfs) {
+        LOGD("%s: %s", config->userfs->name.key, config->userfs->name.value);
+        LOGD("%s: %s", config->userfs->full_upgrade.key,
+                config->userfs->full_upgrade.value);
+        LOGD("%s: %s", config->userfs->file_path.key,
+                config->userfs->file_path.value);
+        LOGD("%s: %s", config->userfs->md5.key, config->userfs->md5.value);
+    }
     LOGD("===================================");
 }
 
@@ -1189,36 +1030,39 @@ static void dump(struct configure_file* this) {
     LOGI("===================================");
     LOGI("Dump configure data.");
 
-    LOGI("bootloader partition name: %s", this->data->bootloader_name);
-    LOGI("bootloader upgrade: %s",
-            this->data->bootloader_upgrade ? "true" : "false");
-    LOGI("bootloader image path: %s", this->data->bootloader_path);
-    LOGI("bootloader image md5: %s\n", this->data->bootloader_md5);
+    if (this->data->bootloader_name[0] != '\0') {
+        LOGI("BOOTLOADER PART: %s", this->data->bootloader_name);
+        LOGI("BOOTLOADER IMAGE: %s", this->data->bootloader_path);
+        LOGI("BOOTLOADER MD5: %s", this->data->bootloader_md5);
+    }
 
-    LOGI("kernel partition name: %s", this->data->kernel_name);
-    LOGI("kernel upgrade: %s", this->data->kernel_upgrade ? "true" : "false");
-    LOGI("kernel image path: %s", this->data->kernel_path);
-    LOGI("kernel image md5: %s\n", this->data->kernel_md5);
+    if (this->data->kernel_name[0] != '\0') {
+        LOGI("KERNEL PART: %s", this->data->kernel_name);
+        LOGI("KERNEL IMAGE: %s", this->data->kernel_path);
+        LOGI("KERNEL MD5: %s", this->data->kernel_md5);
+    }
 
-    LOGI("splash partition name: %s", this->data->splash_name);
-    LOGI("splash upgrade: %s", this->data->splash_upgrade ? "true" : "false");
-    LOGI("splash image path: %s", this->data->splash_path);
-    LOGI("splash image md5: %s\n", this->data->splash_md5);
+    if (this->data->splash_name[0] != '\0') {
+        LOGI("SPLASH PART: %s", this->data->splash_name);
+        LOGI("SPLASH IMAGE: %s", this->data->splash_path);
+        LOGI("SPLASH MD5: %s", this->data->splash_md5);
+    }
 
-    LOGI("rootfs partition name: %s", this->data->rootfs_name);
-    LOGI("rootfs upgrade: %s", this->data->rootfs_upgrade ? "true" : "false");
-    LOGI("rootfs full upgrade: %s",
-            this->data->rootfs_full_upgrade ? "true" : "false");
-    LOGI("rootfs path: %s", this->data->rootfs_path);
-    LOGI("rootfs md5: %s\n", this->data->rootfs_md5);
+    if (this->data->rootfs_name[0] != '\0') {
+        LOGI("ROOTFS PART: %s", this->data->rootfs_name);
+        LOGI("ROOTFS FULL UPFRADE: %s",
+                this->data->rootfs_full_upgrade ? "true" : "false");
+        LOGI("ROOTFS IMAGE: %s", this->data->rootfs_path);
+        LOGI("ROOTFS MD5: %s", this->data->rootfs_md5);
+    }
 
-    LOGI("userfs partition name: %s", this->data->userfs_name);
-    LOGI("userfs upgrade: %s", this->data->userfs_upgrade ? "true" : "false");
-    LOGI("userfs full upgrade: %s",
-            this->data->userfs_full_upgrade ? "true" : "false");
-    LOGI("userfs path: %s", this->data->userfs_path);
-    LOGI("userfs md5: %s", this->data->userfs_md5);
-
+    if (this->data->userfs_name[0] != '\0') {
+        LOGI("USERFS PART: %s", this->data->userfs_name);
+        LOGI("userfs full upgrade: %s",
+                this->data->userfs_full_upgrade ? "true" : "false");
+        LOGI("USERFS IMAGE: %s", this->data->userfs_path);
+        LOGI("USERFS MD5: %s", this->data->userfs_md5);
+    }
     LOGI("===================================");
 }
 

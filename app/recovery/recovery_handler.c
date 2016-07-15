@@ -373,10 +373,10 @@ static void handle_block_event(struct netlink_handler* nh,
             nparts = atoi(event->find_param(event, "NPARTS"));
 
         if (action == NLACTION_ADD) {
-            LOGI("storage medium  \"%s\" insert, %d partitions", dev_name, nparts);
+            LOGI("storage medium \"%s\" insert, %d partitions", dev_name, nparts);
 
         } else if (action == NLACTION_REMOVE) {
-            LOGI("storage medium  \"%s\" remove, %d partitions", dev_name, nparts);
+            LOGI("storage medium \"%s\" remove, %d partitions", dev_name, nparts);
         }
 
     } else if (!strcmp(dev_type, "partition")
@@ -387,7 +387,7 @@ static void handle_block_event(struct netlink_handler* nh,
             part = atoi(event->find_param(event, "PARTN"));
 
         if (action == NLACTION_ADD) {
-            LOGI("storage medium  partition %d found", part);
+            LOGI("storage medium partition %d found", part);
             signal_storage_medium_status_changed(this, true);
 
         } else if (action == NLACTION_REMOVE) {

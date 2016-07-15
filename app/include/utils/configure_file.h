@@ -24,28 +24,24 @@ struct object {
 
 struct bootloader_config {
     struct object name;
-    struct object upgrade;
     struct object file_path;
     struct object md5;
 };
 
 struct kernel_config {
     struct object name;
-    struct object upgrade;
     struct object file_path;
     struct object md5;
 };
 
 struct splash_config {
     struct object name;
-    struct object upgrade;
     struct object file_path;
     struct object md5;
 };
 
 struct rootfs_config {
     struct object name;
-    struct object upgrade;
     struct object full_upgrade;
     struct object file_path;
     struct object md5;
@@ -53,7 +49,6 @@ struct rootfs_config {
 
 struct userfs_config {
     struct object name;
-    struct object upgrade;
     struct object full_upgrade;
     struct object file_path;
     struct object md5;
