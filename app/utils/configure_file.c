@@ -295,7 +295,7 @@ static struct bootloader_config* read_bootloader_config(FILE* stream, int* line)
         goto error;
     }
 
-    if (errors)
+    if (errors || !name || !file_path || !md5)
         goto error;
 
     config = (struct bootloader_config*) malloc(
@@ -368,7 +368,7 @@ static struct kernel_config* read_kernel_config(FILE* stream, int* line) {
         goto error;
     }
 
-    if (errors)
+    if (errors || !name || !file_path || !md5)
         goto error;
 
     config = (struct kernel_config*) malloc(sizeof(struct kernel_config));
@@ -441,7 +441,7 @@ static struct splash_config* read_splash_config(FILE* stream, int* line) {
         goto error;
     }
 
-    if (errors)
+    if (errors || !name || !file_path || !md5)
         goto error;
 
     config = (struct splash_config*) malloc(sizeof(struct splash_config));
@@ -522,7 +522,7 @@ static struct rootfs_config* read_rootfs_config(FILE* stream, int* line) {
         goto error;
     }
 
-    if (errors)
+    if (errors || !name || !full_upgrade || !file_path || !md5)
         goto error;
 
     if ((strcmp(full_upgrade, "yes") && strcmp(full_upgrade, "no"))) {
@@ -533,13 +533,10 @@ static struct rootfs_config* read_rootfs_config(FILE* stream, int* line) {
     config = (struct rootfs_config*) malloc(sizeof(struct rootfs_config));
     config->name.key = strdup("ROOTFS PART");
     config->name.value = name;
-
     config->full_upgrade.key = strdup("ROOTFS FULL UPFRADE");
     config->full_upgrade.value = full_upgrade;
-
     config->file_path.key = strdup("ROOTFS IMAGE");
     config->file_path.value = file_path;
-
     config->md5.key = strdup("ROOTFS MD5");
     config->md5.value = md5;
 
@@ -615,7 +612,7 @@ static struct userfs_config* read_userfs_config(FILE* stream, int* line) {
         goto error;
     }
 
-    if (errors)
+    if (errors || !name || !full_upgrade || !file_path || !md5)
         goto error;
 
     if ((strcmp(full_upgrade, "yes") && strcmp(full_upgrade, "no"))) {
@@ -626,13 +623,10 @@ static struct userfs_config* read_userfs_config(FILE* stream, int* line) {
     config = (struct userfs_config*) malloc(sizeof(struct userfs_config));
     config->name.key = strdup("USERFS PART");
     config->name.value = name;
-
     config->full_upgrade.key = strdup("USERFS FULL UPGRADE");
     config->full_upgrade.value = full_upgrade;
-
     config->file_path.key = strdup("USERFS IMAGE");
     config->file_path.value = file_path;
-
     config->md5.key = strdup("USERFS MD5");
     config->md5.value = md5;
 
