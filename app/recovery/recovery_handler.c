@@ -374,9 +374,13 @@ static void handle_block_event(struct netlink_handler* nh,
 
         if (action == NLACTION_ADD) {
             LOGI("storage medium \"%s\" insert, %d partitions", dev_name, nparts);
+            if (nparts == 0)
+                signal_storage_medium_status_changed(this, true);
 
         } else if (action == NLACTION_REMOVE) {
             LOGI("storage medium \"%s\" remove, %d partitions", dev_name, nparts);
+            if (nparts == 0)
+                signal_storage_medium_status_changed(this, false);
         }
 
     } else if (!strcmp(dev_type, "partition")
