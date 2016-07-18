@@ -491,6 +491,10 @@ static int flash_write(struct flash_manager* this, struct flashwrite_params* par
 		return -1;
 	}
 
+    if (ftype == UBIFS){
+        return ubi_partition_update(this, params->partition, params->image, partition_name);
+    }
+
 	if (flash_write_params_judge(this, params) < 0){
 		LOGE("Parameter judge errors");
 		return -1;
@@ -967,7 +971,6 @@ static int set_write_filesystem_params(struct flash_manager* this, char *mtd_par
         else if (mtd_type_is_nor_user(mtd_dev_info))
             set_write_optional_params(&flashwrite_params, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1);
     }else if (ftype  == UBIFS){
-        ubi_partition_update(this, mtd_part, image, partition_name);
     }
     return 0;
 }
@@ -1035,9 +1038,8 @@ static int flash_partition_write(struct flash_manager* this, const char* partiti
         const char* image) {
 
     mtd_name_convert(this, partition);
-    if (set_write_params(this, mtd_part_name, 0, (char*)image) == UBIFS){
-        return 0;
-    }
+
+    set_write_params(this, mtd_part_name, 0, (char*)image);
 
     dump_flashwrite_params(&flashwrite_params);
     return flash_write(this, &flashwrite_params);

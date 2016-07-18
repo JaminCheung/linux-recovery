@@ -519,6 +519,7 @@ int ubi_params_set(struct flash_manager* this, struct ubi_params **ubi,
     mtdnum = strtoul(&mtd_part[strlen(MTD_PART_HEAD)], NULL, 10);
     mtd_dev = &(this->mtd_dev_info[mtdnum]);
 
+    args.upgrade_blks = 0;
     args.peb_size = mtd_dev->eb_size;
     args.min_io_size = mtd_dev->min_io_size;
     args.subpage_size = mtd_dev->subpage_size;
