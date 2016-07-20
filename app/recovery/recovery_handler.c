@@ -991,16 +991,16 @@ static bool upgrade_for_kernel_fail(struct recovery_handler* this) {
     LOGI("Going to upgrade kernel for boot kernel fail");
 
     char server_path[PATH_MAX] = { 0 };
-    char udisk_path[PATH_MAX] = { 0 };
+    char local_path[PATH_MAX] = { 0 };
 
-    sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
+    sprintf(local_path, "%s/%s", this->storage_medium_mount_point,
     CONFIG_KERNEL_IMAGE_DEF_PATH);
 
-    restart: if (file_exist(udisk_path)) {
+    restart: if (file_exist(local_path)) {
         /*
-         * upgrade kernel from udisk
+         * upgrade kernel from local storage
          */
-        return upgrade_kernel(this, udisk_path);
+        return upgrade_kernel(this, local_path);
 
     } else {
         /*
@@ -1017,7 +1017,7 @@ static bool upgrade_for_kernel_fail(struct recovery_handler* this) {
         sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
         CONFIG_KERNEL_IMAGE_DEF_PATH);
 
-        if (download_kernel(this, server_path, udisk_path))
+        if (download_kernel(this, server_path, local_path))
             goto restart;
     }
 
@@ -1028,16 +1028,16 @@ static bool upgrade_for_rootfs_fail(struct recovery_handler* this) {
     LOGI("Going to upgrade rootfs for mount rootfs fail");
 
     char server_path[PATH_MAX] = { 0 };
-    char udisk_path[PATH_MAX] = { 0 };
+    char local_path[PATH_MAX] = { 0 };
 
-    sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
+    sprintf(local_path, "%s/%s", this->storage_medium_mount_point,
     CONFIG_ROOTFS_IMAGE_DEF_PATH);
 
-    restart: if (file_exist(udisk_path)) {
+    restart: if (file_exist(local_path)) {
         /*
-         * upgrade rootfs from udisk
+         * upgrade rootfs from local storage
          */
-        return upgrade_rootfs(this, udisk_path, true);
+        return upgrade_rootfs(this, local_path, true);
 
     } else {
         /*
@@ -1054,7 +1054,7 @@ static bool upgrade_for_rootfs_fail(struct recovery_handler* this) {
         sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
         CONFIG_ROOTFS_IMAGE_DEF_PATH);
 
-        if (download_rootfs(this, server_path, udisk_path))
+        if (download_rootfs(this, server_path, local_path))
             goto restart;
     }
 
@@ -1125,16 +1125,16 @@ static bool upgrade_for_custom(struct recovery_handler* this) {
     LOGI("Going to upgrade for custom");
 
     char server_path[PATH_MAX] = { 0 };
-    char udisk_path[PATH_MAX] = { 0 };
+    char local_path[PATH_MAX] = { 0 };
 
-    sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
+    sprintf(local_path, "%s/%s", this->storage_medium_mount_point,
     CONFIG_CONFIGURE_FILE_PATH);
 
-    if (file_exist(udisk_path)) {
+    if (file_exist(local_path)) {
         /*
-         * parse configure file from udisk
+         * parse configure file from local storage
          */
-        if (!parse_configure_file(this, udisk_path))
+        if (!parse_configure_file(this, local_path))
             return false;
 
     } else {
@@ -1155,10 +1155,10 @@ static bool upgrade_for_custom(struct recovery_handler* this) {
         LOGI("Going to download configure from %s", server_path);
 
         /*
-         * download configure file to udisk
+         * download configure file to local storage
          */
-        if (download_configure_file(this, server_path, udisk_path)) {
-            if (!parse_configure_file(this, udisk_path))
+        if (download_configure_file(this, server_path, local_path)) {
+            if (!parse_configure_file(this, local_path))
                 return false;
 
             memset(server_path, 0, sizeof(server_path));
@@ -1167,90 +1167,90 @@ static bool upgrade_for_custom(struct recovery_handler* this) {
             return false;
         }
 
-        LOGI("Going to download bootloader from %s", server_path);
-
         /*
-         * download bootloader to udisk
+         * download bootloader to local storage
          */
         if (this->cf_data->bootloader_upgrade) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->bootloader_path);
 
-            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
+            LOGI("Going to download bootloader from %s", server_path);
+
+            sprintf(local_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->bootloader_path);
-            if (!download_bootloader(this, server_path, udisk_path))
+            if (!download_bootloader(this, server_path, local_path))
                 return false;
 
             memset(server_path, 0, sizeof(server_path));
-            memset(udisk_path, 0, sizeof(udisk_path));
+            memset(local_path, 0, sizeof(local_path));
         }
 
-        LOGI("Going to download kernel from %s", server_path);
-
         /*
-         * download kernel to udisk
+         * download kernel to local storage
          */
         if (this->cf_data->kernel_upgrade) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->kernel_path);
 
-            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
+            LOGI("Going to download kernel from %s", server_path);
+
+            sprintf(local_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->kernel_path);
-            if (!download_kernel(this, server_path, udisk_path))
+            if (!download_kernel(this, server_path, local_path))
                 return false;
 
             memset(server_path, 0, sizeof(server_path));
-            memset(udisk_path, 0, sizeof(udisk_path));
+            memset(local_path, 0, sizeof(local_path));
         }
 
-        LOGI("Going to download splash from %s", server_path);
-
         /*
-         * download kernel to udisk
+         * download kernel to local storage
          */
         if (this->cf_data->splash_upgrade) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->splash_path);
 
-            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
+            LOGI("Going to download splash from %s", server_path);
+
+            sprintf(local_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->splash_path);
-            if (!download_splash(this, server_path, udisk_path))
+            if (!download_splash(this, server_path, local_path))
                 return false;
 
             memset(server_path, 0, sizeof(server_path));
-            memset(udisk_path, 0, sizeof(udisk_path));
+            memset(local_path, 0, sizeof(local_path));
         }
 
-        LOGI("Going to download rootfs from %s", server_path);
-
         /*
-         * download rootfs to udisk
+         * download rootfs to local storage
          */
         if (this->cf_data->rootfs_upgrade) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->rootfs_path);
 
-            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
+            LOGI("Going to download rootfs from %s", server_path);
+
+            sprintf(local_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->rootfs_path);
-            if (!download_rootfs(this, server_path, udisk_path))
+            if (!download_rootfs(this, server_path, local_path))
                 return false;
 
             memset(server_path, 0, sizeof(server_path));
-            memset(udisk_path, 0, sizeof(udisk_path));
+            memset(local_path, 0, sizeof(local_path));
         }
 
-        LOGI("Going to download userfs from %s", server_path);
-
         /*
-         * download userfs image to udisk
+         * download userfs image to local storage
          */
         if (this->cf_data->userfs_upgrade) {
             sprintf(server_path, "%s/%s", CONFIG_SERVER_URL,
                     this->cf_data->userfs_path);
 
-            sprintf(udisk_path, "%s/%s", this->storage_medium_mount_point,
+            LOGI("Going to download userfs from %s", server_path);
+
+            sprintf(local_path, "%s/%s", this->storage_medium_mount_point,
                     this->cf_data->userfs_path);
-            if (!download_userfs(this, server_path, udisk_path))
+            if (!download_userfs(this, server_path, local_path))
                 return false;
         }
     }
