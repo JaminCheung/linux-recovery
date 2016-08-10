@@ -23,4 +23,12 @@
     const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
     (type *)( (char *)__mptr - offsetof(type,member) );})
 
+#define mult_frac(x, numer, denom)(         \
+{                           \
+    typeof(x) quot = (x) / (denom);         \
+    typeof(x) rem  = (x) % (denom);         \
+    (quot * (numer)) + ((rem * (numer)) / (denom)); \
+}                           \
+)
+
 #endif /* LINUX_H */

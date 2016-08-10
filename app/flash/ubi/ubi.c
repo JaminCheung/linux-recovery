@@ -23,7 +23,10 @@
 #define LOG_TAG "recovery--->ubi"
 #define MTD_PART_HEAD "/dev/mtd"
 #define DEFAULT_CTRL_DEV "/dev/ubi_ctrl"
+
 #define MAX_CONSECUTIVE_BAD_BLOCKS 4
+#define WL_RESERVED_PEBS 1
+#define EBA_RESERVED_PEBS 1
 
 struct args {
 #ifndef CONFIG_UBI_INI_PARSER_LOAD_IN_MEM
@@ -57,8 +60,9 @@ struct ubi_params {
     unsigned int pebsize;
     unsigned int pagesize;
     unsigned int partition_size;
-    unsigned int wear_level;
-    unsigned int wear_level_blks;
+    unsigned int device_size;
+    unsigned int max_beb_per1024;
+    unsigned int ubi_reserved_blks;
     unsigned int lebsize;
     unsigned int vol_size;
     char *vol_info;
@@ -325,8 +329,9 @@ void dump_ubi_params(struct ubi_params *params) {
     LOGI("peb size: %d", params->pebsize);
     LOGI("page size: %d", params->pagesize);
     LOGI("partition size: %d", params->partition_size);
-    LOGI("wear level: %f", 1.0 / params->wear_level);
-    LOGI("wear level blocks: %d", params->wear_level_blks);
+    LOGI("device size: %d", params->device_size);
+    LOGI("max beb per1024: %d", params->max_beb_per1024);
+    LOGI("ubi reserved blks: %d", params->ubi_reserved_blks);
     LOGI("leg size: %d", params->lebsize);
     LOGI("volume size: %d", params->vol_size);
     LOGI("volume info address: %p", params->vol_info);
@@ -355,11 +360,35 @@ static void ubi_params_free(struct ubi_params *params) {
     }
 }
 
+static int get_bad_peb_limit(struct ubi_params *params)
+{
+    unsigned int limit, device_pebs, max_beb_per1024;
+
+    max_beb_per1024 = params->max_beb_per1024;
+    if (!max_beb_per1024)
+        return 0;
+
+    /*
+     * Here we are using size of the entire flash chip and
+     * not just the MTD partition size because the maximum
+     * number of bad eraseblocks is a percentage of the
+     * whole device and bad eraseblocks are not fairly
+     * distributed over the flash chip. So the worst case
+     * is that all the bad eraseblocks of the chip are in
+     * the MTD partition we are attaching (ubi->mtd).
+     */
+    device_pebs = params->device_size / params->pebsize;
+    limit = mult_frac(device_pebs, max_beb_per1024, 1024);
+    /* Round it up */
+    if (mult_frac(limit, 1024, max_beb_per1024) < device_pebs)
+        limit += 1;
+
+    return limit;
+}
+
 static int ubi_volume_params_set(struct ubi_params *params) {
     char *buf = NULL;
     static int vol_id;
-    unsigned int wear_level_reserved_blks = 0;
-    unsigned int blkcnt = 0;
     unsigned int logic_blkcnt = 0;
     unsigned int logic_blksize = 0;
     unsigned int vol_size = 0;
@@ -371,12 +400,11 @@ static int ubi_volume_params_set(struct ubi_params *params) {
     }
 
     logic_blksize = params->pebsize - 2 * params->pagesize;
-    blkcnt = params->partition_size / params->pebsize;
-    wear_level_reserved_blks = blkcnt / params->wear_level;
-    logic_blkcnt = blkcnt - wear_level_reserved_blks;
+    params->max_beb_per1024 = CONFIG_MTD_UBI_BEB_LIMIT;
+    params->ubi_reserved_blks = UBI_LAYOUT_VOLUME_EBS + WL_RESERVED_PEBS +
+                EBA_RESERVED_PEBS + get_bad_peb_limit(params);
+    logic_blkcnt = params->si->good_cnt - params->ubi_reserved_blks;
     vol_size = logic_blkcnt * logic_blksize;
-
-    params->wear_level_blks = wear_level_reserved_blks;
     params->lebsize = logic_blksize;
     params->vol_size = vol_size;
     params->vol_info = buf;
@@ -497,6 +525,21 @@ static int ubi_mtd_part_check(struct mtd_dev_info* mtd_dev,
     return 0;
 }
 
+static unsigned int get_flash_size(struct flash_manager* this)
+{
+    struct mtd_dev_info* mtd_dev_info;
+    unsigned int size = 0;
+    int i;
+
+    for (i = 0; i < this->mtd_info.mtd_dev_cnt; i++){
+        mtd_dev_info = &this->mtd_dev_info[i];
+        size += (unsigned int)mtd_dev_info->size;
+    }
+
+    return size;
+}
+
+
 int ubi_params_set(struct flash_manager* this, struct ubi_params **ubi,
         char *mtd_part, char *ubifsimg, char *volname) {
 
@@ -539,19 +582,20 @@ int ubi_params_set(struct flash_manager* this, struct ubi_params **ubi,
     params->pebsize = mtd_dev->eb_size;
     params->pagesize = mtd_dev->min_io_size;
     params->partition_size = mtd_dev->eb_size * mtd_dev->eb_cnt;
-    params->wear_level = CONFIG_UBI_WEAR_LEVEL;
+    params->device_size = get_flash_size(this);
     params->mtd_dev = mtd_dev;
     params->this = this;
+
+    if (ubi_mtd_part_check(mtd_dev, params) < 0) {
+        LOGE("ubi mtd part checking is failed");
+        goto out_free_ui;
+    }
 
     if (ubi_volume_params_set(params) < 0) {
         LOGE("ubi volume paramters setting is failed");
         goto out_free_ui;
     }
 
-    if (ubi_mtd_part_check(mtd_dev, params) < 0) {
-        LOGE("ubi mtd part checking is failed");
-        goto out_free_ui;
-    }
     *ubi = params;
     dump_ubi_params(params);
 

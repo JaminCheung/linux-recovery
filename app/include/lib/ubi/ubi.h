@@ -3,7 +3,7 @@
 
 #include <flash/flash_manager.h>
 
-#define CONFIG_UBI_WEAR_LEVEL  100    // 0.01
+#define CONFIG_MTD_UBI_BEB_LIMIT  20
 
 #define CONFIG_UBI_INI_PARSER_LOAD_IN_MEM
 #define CONFIG_UBI_VOLUME_WRITE_MTD
