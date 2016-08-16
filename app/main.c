@@ -38,7 +38,7 @@ static const char *TEMPORARY_LOG_FILE = "/dev/tty0";
 #endif
 
 static void print_version() {
-    LOGI("Linux recovery updater. Version: 1.0-alpha. Build: %s %s", __DATE__,
+    LOGI("Linux recovery updater. Version: 1.0-beta. Build: %s %s", __DATE__,
             __TIME__);
     LOGI(
             "Copyright (c) 2016, ZhangYanMing <jamincheung@126.com> and contributors.\n\n\n");
