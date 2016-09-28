@@ -3,7 +3,6 @@
 .settings
 *.o
 *.o.d
-autoconf.h
 install
 core.*
 *.d
