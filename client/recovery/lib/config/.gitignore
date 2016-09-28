@@ -1,0 +1,8 @@
+Makefile
+config.log
+config.status
+.deps
+*.pc
+libtool
+stamp-h1
+!testunit/Makefile

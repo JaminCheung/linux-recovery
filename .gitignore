@@ -8,3 +8,4 @@ install
 core.*
 *.d
 *.d.*
+out
