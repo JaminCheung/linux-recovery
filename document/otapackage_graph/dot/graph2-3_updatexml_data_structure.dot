@@ -1,0 +1,40 @@
+#struct st_update_mode_full {
+#    int type;
+#};
+#struct st_update_mode_slice {
+#    int type;
+#    unsigned int size;
+#    unsigned int count;
+#};
+#union un_update_mode {
+#    struct st_update_mode_full full;
+#    struct st_update_mode_slice slice;
+#}
+#struct st_image_info {
+#    char *name;
+#    int type;
+#    unsigned int offset;
+#    unsigned int size;
+#    union un_update_mode updatemode;
+#};
+#struct st_update {
+#    int devctl;      
+#    int imgcnt;
+#    struct st_image_info *imglist;    
+#};
+
+digraph st2{
+fontname = "Verdana";
+fontsize = 10;
+rankdir=LR;
+node [fontname = "Verdana", fontsize = 10, color="skyblue", shape="record"];
+st_update [label="{st_update|imgcnt|<list1>imglist|devctl}"];
+st_image_info [label="{<head>st_image_info|<updatemode>updatemode|name|type|offset|size}"];
+un_update_mode [label="{<head>un_update_mode|<full>full|<slice>slice}"];
+st_update_mode_full [label="{<head>st_update_mode_full|type}"];
+st_update_mode_slice [label="{<head>st_update_mode_slice|type|size|count}"];
+st_update:list1 -> st_image_info:head;
+st_image_info:updatemode -> un_update_mode:head[style="dashed", color="forestgreen"];
+un_update_mode:full->st_update_mode_full:head
+un_update_mode:slice->st_update_mode_slice:head
+}

@@ -1,0 +1,18 @@
+digraph G {
+    edge [fontname="FangSong"];
+    node [fontname="SimSun" size="20,20"];
+    rankdir = LR;  
+    compound=true;
+    subgraph cluster_package {
+        "mkotapackage.py"->"update0.zip~updateN.zip";
+        label = "ota升级包制作程序";
+    }
+    subgraph cluster_customer {
+        "partition.py"->"partition.conf";
+        "otacustomize.py"->"customization.conf";
+        "升级镜像文件"
+        {rank = same;"partition.conf";"customization.conf";"升级镜像文件"}
+        label = "用户定制";
+    }
+    { "partition.conf"; "customization.conf"; "升级镜像文件"}->"mkotapackage.py"[lhead=cluster_package]
+}

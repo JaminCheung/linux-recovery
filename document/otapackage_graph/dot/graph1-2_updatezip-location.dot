@@ -1,0 +1,17 @@
+digraph G {
+    edge [fontname="FangSong"];
+    node [fontname="SimSun" size="20,20"];
+    rankdir=LR;
+    compound=true;
+    subgraph cluster_updatemedium{
+    "HTTP服务器地址/autoupdate/";
+    "U盘/autoupdate/";
+    "SD卡/autoupdate/";
+    label = "升级媒介";
+    }
+
+"update0.zip~updateN.zip"->{"U盘/autoupdate/"}[lhead=cluster_updatemedium, label="store in"];
+
+{"U盘/autoupdate/"}->"升级媒介/autoupdate/update0.zip~updateN.zip"[label="equal with", ltail=cluster_updatemedium]
+
+}

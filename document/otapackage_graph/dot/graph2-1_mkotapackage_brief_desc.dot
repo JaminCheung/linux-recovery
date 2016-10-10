@@ -1,0 +1,15 @@
+digraph G {
+    edge [fontname="FangSong"];
+    node [fontname="SimSun" size="20,20"];
+    rankdir = LR;  
+    compound=true;
+    subgraph cluster_package {
+        "mkotapackage.py"->"update0.zip";
+        "mkotapackage.py"->"update1.zip";
+        "mkotapackage.py"->"...";
+        "mkotapackage.py"->"updateN.zip";
+        "update0.zip"->{"partition.xml, update.xml"}[label="unpacked"]
+        {"update1.zip"; "..."; "updateN.zip"}->升级镜像[label="unpacked"]
+        label = "ota升级包制作程序";
+    }
+}
