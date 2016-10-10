@@ -1,37 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <update>
-    <devctl>0</devctl>
-<imagelist>
-    <image>
-        <name>x-loader-pad-with-sleep-lib.bin</name>
-        <type>0</type>
-        <offset>0</offset>
-        <size>24576</size>
-        <updatemode>
-            <type>0x200</type>
-        </updatemode>
-    </image>
-    <image>
-        <name>xImage</name>
-        <type>0</type>
-        <offset>0x40000</offset>
-        <size>3018816</size>
-        <updatemode>
-            <type>0x201</type>
-            <chunksize>1048576</chunksize>
-            <chunkcount>3</chunkcount>
-        </updatemode>
-    </image>
-    <image>
-        <name>system.jffs2</name>
-        <type>0x111</type>
-        <offset>0x360000</offset>
-        <size>11730944</size>
-        <updatemode>
-            <type>0x201</type>
-            <chunksize>1048576</chunksize>
-            <chunkcount>12</chunkcount>
-        </updatemode>
-    </image>
-</imagelist>
+    <devctl type="integer">1234</devctl>
+
+    <imagelist count="3">
+        <image>
+            <name type="opaque">x-loader-pad-with-sleep-lib.bin</name>
+            <type type="opaque">normal</type>
+            <offset>0</offset>
+            <size>24576</size>
+            <updatemode>
+                <type type="integer">0x200</type>
+            </updatemode>
+        </image>
+
+        <image>
+            <name type="opaque">xImage</name>
+            <type type="opaque">normal</type>
+            <offset>0x40000</offset>
+            <size>3018816</size>
+            <updatemode>
+                <type type="integer">0x201</type>
+                <chunksize type="integer">1048576</chunksize>
+                <chunkcount type="integer">3</chunkcount>
+            </updatemode>
+        </image>
+
+        <image>
+            <name type="opaque">system.jffs2</name>
+            <type type="opaque">jffs2</type>
+            <offset>0x360000</offset>
+            <size>11730944</size>
+            <updatemode>
+                <type type="integer">0x201</type>
+                <chunksize type="integer">1048576</chunksize>
+                <chunkcount type="integer">12</chunkcount>
+            </updatemode>
+        </image>
+    </imagelist>
 </update>

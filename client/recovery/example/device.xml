@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<device>
+    <devinfo>
+        <type type="opaque">nor</type>
+        <capacity>0x1000000</capacity>
+    </devinfo>
+    <partition count="3">
+        <item>
+            <name type="opaque">uboot</name>
+            <offset>0x0</offset>
+            <size>0x40000</size>
+            <blockname type="opaque">mtdblock1</blockname>
+        </item>
+
+        <item>
+            <name type="opaque">kernel</name>
+            <offset>0x40000</offset>
+            <size>0x300000</size>
+            <blockname type="opaque">mtdblock2</blockname>
+        </item>
+
+        <item>
+            <name type="opaque">rootfs</name>
+            <offset>0x360000</offset>
+            <size>0xca0000</size>
+            <blockname type="opaque">mtdblock3</blockname>
+        </item>
+    </partition>	
+</device>
+

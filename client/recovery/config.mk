@@ -18,6 +18,8 @@ SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 	else if [ -x /bin/bash ]; then echo /bin/bash; \
 	else echo sh; fi; fi)
 
+TARGET := recovery
+
 #
 # Top directory
 #
@@ -66,3 +68,6 @@ QUIET_AR        = @echo -e "  AR\t$@";
 QUIET_CC        = @echo -e "  CC\t$@";
 QUIET_LINK      = @echo -e "  LINK\t$@";
 endif
+
+%.o:%.c
+	$(QUIET_CC)$(COMPILE_SRC) $< -o $@

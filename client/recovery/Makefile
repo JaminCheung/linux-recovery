@@ -20,13 +20,6 @@ endif
 
 include config.mk
 
-#
-# Top directory
-#
-TOPDIR := $(shell pwd)
-
-TARGET := recovery
-
 AUTOCONF := $(INCLUDES)/autoconf.h
 
 #
@@ -192,9 +185,6 @@ testunit_clean:
 	make -C lib/config/testunit clean
 	make -C lib/zlib/testunit clean
 	make -C lib/ini/testunit clean
-
-%.o:%.c
-	$(QUIET_CC)$(COMPILE_SRC) $< -o $@
 
 $(TARGET): $(OBJS) $(LIBS)
 	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(OBJS) $(LIBS) $(LDFLAGS) $(LDLIBS)
