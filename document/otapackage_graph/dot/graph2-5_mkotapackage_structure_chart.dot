@@ -1,0 +1,41 @@
+digraph G {
+    edge [fontname="FangSong"];
+    node [fontname="SimSun" size="20,20"];
+    #node [ fontname = "Microsoft YaHei", fontsize = 12, shape = "record" ]; 
+    #edge [ fontname = "Microsoft YaHei", fontsize = 12 ];
+    #rankdir = TB;  
+    subgraph cluster_generate_re{
+        label="升级包生成规则";
+        #rankdir = LR;  
+        bgcolor="mintcream";
+        node [shape="box", color="skyblue", style="filled"];
+        #total [label="{<partition_parser>partition parse regular|<customer_parser>customization parse regular|<pack_regular>pack regular|<signature_regular>signature regular}"]
+        #total [label="{<p1>解析规则|<p2>用户配置|<p3>镜像打包|<p4>签名规则}"]
+        #total [label="{<head>st_image_info|<updatemode>updatemode|name|type|offset|size}"]
+        partition_parser [label="分区文件解析规则"]
+        customer_parser [label="用户配置文件解析\n与生成规则"]
+        pack_regular [label="镜像打包规则"]
+        signature_regular [label="签名规则"]
+        
+    };    
+    subgraph cluster_otapackage{
+        label="mkotapackage";
+        bgcolor="lightcyan";
+        labelloc = b;
+        node [shape="box",color="chartreuse2", style="filled"];
+        ini_parser [label="ini解析器"]
+        xml_parser [label="XML解析器"]
+        generate_re [label="升级包生成规则"]
+        document_unit [label="文件处理器"]
+        signature_lib [label="加密器"]
+    };
+    #ini_parser -> customer_parser [label="依赖"];
+    #xml_parser -> customer_parser [label="依赖"];
+    #document_unit -> pack_regular [label="依赖"];
+    partition_parser->ini_parser [label="依赖"];
+    customer_parser->ini_parser [label="依赖"];
+    customer_parser->xml_parser [label="依赖"];
+    pack_regular->document_unit [label="依赖"];
+    signature_regular->signature_lib [label="依赖"];
+    {partition_parser, customer_parser, pack_regular, signature_regular} ->generate_re [style=dotted, dir=none, color=red]
+}

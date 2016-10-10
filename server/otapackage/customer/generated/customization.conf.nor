@@ -1,0 +1,17 @@
+[update]
+imgcnt=3
+[image1]
+name=x-loader-pad-with-sleep-lib.bin
+type=normal
+offset=0x0
+updatemode=full
+[image2]
+name=xImage
+type=normal
+offset=0x40000
+updatemode=slice
+[image3]
+name=system.jffs2
+type=jffs2
+offset=0x360000
+updatemode=slice
