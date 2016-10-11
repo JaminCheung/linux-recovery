@@ -4,7 +4,12 @@ TOPDIR ?= ../../../
 include ../../../config.mk
 
 TESTUNIT := test_libconfig
-TESTUNIT_OBJS := main.o
+TESTUNIT_OBJS := main.o                                                        \
+          $(TOPDIR)/lib/config/libconfig-1.5/lib/scanner.o                     \
+          $(TOPDIR)/lib/config/libconfig-1.5/lib/scanctx.o                     \
+          $(TOPDIR)/lib/config/libconfig-1.5/lib/strbuf.o                      \
+          $(TOPDIR)/lib/config/libconfig-1.5/lib/libconfig.o                   \
+          $(TOPDIR)/lib/config/libconfig-1.5/lib/grammar.o
 
 .PHONY : all clean
 

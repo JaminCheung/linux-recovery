@@ -17,8 +17,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
 
-#include <utils/log.h>
 #include <netlink/netlink_handler.h>
 
 #define LOG_TAG "netlink_handler"

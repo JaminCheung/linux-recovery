@@ -14,28 +14,9 @@
  *
  */
 
-#include <signal.h>
-#include <stdio.h>
-
-#include <utils/signal_handler.h>
-
-#define LOG_TAG "signal_handler"
-
-static void init(struct signal_handler* this, int signal,
-        signal_handler_t handler) {
-    struct sigaction action;
-
-    sigemptyset(&action.sa_mask);
-    action.sa_handler = handler;
-    action.sa_flags = 0;
-
-    sigaction(signal, &action, NULL);
-}
-
-void construct_signal_handler(struct signal_handler* this) {
-    this->init = init;
-}
-
-void destruct_signal_handler(struct signal_handler* this) {
-    this->init = NULL;
-}
+#define VERSION             "2.0"
+#define VERSION_CODE        0x2000
+#define VERSION_MAJOR       2
+#define VERSION_MINOR       0
+#define VERSION_REVISION    0
+#define VERSION_SUBREVISION 0
