@@ -178,6 +178,7 @@ testunit:
 	make -C lib/config/testunit all
 	make -C lib/zlib/testunit all
 	make -C lib/ini/testunit all
+	make -C lib/gpio/testunit all
 
 testunit_clean:
 	make -C lib/mxml/testunit clean
@@ -185,6 +186,7 @@ testunit_clean:
 	make -C lib/config/testunit clean
 	make -C lib/zlib/testunit clean
 	make -C lib/ini/testunit clean
+	make -C lib/gpio/testunit clean
 
 $(TARGET): $(OBJS) $(LIBS)
 	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(OBJS) $(LIBS) $(LDFLAGS) $(LDLIBS)
