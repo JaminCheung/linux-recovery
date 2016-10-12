@@ -61,11 +61,6 @@ OBJS-y += recovery/recovery_handler.o
 OBJS-y += net/net_interface.o
 
 #
-# Mini zip
-#
-OBJS-y +=
-
-#
 # EEPROM Manager
 #
 OBJS-n += eeprom/eeprom_manager.o
@@ -73,7 +68,7 @@ OBJS-n += eeprom/eeprom_manager.o
 OBJS := $(OBJS-y)
 
 #
-# ZLib
+# ZLib & Mini-zip Lib
 #
 LIBS-y += lib/zlib/zlib-1.2.8/adler32.o                                        \
           lib/zlib/zlib-1.2.8/crc32.o                                          \
@@ -89,7 +84,10 @@ LIBS-y += lib/zlib/zlib-1.2.8/adler32.o                                        \
           lib/zlib/zlib-1.2.8/gzclose.o                                        \
           lib/zlib/zlib-1.2.8/gzlib.o                                          \
           lib/zlib/zlib-1.2.8/gzread.o                                         \
-          lib/zlib/zlib-1.2.8/gzwrite.o
+          lib/zlib/zlib-1.2.8/gzwrite.o                                        \
+          lib/zip/minizip/ioapi.o                                              \
+          lib/zip/minizip/unzip.o                                              \
+          lib/zip/minizip/zip.o
 
 #
 # MTD Lib
@@ -179,6 +177,7 @@ testunit:
 	make -C lib/zlib/testunit all
 	make -C lib/ini/testunit all
 	make -C lib/gpio/testunit all
+	make -C lib/zip/testunit all
 
 testunit_clean:
 	make -C lib/mxml/testunit clean
@@ -187,6 +186,7 @@ testunit_clean:
 	make -C lib/zlib/testunit clean
 	make -C lib/ini/testunit clean
 	make -C lib/gpio/testunit clean
+	make -C lib/zip/testunit all
 
 $(TARGET): $(OBJS) $(LIBS)
 	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(OBJS) $(LIBS) $(LDFLAGS) $(LDLIBS)

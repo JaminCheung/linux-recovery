@@ -1,4 +1,4 @@
-TOPDIR ?= ../../../
+TOPDIR ?= ../../..
 #CROSS_COMPILE ?=
 
 include ../../../config.mk

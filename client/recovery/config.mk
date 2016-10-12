@@ -38,13 +38,17 @@ $(if $(OUTDIR),,$(error output directory "$(OUTDIR)" does not exist))
 #
 CROSS_COMPILE ?= mips-linux-gnu-
 CC := $(CROSS_COMPILE)gcc
+AR := $(CROSS_COMPILE)ar
 STRIP := $(CROSS_COMPILE)strip
 
 #
 # Compiler & Linker options
 #
+ARFLAGS = rcv
 INCLUDES := -I$(TOPDIR)/include                                                \
-            -I$(TOPDIR)/include/lib
+            -I$(TOPDIR)/include/lib                                            \
+            -I$(TOPDIR)/include/lib/zlib                                       \
+            -I$(TOPDIR)/include/lib/zip/minizip
 
 CFLAGS := -std=gnu11 $(INCLUDES)
 CHECKFLAGS := -Wall -Wuninitialized -Wundef
