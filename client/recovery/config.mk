@@ -59,6 +59,13 @@ else
 CFLAGS += -g -DLOCAL_DEBUG -DDEBUG
 endif
 
+#
+# For Mini-zip lib crypt
+#
+# open to disable encryption support
+#
+#CFLAGS += -DNOUNCRYPT -DNOCRYPT
+
 LDLIBS += -pthread
 override CFLAGS := $(CHECKFLAGS) $(CFLAGS)
 
