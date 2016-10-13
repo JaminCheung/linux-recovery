@@ -237,7 +237,7 @@ int main(void) {
         LOGI("-------------------------");
         LOGI("image name: %s", image->name);
         LOGI("image fs type: %s", image->fs_type);
-        LOGI("image offset: 0x%x", image->offset);
+        LOGI("image offset: 0x%x", (uint32_t) image->offset);
         LOGI("image size: %llu", image->size);
         LOGI("image update mode: 0x%x", image->update_mode);
         LOGI("image chunksize: %du", image->chunksize);
@@ -372,15 +372,15 @@ int main(void) {
     LOGI("=========================");
     LOGI("Dump %s", DEVICE_FILE);
     LOGI("device type: %s", device_info.type);
-    LOGI("device capacity: 0x%x", device_info.capacity);
+    LOGI("device capacity: 0x%x", (uint32_t) device_info.capacity);
 
     struct partition_info* partition;
     list_for_each(pos, &device_info.partition_list) {
         partition = list_entry(pos, struct partition_info, head);
         LOGI("-------------------------");
         LOGI("part name: %s", partition->name);
-        LOGI("part offset: 0x%x", partition->offset);
-        LOGI("part size: 0x%x", partition->size);
+        LOGI("part offset: 0x%x", (uint32_t) partition->offset);
+        LOGI("part size: 0x%x", (uint32_t) partition->size);
         LOGI("part mtd name: %s", partition->block_name);
     }
 

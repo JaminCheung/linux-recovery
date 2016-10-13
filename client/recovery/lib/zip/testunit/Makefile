@@ -16,13 +16,13 @@ TESTUNIT_OBJS := main.o                                                        \
           $(TOPDIR)/lib/zlib/zlib-1.2.8/zutil.o                                \
           $(TOPDIR)/lib/zlib/zlib-1.2.8/compress.o                             \
           $(TOPDIR)/lib/zlib/zlib-1.2.8/uncompr.o                              \
-          $(TOPDIR)/lib/zlib/zlib-1.2.8/gzclose.o                              \
-          $(TOPDIR)/lib/zlib/zlib-1.2.8/gzlib.o                                \
-          $(TOPDIR)/lib/zlib/zlib-1.2.8/gzread.o                               \
-          $(TOPDIR)/lib/zlib/zlib-1.2.8/gzwrite.o                              \
           $(TOPDIR)/lib/zip/minizip/ioapi.o                                    \
           $(TOPDIR)/lib/zip/minizip/unzip.o                                    \
           $(TOPDIR)/lib/zip/minizip/zip.o
+#          $(TOPDIR)/lib/zlib/zlib-1.2.8/gzclose.o                              \
+          $(TOPDIR)/lib/zlib/zlib-1.2.8/gzlib.o                                \
+          $(TOPDIR)/lib/zlib/zlib-1.2.8/gzread.o                               \
+          $(TOPDIR)/lib/zlib/zlib-1.2.8/gzwrite.o                              \
 
 .PHONY : all clean
 

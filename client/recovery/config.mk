@@ -44,7 +44,7 @@ STRIP := $(CROSS_COMPILE)strip
 #
 # Compiler & Linker options
 #
-ARFLAGS = rcv
+ARFLAGS := rcv
 INCLUDES := -I$(TOPDIR)/include                                                \
             -I$(TOPDIR)/include/lib                                            \
             -I$(TOPDIR)/include/lib/zlib                                       \
@@ -65,6 +65,11 @@ endif
 # open to disable encryption support
 #
 #CFLAGS += -DNOUNCRYPT -DNOCRYPT
+
+#
+# For open large file > 2GB
+#
+#CFLAGS += -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE
 
 LDLIBS += -pthread
 override CFLAGS := $(CHECKFLAGS) $(CFLAGS)

@@ -8,13 +8,15 @@
 
 int main(int argc, char* argv[])
 {
-    char text[] = "zlib compress and uncompress test\n";
-    uLong tlen = strlen(text) + 1;
-    char* buf = NULL;
+    Bytef text[] = "zlib compress and uncompress test\n";
+    uLong tlen = 0;
+    Bytef* buf = NULL;
     uLong blen;
 
+    tlen = (uLong) strlen((const char*) text) + 1;
+
     blen = compressBound(tlen);
-    if((buf = (char*)malloc(sizeof(char) * blen)) == NULL) {
+    if((buf = (Bytef*) malloc(sizeof(char) * blen)) == NULL) {
         LOGE("Failed to allocate memory");
         return -1;
     }

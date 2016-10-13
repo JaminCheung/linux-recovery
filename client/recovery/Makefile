@@ -81,13 +81,13 @@ LIBS-y += lib/zlib/zlib-1.2.8/adler32.o                                        \
           lib/zlib/zlib-1.2.8/zutil.o                                          \
           lib/zlib/zlib-1.2.8/compress.o                                       \
           lib/zlib/zlib-1.2.8/uncompr.o                                        \
-          lib/zlib/zlib-1.2.8/gzclose.o                                        \
-          lib/zlib/zlib-1.2.8/gzlib.o                                          \
-          lib/zlib/zlib-1.2.8/gzread.o                                         \
-          lib/zlib/zlib-1.2.8/gzwrite.o                                        \
           lib/zip/minizip/ioapi.o                                              \
           lib/zip/minizip/unzip.o                                              \
           lib/zip/minizip/zip.o
+#          lib/zlib/zlib-1.2.8/gzclose.o                                        \
+          lib/zlib/zlib-1.2.8/gzlib.o                                          \
+          lib/zlib/zlib-1.2.8/gzread.o                                         \
+          lib/zlib/zlib-1.2.8/gzwrite.o                                        \
 
 #
 # MTD Lib
@@ -186,7 +186,7 @@ testunit_clean:
 	make -C lib/zlib/testunit clean
 	make -C lib/ini/testunit clean
 	make -C lib/gpio/testunit clean
-	make -C lib/zip/testunit all
+	make -C lib/zip/testunit clean
 
 $(TARGET): $(OBJS) $(LIBS)
 	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(OBJS) $(LIBS) $(LDFLAGS) $(LDLIBS)

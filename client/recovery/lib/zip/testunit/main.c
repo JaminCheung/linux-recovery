@@ -6,6 +6,8 @@
 #include <fcntl.h>
 # include <unistd.h>
 # include <utime.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <utils/log.h>
 #include <lib/zip/minizip/zip.h>
@@ -16,10 +18,6 @@
 #define CASESENSITIVITY (0)
 #define WRITEBUFFERSIZE (8192)
 #define MAXFILENAME (256)
-
-#define FOPEN_FUNC(filename, mode) fopen64(filename, mode)
-#define FTELLO_FUNC(stream) ftello64(stream)
-#define FSEEKO_FUNC(stream, offset, origin) fseeko64(stream, offset, origin)
 
 void do_help() {
     printf(
@@ -38,7 +36,7 @@ int mymkdir(const char* dirname) {
     return ret;
 }
 
-int makedir(char *newdir) {
+int makedir(const char *newdir) {
     char *buffer;
     char *p;
     int len = (int) strlen(newdir);
@@ -93,7 +91,6 @@ int do_extract_currentfile(unzFile uf, const int* popt_extract_without_path,
     uInt size_buf;
 
     unz_file_info64 file_info;
-    uLong ratio = 0;
     err = unzGetCurrentFileInfo64(uf, &file_info, filename_inzip,
             sizeof(filename_inzip), NULL, 0, NULL, 0);
 
@@ -135,7 +132,7 @@ int do_extract_currentfile(unzFile uf, const int* popt_extract_without_path,
             LOGE("error %d with zipfile in unzOpenCurrentFilePassword", err);
 
         if (err == UNZ_OK) {
-            fout = FOPEN_FUNC(write_filename, "wb");
+            fout = fopen(write_filename, "wb");
             /* some zipfile don't contain directory alone before file */
             if ((fout == NULL) && ((*popt_extract_without_path) == 0)
                     && (filename_withoutpath != (char*) filename_inzip)) {
@@ -143,7 +140,7 @@ int do_extract_currentfile(unzFile uf, const int* popt_extract_without_path,
                 *(filename_withoutpath - 1) = '\0';
                 makedir(write_filename);
                 *(filename_withoutpath - 1) = c;
-                fout = FOPEN_FUNC(write_filename, "wb");
+                fout = fopen(write_filename, "wb");
             }
 
             if (fout == NULL) {
@@ -189,7 +186,6 @@ int do_extract(unzFile uf, int opt_extract_without_path, const char* password) {
     uLong i;
     unz_global_info64 gi;
     int err;
-    FILE* fout = NULL;
 
     err = unzGetGlobalInfo64(uf, &gi);
     if (err != UNZ_OK)
@@ -221,7 +217,6 @@ int main(int argc, char *argv[]) {
     int opt_do_extract = 1;
     int opt_extractdir = 0;
     int opt_do_extract_withoutpath = 0;
-    int opt_overwrite = 0;
     const char *dirname = NULL;
     unzFile uf = NULL;
 
