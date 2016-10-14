@@ -122,6 +122,17 @@ LIBS-y += lib/config/libconfig-1.5/lib/scanner.o                               \
           lib/config/libconfig-1.5/lib/grammar.o
 
 #
+# Mincrypt Lib (From Android 5.1)
+#
+LIBS-y += lib/mincrypt/dsa_sig.o                                               \
+          lib/mincrypt/p256.o                                                  \
+          lib/mincrypt/p256_ec.o                                               \
+          lib/mincrypt/p256_ecdsa.o                                            \
+          lib/mincrypt/rsa.o                                                   \
+          lib/mincrypt/sha.o                                                   \
+          lib/mincrypt/sha256.o
+
+#
 # Input Lib
 #
 LIBS-y +=
@@ -178,6 +189,7 @@ testunit:
 	make -C lib/ini/testunit all
 	make -C lib/gpio/testunit all
 	make -C lib/zip/testunit all
+	make -C lib/mincrypt/testunit all
 
 testunit_clean:
 	make -C lib/mxml/testunit clean
@@ -187,13 +199,14 @@ testunit_clean:
 	make -C lib/ini/testunit clean
 	make -C lib/gpio/testunit clean
 	make -C lib/zip/testunit clean
+	make -C lib/mincrypt/testunit clean
 
 $(TARGET): $(OBJS) $(LIBS)
 	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(OBJS) $(LIBS) $(LDFLAGS) $(LDLIBS)
 	@$(STRIP) $(OUTDIR)/$@
 	@echo -e '\n  Recovery: $(shell basename $(OUTDIR))/$@ is ready\n'
 
-clean: testunit_clean
+clean:
 	rm -rf $(OUTDIR) $(OBJS) $(LIBS)
 
 distclean: clean
