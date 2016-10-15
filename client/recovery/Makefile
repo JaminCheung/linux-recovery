@@ -42,6 +42,8 @@ OBJS-y += utils/configure_file.o                                               \
           utils/signal_handler.o                                               \
           utils/compare_string.o                                               \
           utils/assert.o                                                       \
+          utils/verifier.o                                                     \
+          utils/file_ops.o                                                     \
           utils/common.o
 
 #
@@ -122,15 +124,12 @@ LIBS-y += lib/config/libconfig-1.5/lib/scanner.o                               \
           lib/config/libconfig-1.5/lib/grammar.o
 
 #
-# Mincrypt Lib (From Android 5.1)
+# Mincrypt Lib (From Android 4.3)
 #
-LIBS-y += lib/mincrypt/dsa_sig.o                                               \
-          lib/mincrypt/p256.o                                                  \
-          lib/mincrypt/p256_ec.o                                               \
-          lib/mincrypt/p256_ecdsa.o                                            \
-          lib/mincrypt/rsa.o                                                   \
-          lib/mincrypt/sha.o                                                   \
-          lib/mincrypt/sha256.o
+LIBS-y += lib/mincrypt/rsa.o                                                   \
+          lib/mincrypt/rsa_e_3.o                                               \
+          lib/mincrypt/rsa_e_f4.o                                              \
+          lib/mincrypt/sha.o
 
 #
 # Input Lib
@@ -176,7 +175,7 @@ LIBS := $(LIBS-y)
 #
 all: $(TARGET)
 
-.PHONY : all testunit testunit_clean clean
+.PHONY : all testunit testunit_clean clean backup
 
 #
 # Test unit
@@ -189,7 +188,6 @@ testunit:
 	make -C lib/ini/testunit all
 	make -C lib/gpio/testunit all
 	make -C lib/zip/testunit all
-	make -C lib/mincrypt/testunit all
 
 testunit_clean:
 	make -C lib/mxml/testunit clean
@@ -199,7 +197,6 @@ testunit_clean:
 	make -C lib/ini/testunit clean
 	make -C lib/gpio/testunit clean
 	make -C lib/zip/testunit clean
-	make -C lib/mincrypt/testunit clean
 
 $(TARGET): $(OBJS) $(LIBS)
 	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(OBJS) $(LIBS) $(LDFLAGS) $(LDLIBS)

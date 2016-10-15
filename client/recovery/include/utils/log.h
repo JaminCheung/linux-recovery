@@ -19,6 +19,7 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #ifdef LOCAL_DEBUG
 #define DEBUG_TRACE 1
@@ -26,16 +27,19 @@
 #define DEBUG_TRACE 0
 #endif
 
+static pthread_mutex_t log_init_lock = PTHREAD_MUTEX_INITIALIZER;
+
 #define TAG_BASE "Recovery--->"
 
 #define LOGV(...)                                                              \
     do {                                                                       \
       int save_errno = errno;                                                  \
+      pthread_mutex_lock(&log_init_lock);                                      \
       fprintf(stderr, "V/%s%s %d: ", TAG_BASE, LOG_TAG, __LINE__);             \
       errno = save_errno;                                                      \
       fprintf(stderr, __VA_ARGS__);                                            \
-      fprintf(stderr, "\n");                                                   \
       fflush(stderr);                                                          \
+      pthread_mutex_unlock(&log_init_lock);                                    \
       errno = save_errno;                                                      \
     } while (0)
 
@@ -43,11 +47,12 @@
     do {                                                                       \
       if (DEBUG_TRACE) {                                                       \
           int save_errno = errno;                                              \
+          pthread_mutex_lock(&log_init_lock);                                  \
           fprintf(stderr, "D/%s%s %d: ", TAG_BASE, LOG_TAG, __LINE__);         \
           errno = save_errno;                                                  \
           fprintf(stderr, __VA_ARGS__);                                        \
-          fprintf(stderr, "\n");                                               \
           fflush(stderr);                                                      \
+          pthread_mutex_unlock(&log_init_lock);                                \
           errno = save_errno;                                                  \
       }                                                                        \
     } while (0)
@@ -55,33 +60,36 @@
 #define LOGI(...)                                                              \
     do {                                                                       \
       int save_errno = errno;                                                  \
+      pthread_mutex_lock(&log_init_lock);                                      \
       fprintf(stderr, "I/%s%s %d: ", TAG_BASE, LOG_TAG, __LINE__);             \
       errno = save_errno;                                                      \
       fprintf(stderr, __VA_ARGS__);                                            \
-      fprintf(stderr, "\n");                                                   \
       fflush(stderr);                                                          \
+      pthread_mutex_unlock(&log_init_lock);                                    \
       errno = save_errno;                                                      \
     } while (0)
 
 #define LOGW(...)                                                              \
     do {                                                                       \
       int save_errno = errno;                                                  \
+      pthread_mutex_lock(&log_init_lock);                                      \
       fprintf(stderr, "W/%s%s %d: ", TAG_BASE, LOG_TAG, __LINE__);             \
       errno = save_errno;                                                      \
       fprintf(stderr, __VA_ARGS__);                                            \
-      fprintf(stderr, "\n");                                                   \
       fflush(stderr);                                                          \
+      pthread_mutex_unlock(&log_init_lock);                                    \
       errno = save_errno;                                                      \
     } while (0)
 
 #define LOGE(...)                                                              \
     do {                                                                       \
       int save_errno = errno;                                                  \
+      pthread_mutex_lock(&log_init_lock);                                      \
       fprintf(stderr, "E/%s%s %d: ", TAG_BASE, LOG_TAG, __LINE__);             \
       errno = save_errno;                                                      \
       fprintf(stderr, __VA_ARGS__);                                            \
-      fprintf(stderr, "\n");                                                   \
       fflush(stderr);                                                          \
+      pthread_mutex_unlock(&log_init_lock);                                    \
       errno = save_errno;                                                      \
     } while (0)
 #endif /* LOG_H_ */
