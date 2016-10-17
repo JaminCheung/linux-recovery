@@ -34,7 +34,7 @@ struct recovery_handler {
 #endif
     struct signal_handler* sh;
     struct configure_file* cf;
-    struct flash_manager* fm;
+    struct block_manager* bm;
 
     bool storage_medium_insert;
     pthread_cond_t storage_medium_status_cond;

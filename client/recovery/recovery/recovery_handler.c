@@ -43,7 +43,7 @@
 #include <utils/configure_file.h>
 #include <utils/signal_handler.h>
 #include <eeprom/eeprom_manager.h>
-#include <flash/flash_manager.h>
+#include <block/block_manager.h>
 #include <recovery/recovery_handler.h>
 #include <lib/md5/libmd5.h>
 
@@ -558,7 +558,7 @@ static bool upgrade_bootloader(struct recovery_handler* this, const char* path) 
 
     char* part_name = this->cf_data->bootloader_name;
 
-    struct mtd_dev_info* info = this->fm->get_mtd_dev_info_by_name(this->fm,
+    struct mtd_dev_info* info = this->bm->get_mtd_dev_info_by_name(this->bm,
             part_name);
 
     if (!info) {
@@ -568,13 +568,13 @@ static bool upgrade_bootloader(struct recovery_handler* this, const char* path) 
 
     LOGI("Going to upgrade bootloader from: %s", path);
 
-    error = this->fm->partition_erase(this->fm, part_name);
+    error = this->bm->partition_erase(this->bm, part_name);
     if (error < 0) {
         LOGE("Failed to earse partition: %s", part_name);
         goto error;
     }
 
-    error = this->fm->partition_write(this->fm, part_name, path);
+    error = this->bm->partition_write(this->bm, part_name, path);
     if (error < 0) {
         LOGE("Failed to write partition: %s", part_name);
         goto error;
@@ -613,7 +613,7 @@ static bool upgrade_kernel(struct recovery_handler* this, const char* path) {
         part_name = this->cf_data->kernel_name;
     }
 
-    struct mtd_dev_info* info = this->fm->get_mtd_dev_info_by_name(this->fm,
+    struct mtd_dev_info* info = this->bm->get_mtd_dev_info_by_name(this->bm,
             part_name);
 
     if (!info) {
@@ -623,13 +623,13 @@ static bool upgrade_kernel(struct recovery_handler* this, const char* path) {
 
     LOGI("Going to upgrade kernel from: %s", path);
 
-    error = this->fm->partition_erase(this->fm, part_name);
+    error = this->bm->partition_erase(this->bm, part_name);
     if (error < 0) {
         LOGE("Failed to earse partition: %s", part_name);
         goto error;
     }
 
-    error = this->fm->partition_write(this->fm, part_name, path);
+    error = this->bm->partition_write(this->bm, part_name, path);
     if (error < 0) {
         LOGE("Failed to write partition: %s", part_name);
         goto error;
@@ -655,7 +655,7 @@ static bool upgrade_splash(struct recovery_handler* this, const char* path) {
 
     char* part_name = this->cf_data->splash_name;
 
-    struct mtd_dev_info* info = this->fm->get_mtd_dev_info_by_name(this->fm,
+    struct mtd_dev_info* info = this->bm->get_mtd_dev_info_by_name(this->bm,
             part_name);
 
     if (!info) {
@@ -665,13 +665,13 @@ static bool upgrade_splash(struct recovery_handler* this, const char* path) {
 
     LOGI("Going to upgrade splash from: %s", path);
 
-    error = this->fm->partition_erase(this->fm, part_name);
+    error = this->bm->partition_erase(this->bm, part_name);
     if (error < 0) {
         LOGE("Failed to earse partition: %s", part_name);
         goto error;
     }
 
-    error = this->fm->partition_write(this->fm, part_name, path);
+    error = this->bm->partition_write(this->bm, part_name, path);
     if (error < 0) {
         LOGE("Failed to write partition: %s", part_name);
         goto error;
@@ -719,7 +719,7 @@ static bool upgrade_rootfs(struct recovery_handler* this, const char* path,
             part_name = this->cf_data->rootfs_name;
         }
 
-        struct mtd_dev_info* info = this->fm->get_mtd_dev_info_by_name(this->fm,
+        struct mtd_dev_info* info = this->bm->get_mtd_dev_info_by_name(this->bm,
                 part_name);
 
         if (!info) {
@@ -727,13 +727,13 @@ static bool upgrade_rootfs(struct recovery_handler* this, const char* path,
             goto error;
         }
 
-        error = this->fm->partition_erase(this->fm, part_name);
+        error = this->bm->partition_erase(this->bm, part_name);
         if (error < 0) {
             LOGE("Failed to earse partition: %s", part_name);
             goto error;
         }
 
-        error = this->fm->partition_write(this->fm, part_name, path);
+        error = this->bm->partition_write(this->bm, part_name, path);
         if (error < 0) {
             LOGE("Failed to write partition: %s", part_name);
             goto error;
@@ -794,7 +794,7 @@ static bool upgrade_userfs(struct recovery_handler* this, const char* path,
 
         char* part_name = this->cf_data->userfs_name;
 
-        struct mtd_dev_info* info = this->fm->get_mtd_dev_info_by_name(this->fm,
+        struct mtd_dev_info* info = this->bm->get_mtd_dev_info_by_name(this->bm,
                 part_name);
 
         if (!info) {
@@ -802,13 +802,13 @@ static bool upgrade_userfs(struct recovery_handler* this, const char* path,
             goto error;
         }
 
-        error = this->fm->partition_erase(this->fm, part_name);
+        error = this->bm->partition_erase(this->bm, part_name);
         if (error < 0) {
             LOGE("Failed to earse partition: %s", part_name);
             goto error;
         }
 
-        error = this->fm->partition_write(this->fm, part_name, path);
+        error = this->bm->partition_write(this->bm, part_name, path);
         if (error < 0) {
             LOGE("Failed to write partition: %s", part_name);
             goto error;
@@ -1424,11 +1424,11 @@ void construct_recovery_handler(struct recovery_handler* this) {
     /*
      * instance flash manager
      */
-    this->fm = (struct flash_manager*) malloc(sizeof(struct flash_manager));
-    this->fm->construct = construct_flash_manager;
-    this->fm->destruct = destruct_flash_manager;
-    this->fm->construct(this->fm, NULL, NULL);
-    this->fm->init_libmtd(this->fm);
+    this->bm = (struct block_manager*) malloc(sizeof(struct block_manager));
+    this->bm->construct = construct_block_manager;
+    this->bm->destruct = destruct_block_manager;
+    this->bm->construct(this->bm, NULL, NULL);
+    this->bm->init_libmtd(this->bm);
 
 #if (defined CONFIG_BOARD_HAS_EEPROM) && (CONFIG_BOARD_HAS_EEPROM == true)
     /*
@@ -1472,7 +1472,7 @@ void destruct_recovery_handler(struct recovery_handler* this) {
     /*
      * destruct flash manager
      */
-    this->fm->destruct(this->fm);
+    this->bm->destruct(this->bm);
 
 #if (defined CONFIG_BOARD_HAS_EEPROM) && (CONFIG_BOARD_HAS_EEPROM == true)
     /*
