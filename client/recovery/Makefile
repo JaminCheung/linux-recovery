@@ -27,6 +27,8 @@ AUTOCONF := $(INCLUDES)/autoconf.h
 #
 OBJS-y += main.o
 
+OBJS-y += ota/ota_manager.o
+
 #
 # Netlink
 #
