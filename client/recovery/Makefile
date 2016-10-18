@@ -47,13 +47,10 @@ OBJS-y += utils/configure_file.o                                               \
           utils/common.o
 
 #
-# Block Manager
+# Flash Manager
 #
-OBJS-y += block/block_manager.o
-OBJS-y += block/blocks/mtd.o
-OBJS-y += block/blocks/mmc.o
-OBJS-y += block/fs/ubifs.o
-OBJS-y += block/fs/yaffs2.o
+OBJS-y += flash/flash_manager.o
+OBJS-y += flash/ubi/ubi.o
 
 #
 # Recovery Handler
@@ -99,7 +96,7 @@ LIBS-y += lib/zlib/zlib-1.2.8/adler32.o                                        \
 #
 LIBS-y += lib/mtd/libmtd_legacy.o                                              \
           lib/mtd/libmtd.o                                                     \
-          #lib/mtd/ubi/libubi.o                                                 \
+          lib/mtd/ubi/libubi.o                                                 \
           lib/mtd/ubi/libubigen.o                                              \
           lib/mtd/ubi/libscan.o
 

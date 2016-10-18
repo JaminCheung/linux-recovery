@@ -1,1 +1,0 @@
-#define YAFFS2_TAG_SIZE 28
