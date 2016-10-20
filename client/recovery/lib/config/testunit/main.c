@@ -74,5 +74,7 @@ int main(void) {
     LOGI("url: %s", app_config.url);
     LOGI("=====================");
 
+    config_destroy(&cfg);
+
     return 0;
 }

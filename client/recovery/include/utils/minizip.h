@@ -14,30 +14,10 @@
  *
  */
 
-#include <stdbool.h>
-#include <stdarg.h>
-#include <stdlib.h>
+#ifndef MINIZIP_H
+#define MINIZIP_H
 
-#include <utils/log.h>
+int unzip(const char* path, const char* dir, const char* password,
+        int junk_path);
 
-#define LOG_TAG "assert"
-
-#define BUF_SIZE    (1024 * 1)
-
-void assert_die_if(bool condition, const char* fmt, ...) {
-    if (!condition)
-        return;
-
-    va_list ap;
-    char buf[BUF_SIZE] = { 0 };
-
-    va_start(ap, fmt);
-    vsnprintf(buf, BUF_SIZE, fmt, ap);
-    va_end(ap);
-
-    LOGE("============ Assert Failed ============\n");
-    LOGE("Message: %s", buf);
-    LOGE("========== Assert Failed End ==========\n");
-
-    exit(-1);
-}
+#endif

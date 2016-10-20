@@ -92,7 +92,7 @@ static int set_flags(struct net_interface* this, unsigned int set,
 
     int error = ioctl(this->socket, SIOCGIFFLAGS, &ifr);
     if (error < 0) {
-        LOGE("ioctl(socket, SIOCGIFFLAGS, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCGIFFLAGS, &ifr) failed: %s\n", strerror(errno));
         return error;
     }
 
@@ -100,7 +100,7 @@ static int set_flags(struct net_interface* this, unsigned int set,
 
     error = ioctl(this->socket, SIOCSIFFLAGS, &ifr);
     if (error < 0)
-        LOGE("ioctl(socket, SIOCSIFFLAGS, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCSIFFLAGS, &ifr) failed: %s\n", strerror(errno));
 
     return error;
 }
@@ -109,24 +109,24 @@ static int init_socket(struct net_interface* this) {
     if (this->socket == -1) {
         this->socket = socket(AF_INET, SOCK_DGRAM, 0);
         if (this->socket < 0)
-            LOGE("Failed to create AF_INET socket: %s", strerror(errno));
+            LOGE("Failed to create AF_INET socket: %s\n", strerror(errno));
     }
 
     if (this->icmp_socket == -1) {
         this->icmp_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
         if (this->icmp_socket < 0) {
-            LOGE("Failed to create AF_INET icmp socket: %s", strerror(errno));
+            LOGE("Failed to create AF_INET icmp socket: %s\n", strerror(errno));
             return -1;
 
         } else {
             int flag = 0;
             if (fcntl(this->icmp_socket, F_GETFL, 0) < 0) {
-                LOGE("Failed to get icmp socket flag: %s", strerror(errno));
+                LOGE("Failed to get icmp socket flag: %s\n", strerror(errno));
                 return -1;
             }
 
             if (fcntl(this->icmp_socket, F_SETFL, flag | O_NONBLOCK) < 0) {
-                LOGE("Failed to set icmp socket flag: %s", strerror(errno));
+                LOGE("Failed to set icmp socket flag: %s\n", strerror(errno));
                 return -1;
             }
 
@@ -171,8 +171,8 @@ static bool icmp_echo(struct net_interface* this, const char* host, int timeout)
     struct sockaddr_in dest;
     pid_t pid = -1;
 
-    assert_die_if(host == NULL, "server address is null");
-    assert_die_if(timeout <= 0, "timeout is unavailable");
+    assert_die_if(host == NULL, "server address is null\n");
+    assert_die_if(timeout <= 0, "timeout is unavailable\n");
 
     memset(&dest, 0, sizeof(dest));
 
@@ -193,11 +193,11 @@ static bool icmp_echo(struct net_interface* this, const char* host, int timeout)
         icmp_pkt->icmp_cksum = cal_chksum((unsigned short *) send_packet,
                 packet_size);
 
-        LOGI("Start sending icmp packet to %s, try %d", host, try_count);
+        LOGD("Start sending icmp packet to %s, try %d\n", host, try_count);
         n = sendto(this->icmp_socket, send_packet, packet_size, 0,
                 (struct sockaddr *) &dest, sizeof(struct sockaddr_in));
         if (n != packet_size) {
-            LOGE("Failed to send icmp packet to %s: %s", host, strerror(errno));
+            LOGE("Failed to send icmp packet to %s: %s\n", host, strerror(errno));
             return false;
         }
 
@@ -228,13 +228,13 @@ static bool icmp_echo(struct net_interface* this, const char* host, int timeout)
             icmp_pkt = (struct icmp *) (recv_packet + (ip_hdr->ihl << 2));
             if (icmp_pkt->icmp_id == pid
                     || icmp_pkt->icmp_type == ICMP_ECHOREPLY) {
-                LOGI("Sucess to sending icmp packet to %s", host);
+                LOGD("Sucess to sending icmp packet to %s\n", host);
                 return true;
             }
         }
     }
 
-    LOGE("Failed to send icmp packet to %s: %s", host, strerror(errno));
+    LOGE("Failed to send icmp packet to %s: %s\n", host, strerror(errno));
 
     return false;
 }
@@ -245,7 +245,7 @@ static int get_hwaddr(struct net_interface* this, unsigned char* hwaddr) {
 
     int error = ioctl(this->socket, SIOCGIFHWADDR, &ifr);
     if (error < 0) {
-        LOGE("ioctl(socket, SIOCGIFHWADDR, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCGIFHWADDR, &ifr) failed: %s\n", strerror(errno));
         return error;
     }
 
@@ -263,7 +263,7 @@ static int set_hwaddr(struct net_interface* this, const unsigned char* hwaddr) {
 
     int error = ioctl(this->socket, SIOCSIFHWADDR, &ifr);
     if (error < 0)
-        LOGE("ioctl(socket, SIOCSIFHWADDR, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCSIFHWADDR, &ifr) failed: %s\n", strerror(errno));
 
     return error;
 }
@@ -274,7 +274,7 @@ static int get_addr(struct net_interface* this, in_addr_t* addr) {
 
     int error = ioctl(this->socket, SIOCGIFADDR, &ifr);
     if (error < 0) {
-        LOGE("ioctl(socket, SIOCGIFADDR, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCGIFADDR, &ifr) failed: %s\n", strerror(errno));
         return error;
     }
 
@@ -290,7 +290,7 @@ static int set_addr(struct net_interface* this, in_addr_t addr) {
 
     int error = ioctl(this->socket, SIOCSIFADDR, &ifr);
     if (error < 0)
-        LOGE("ioctl(socket, SIOCSIFADDR, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCSIFADDR, &ifr) failed: %s\n", strerror(errno));
 
     return error;
 }
@@ -319,7 +319,7 @@ __attribute__((unused)) static cable_state_t cable_detect_ethtool(struct net_int
 
     int err = ioctl(this->socket, SIOCETHTOOL, &ifr);
     if (err) {
-        LOGE("ioctl(socket, SIOCETHTOOL, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCETHTOOL, &ifr) failed: %s\n", strerror(errno));
         return CABLE_STATE_ERR;
     }
 
@@ -339,14 +339,14 @@ __attribute__((unused)) static cable_state_t cable_detect_priv(
 
     int err = ioctl(this->socket, SIOCDEVPRIVATE, &ifr);
     if (err) {
-        LOGE("ioctl(socket, SIOCDEVPRIVATE, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCDEVPRIVATE, &ifr) failed: %s\n", strerror(errno));
         return CABLE_STATE_ERR;
     }
 
     ((unsigned short*) &ifr.ifr_data)[1] = 1;
     err = ioctl(this->socket, SIOCDEVPRIVATE + 1, &ifr);
     if (err) {
-        LOGE("ioctl(socket, SIOCDEVPRIVATE + 1, &ifr) failed: %s",
+        LOGE("ioctl(socket, SIOCDEVPRIVATE + 1, &ifr) failed: %s\n",
                 strerror(errno));
         return CABLE_STATE_ERR;
     }
@@ -368,7 +368,7 @@ __attribute__((unused)) static cable_state_t cable_detect_iff(
 
     int err = ioctl(this->socket, SIOCGIFFLAGS, &ifr);
     if (err) {
-        LOGE("ioctl(socket, SIOCGIFFLAGS, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCGIFFLAGS, &ifr) failed: %s\n", strerror(errno));
         return CABLE_STATE_ERR;
     }
 
@@ -389,14 +389,14 @@ __attribute__((unused)) static cable_state_t cable_detect_mii(
 
     int err = ioctl(this->socket, SIOCGMIIPHY, &ifr);
     if (err) {
-        LOGE("ioctl(socket, SIOCGMIIPHY, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCGMIIPHY, &ifr) failed: %s\n", strerror(errno));
         return CABLE_STATE_ERR;
     }
 
     ((unsigned short*) &ifr.ifr_data)[1] = 1;
     err = ioctl(this->socket, SIOCGMIIREG, &ifr);
     if (err) {
-        LOGE("ioctl(socket, SIOCGMIIREG, &ifr) failed: %s", strerror(errno));
+        LOGE("ioctl(socket, SIOCGMIIREG, &ifr) failed: %s\n", strerror(errno));
         return CABLE_STATE_ERR;
     }
 
@@ -469,7 +469,7 @@ static int start_cable_detector(struct net_interface* this,
 
     retval = pthread_create(&tid, NULL, detector_loop, (void *) this);
     if (retval) {
-        LOGE("pthread_create failed: %s", strerror(errno));
+        LOGE("pthread_create failed: %s\n", strerror(errno));
         return -1;
     }
 

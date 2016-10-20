@@ -108,7 +108,7 @@ static const char *find_param(struct netlink_event* this,
             return ++ptr;
     }
 
-    LOGE("Parameter '%s' not found", param_name);
+    LOGE("Parameter '%s' not found\n", param_name);
 
     return NULL;
 }
@@ -125,18 +125,18 @@ static void dump(struct netlink_event* this) {
     static const char *action[] = { "", "add", "remove", "change" };
     int i;
 
-    LOGD("========================================");
-    LOGD("Dump uevent.");
-    LOGD("NL seqnum \'%d\'", this->seq);
-    LOGD("NL subsytem \'%s\'", this->subsystem);
-    LOGD("NL devpath \'%s\'", this->path);
-    LOGD("NL action \'%s\'", action[this->action]);
+    LOGD("========================================\n");
+    LOGD("Dump uevent\n");
+    LOGD("NL seqnum \'%d\'\n", this->seq);
+    LOGD("NL subsytem \'%s\'\n", this->subsystem);
+    LOGD("NL devpath \'%s\'\n", this->path);
+    LOGD("NL action \'%s\'\n", action[this->action]);
     for (i = 0; i < NL_PARAMS_MAX; i++) {
         if (!this->params[i])
             break;
-        LOGD("NL param \'%s\'", this->params[i]);
+        LOGD("NL param \'%s\'\n", this->params[i]);
     }
-    LOGD("========================================");
+    LOGD("========================================\n");
 }
 
 void construct_netlink_event(struct netlink_event* this) {

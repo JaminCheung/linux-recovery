@@ -39,7 +39,7 @@ static int start_listener(struct netlink_listener *this) {
     int retval = 0;
 
     if (pipe(this->pipe)) {
-        LOGE("Unable to open pipe: %s", strerror(errno));
+        LOGE("Unable to open pipe: %s\n", strerror(errno));
         return -1;
     }
 
@@ -50,7 +50,7 @@ static int start_listener(struct netlink_listener *this) {
 
     retval = pthread_create(&tid, &attr, thread_loop, (void *) this);
     if (retval) {
-        LOGE("pthread_create failed: %s", strerror(errno));
+        LOGE("pthread_create failed: %s\n", strerror(errno));
         pthread_attr_destroy(&attr);
         return -1;
     }
@@ -63,7 +63,7 @@ static int start_listener(struct netlink_listener *this) {
 static int stop_listener(struct netlink_listener *this) {
     char c = 0;
     if (!write(this->pipe[1], &c, 1)) {
-        LOGE("Unable to write pipe: %s", strerror(errno));
+        LOGE("Unable to write pipe: %s\n", strerror(errno));
         return -1;
     }
 
@@ -72,6 +72,7 @@ static int stop_listener(struct netlink_listener *this) {
 
 static void register_handler(struct netlink_listener* this,
         struct netlink_handler* handler) {
+    assert_die_if(handler == NULL, "handler is NULL\n");
 
     while ((this->head) != NULL) {
         if (handler->get_priority(handler) > this->head->get_priority(handler))
@@ -132,11 +133,11 @@ static void *thread_loop(void *param) {
         if (fds[0].revents & POLLIN) {
             count = recv(this->socket, this->buffer, sizeof(this->buffer), 0);
             if (count < 0) {
-                LOGE("netlink event recv failed: %s", strerror(errno));
+                LOGE("netlink event recv failed: %s\n", strerror(errno));
                 goto restart;
             }
 
-            struct netlink_event* event = (struct netlink_event *) malloc(
+            struct netlink_event* event = (struct netlink_event *) calloc(1,
                     sizeof(struct netlink_event));
 
             event->construct = construct_netlink_event;
@@ -144,7 +145,7 @@ static void *thread_loop(void *param) {
             event->construct(event);
 
             if (event->decode(event, this->buffer, count, this->format) < 0) {
-                LOGE("Error decoding netlink_event");
+                LOGE("Error decoding netlink_event\n");
                 event->destruct(event);
                 free(event);
                 goto restart;
@@ -161,11 +162,11 @@ static void *thread_loop(void *param) {
             char c;
             retval = read(fds[1].fd, &c, 1);
             if (!retval) {
-                LOGE("Unable to read pipe: %s", strerror(errno));
+                LOGE("Unable to read pipe: %s\n", strerror(errno));
                 continue;
             }
 
-            LOGI("main thread call me break out.");
+            LOGI("main thread call me break out\n");
             break;
         }
     }

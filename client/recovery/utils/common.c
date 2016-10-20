@@ -1,3 +1,19 @@
+/*
+ *  Copyright (C) 2016, Zhang YanMing <jamincheung@126.com>
+ *
+ *  Linux recovery updater
+ *
+ *  This program is free software; you can redistribute it and/or modify it
+ *  under  the terms of the GNU General  Public License as published by the
+ *  Free Software Foundation;  either version 2 of the License, or (at your
+ *  option) any later version.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ */
+
 #include <sys/time.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -5,6 +21,55 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
+#include <errno.h>
+
+#include <types.h>
+#include <utils/log.h>
+#include <utils/assert.h>
+#include <utils/file_ops.h>
+
+#define LOG_TAG "common"
+
+static const char* prefix_wget_path = "/usr/bin/wget";
+
+void msleep(uint64_t msec) {
+    struct timespec ts;
+    int err;
+
+    ts.tv_sec = (msec / 1000);
+    ts.tv_nsec = (msec % 1000) * 1000 * 1000;
+
+    do {
+        err = nanosleep(&ts, &ts);
+    } while (err < 0 && errno == EINTR);
+}
+
+int download_file(const char* file, const char* path) {
+    assert_die_if(file == NULL, "file is NULL\n");
+    assert_die_if(path == NULL, "path is NULL\n");
+
+    int error = 0;
+    int timeout = 3;
+
+    if (file_executable(prefix_wget_path) < 0) {
+        LOGE("%s not execuable\n", prefix_wget_path);
+        return -1;
+    }
+
+    do {
+        error = execl("/usr/bin/wget", "wget", "-c", file, "-O", path,
+                (char*) 0);
+        timeout--;
+    } while (error != 0 && timeout != 0);
+
+    if (error < 0 || timeout == 0) {
+        LOGE("Failed execl(): %s\n", strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
 
 /**
  * get_multiplier - convert size specifier to an integer multiplier.
@@ -14,8 +79,7 @@
  * 'KiB', 'MiB', or 'GiB' into an integer multiplier. Returns positive
  * size multiplier in case of success and %-1 in case of failure.
  */
-int get_multiplier(const char *str)
-{
+int get_multiplier(const char *str) {
     if (!str)
         return 1;
 
@@ -42,13 +106,12 @@ int get_multiplier(const char *str)
  * size specifiers. Returns positive amount of bytes in case of success and %-1
  * in case of failure.
  */
-long long get_bytes(const char *str)
-{
+long long get_bytes(const char *str) {
     char *endp;
     long long bytes = strtoull(str, &endp, 0);
 
     if (endp == str || bytes < 0) {
-        fprintf(stderr, "incorrect amount of bytes: \"%s\"\n", str);
+        LOGE("incorrect amount of bytes: \"%s\"\n", str);
         return -1;
     }
 
@@ -56,7 +119,7 @@ long long get_bytes(const char *str)
         int mult = get_multiplier(endp);
 
         if (mult == -1) {
-            fprintf(stderr, "bad size specifier: \"%s\" - "
+            LOGE("bad size specifier: \"%s\" - "
                     "should be 'KiB', 'MiB' or 'GiB'\n", endp);
             return -1;
         }
@@ -76,8 +139,7 @@ long long get_bytes(const char *str)
  * amount of Kilobytes, Megabytes, or Gigabytes, depending on how big @bytes
  * is.
  */
-void print_bytes(long long bytes, int bracket)
-{
+void print_bytes(long long bytes, int bracket) {
     const char *p;
 
     if (bracket)
@@ -85,18 +147,18 @@ void print_bytes(long long bytes, int bracket)
     else
         p = ", ";
 
-    printf("%lld bytes", bytes);
+    LOGI("%lld bytes", bytes);
 
     if (bytes > 1024 * 1024 * 1024)
-        printf("%s%.1f GiB", p, (double)bytes / (1024 * 1024 * 1024));
+        LOGI("%s%.1f GiB", p, (double)bytes / (1024 * 1024 * 1024));
     else if (bytes > 1024 * 1024)
-        printf("%s%.1f MiB", p, (double)bytes / (1024 * 1024));
+        LOGI("%s%.1f MiB", p, (double)bytes / (1024 * 1024));
     else if (bytes > 1024 && bytes != 0)
-        printf("%s%.1f KiB", p, (double)bytes / 1024);
+        LOGI("%s%.1f KiB", p, (double)bytes / 1024);
     else
         return;
 
     if (bracket)
-        printf(")");
+        LOGI(")");
 }
 

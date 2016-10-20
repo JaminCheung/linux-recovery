@@ -27,6 +27,9 @@ AUTOCONF := $(INCLUDES)/autoconf.h
 #
 OBJS-y += main.o
 
+#
+# OTA Manager
+#
 OBJS-y += ota/ota_manager.o
 
 #
@@ -40,11 +43,11 @@ OBJS-y += netlink/netlink_manager.o                                            \
 #
 # Utils
 #
-OBJS-y += utils/configure_file.o                                               \
-          utils/signal_handler.o                                               \
+OBJS-y += utils/signal_handler.o                                               \
           utils/compare_string.o                                               \
           utils/assert.o                                                       \
           utils/verifier.o                                                     \
+          utils/minizip.o                                                      \
           utils/file_ops.o                                                     \
           utils/common.o
 
@@ -57,7 +60,7 @@ OBJS-y += flash/ubi/ubi.o
 #
 # Recovery Handler
 #
-OBJS-y += recovery/recovery_handler.o
+OBJS-n += recovery/recovery_handler.o
 
 #
 # Net Interface
@@ -68,6 +71,12 @@ OBJS-y += net/net_interface.o
 # EEPROM Manager
 #
 OBJS-n += eeprom/eeprom_manager.o
+
+#
+# Configure & Update Parser
+#
+OBJS-y += configure/configure_file.o                                           \
+          configure/update_file.o
 
 OBJS := $(OBJS-y)
 

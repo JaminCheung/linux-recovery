@@ -20,6 +20,10 @@
 struct ota_manager {
     void (*construct)(struct ota_manager* this);
     void (*destruct)(struct ota_manager* this);
+    int (*start)(struct ota_manager* this);
+    int (*stop)(struct ota_manager* this);
+    struct netlink_handler* (*get_hotplug_handler)(struct ota_manager* this);
+    struct netlink_handler* nh;
 };
 
 void construct_ota_manager(struct ota_manager* this);

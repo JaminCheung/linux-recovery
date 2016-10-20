@@ -51,7 +51,7 @@ int i2c_write_1b(struct eeprom_manager* this, unsigned char* buf) {
 
     retval = i2c_smbus_write_byte(this->fd, buf[0]);
     if (retval < 0)
-        LOGE("Failed to write 1 byte: %s", strerror(errno));
+        LOGE("Failed to write 1 byte: %s\n", strerror(errno));
 
     usleep(50);
 
@@ -63,7 +63,7 @@ int i2c_write_2b(struct eeprom_manager* this, unsigned char* buf) {
 
     retval = i2c_smbus_write_byte_data(this->fd, buf[0], buf[1]);
     if (retval)
-        LOGE("Failed to write 2 bytes: %s", strerror(errno));
+        LOGE("Failed to write 2 bytes: %s\n", strerror(errno));
 
     usleep(50);
 
@@ -75,7 +75,7 @@ int i2c_write_3b(struct eeprom_manager* this, unsigned char *buf) {
 
     retval = i2c_smbus_write_word_data(this->fd, buf[0], buf[2] << 8 | buf[1]);
     if (retval)
-        LOGE("Failed to write 3 bytes: %s", strerror(errno));
+        LOGE("Failed to write 3 bytes: %s\n", strerror(errno));
 
     usleep(50);
 
@@ -149,7 +149,7 @@ static int eeprom_write(struct eeprom_manager* this, unsigned char* buf, int add
     for (i = 0; i < count; i++) {
         usleep(EEPROM_ACCESS_DELAY_US);
         retval = eeprom_write_byte(this, addr + i, buf[i]);
-        assert_die_if(retval < 0, "Failed to write eeprom: %s",
+        assert_die_if(retval < 0, "Failed to write eeprom: %s\n",
                 strerror(errno));
     }
 
@@ -163,7 +163,7 @@ static int eeprom_read(struct eeprom_manager* this, unsigned char* buf, int addr
     for (i = 0; i < count; i++) {
         usleep(EEPROM_ACCESS_DELAY_US);
         buf[i] = eeprom_read_byte(this, addr + i);
-        assert_die_if(buf[i] < 0, "Failed to read eeprom: %s", strerror(errno));
+        assert_die_if(buf[i] < 0, "Failed to read eeprom: %s\n", strerror(errno));
     }
 
     return 0;
@@ -218,16 +218,16 @@ static void eeprom_dev_init(struct eeprom_manager* this) {
 
     retval = lookup_bus_num_by_chip_addr(chip_addr);
     assert_die_if(retval < 0,
-            "Failed to init i2c device, check kernel configure or config.mk.");
+            "Failed to init i2c device, check kernel configure or config.mk\n");
     bus_num = retval;
 
     retval = i2c_smbus_open(bus_num);
-    assert_die_if(retval < 0, "Failed to open i2c bus %d: %s", bus_num,
+    assert_die_if(retval < 0, "Failed to open i2c bus %d: %s\n", bus_num,
             strerror(errno));
     this->fd = retval;
 
     retval = i2c_smbus_get_funcs_matrix(this->fd, &this->funcs);
-    assert_die_if(retval < 0, "Failed to get i2c functions: %s",
+    assert_die_if(retval < 0, "Failed to get i2c functions: %s\n",
             strerror(errno));
 
     CHECK_I2C_FUNC(this->funcs, I2C_FUNC_SMBUS_READ_BYTE);
@@ -238,7 +238,7 @@ static void eeprom_dev_init(struct eeprom_manager* this) {
     CHECK_I2C_FUNC(this->funcs, I2C_FUNC_SMBUS_WRITE_WORD_DATA);
 
     retval = i2c_smbus_set_slave_addr(this->fd, chip_addr, true);
-    assert_die_if(retval < 0, "Failed to set i2c slave addr: %s",
+    assert_die_if(retval < 0, "Failed to set i2c slave addr: %s\n",
             strerror(errno));
 }
 

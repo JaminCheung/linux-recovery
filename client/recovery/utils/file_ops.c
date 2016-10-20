@@ -23,10 +23,130 @@
 #include <errno.h>
 #include <dirent.h>
 #include <limits.h>
+#include <fcntl.h>
 
+#include <utils/log.h>
 #include <utils/assert.h>
+#include <lib/md5/libmd5.h>
 
 #define LOG_TAG "file_ops"
+
+#define READ_DATA_SIZE  1024
+#define MD5_SIZE        16
+#define MD5_STR_LEN     (MD5_SIZE * 2)
+
+int file_exist(const char *path) {
+
+    assert_die_if(path == NULL, "path is NULL");
+
+    if (access(path, F_OK | R_OK))
+        return -errno;
+
+    return 0;
+}
+
+int file_executable(const char *path) {
+
+    assert_die_if(path == NULL, "path is NULL");
+
+    if (access(path, F_OK | R_OK | X_OK))
+        return -errno;
+
+    return 0;
+}
+
+int check_file_md5(const char* path, const char* md5) {
+    int fd = 0;
+    int i;
+    int retval = 0;
+    unsigned char buf[READ_DATA_SIZE] = { 0 };
+    unsigned char md5_value[MD5_SIZE] = { 0 };
+    char md5_str[MD5_STR_LEN + 1] = { 0 };
+
+    MD5_CTX md5_ctx;
+
+    fd = open(path, O_RDONLY);
+    if (fd < 0)
+        return -1;
+
+    MD5Init(&md5_ctx);
+
+    for (;;) {
+        retval = read(fd, buf, sizeof(buf));
+        if (retval < 0) {
+            LOGE("Failed to read %s: %s\n", path, strerror(errno));
+            goto error;
+        }
+
+        MD5Update(&md5_ctx, buf, retval);
+
+        if (retval == 0 || retval < READ_DATA_SIZE)
+            break;
+    }
+
+    close(fd);
+
+    MD5Final(&md5_ctx, md5_value);
+
+    for (i = 0; i < MD5_SIZE; i++)
+        snprintf(md5_str + i * 2, 2 + 1, "%02x", md5_value[i]);
+
+    md5_str[MD5_STR_LEN] = '\0';
+
+    if (!strcmp(md5_str, md5))
+        return 0;
+
+    return -1;
+
+error:
+    close(fd);
+
+    return -1;
+}
+
+int dir_create(const char* path) {
+    char *buffer;
+    char *p;
+    int len = (int) strlen(path);
+
+    if (len <= 0)
+        return -1;
+
+    buffer = (char*) calloc(1, len + 1);
+    if (buffer == NULL)
+        return -1;
+
+    strcpy(buffer, path);
+
+    if (buffer[len - 1] == '/')
+        buffer[len - 1] = '\0';
+
+    if (mkdir(buffer, 0775) == 0) {
+        free(buffer);
+        return 0;
+    }
+
+    p = buffer + 1;
+
+    while (1) {
+        char hold;
+        while (*p && *p != '\\' && *p != '/')
+            p++;
+
+        hold = *p;
+        *p = 0;
+        if ((mkdir(buffer, 0775) == -1) && (errno == ENOENT)) {
+            free(buffer);
+            return -1;
+        }
+        if (hold == 0)
+            break;
+        *p++ = hold;
+    }
+    free(buffer);
+
+    return 0;
+}
 
 int dir_delete(const char *path) {
     struct stat st;

@@ -26,6 +26,7 @@
 #include <linux/netlink.h>
 
 #include <utils/log.h>
+#include <utils/assert.h>
 #include <netlink/netlink_handler.h>
 #include <netlink/netlink_manager.h>
 #include <netlink/netlink_listener.h>
@@ -37,7 +38,7 @@ static int start(struct netlink_manager *this) {
 
     retval = this->listener->start_listener(this->listener);
     if (retval) {
-        LOGE("Unable to start netlink_listener: %s", strerror(errno));
+        LOGE("Unable to start netlink_listener: %s\n", strerror(errno));
         return -1;
     }
 
@@ -46,7 +47,7 @@ static int start(struct netlink_manager *this) {
 
 static int stop(struct netlink_manager *this) {
     if (!this->listener->stop_listener(this->listener)) {
-        LOGE("Unable to stop netlink_listener: %s", strerror(errno));
+        LOGE("Unable to stop netlink_listener: %s\n", strerror(errno));
         return -1;
     }
 
@@ -61,6 +62,7 @@ static int stop(struct netlink_manager *this) {
 
 static void register_handler(struct netlink_manager* this,
         struct netlink_handler *handler) {
+    assert_die_if(handler == NULL, "handler is NULL\n");
     this->listener->register_handler(this->listener, handler);
 }
 
@@ -85,22 +87,22 @@ void construct_netlink_manager(struct netlink_manager *this) {
 
     this->socket = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
     if (this->socket < 0) {
-        LOGE("Unable to create uevent socket: %s", strerror(errno));
+        LOGE("Unable to create uevent socket: %s\n", strerror(errno));
         return;
     }
 
     if (setsockopt(this->socket, SOL_SOCKET, SO_RCVBUFFORCE, &size,
             sizeof(size)) < 0) {
-        LOGE("Unable to set uevent socket options: %s", strerror(errno));
+        LOGE("Unable to set uevent socket options: %s\n", strerror(errno));
         return;
     }
 
     if (bind(this->socket, (struct sockaddr *) &nladdr, sizeof(nladdr)) < 0) {
-        LOGE("Unable to bind uevent socket: %s", strerror(errno));
+        LOGE("Unable to bind uevent socket: %s\n", strerror(errno));
         return;
     }
 
-    this->listener = (struct netlink_listener *) malloc(
+    this->listener = (struct netlink_listener *) calloc(1,
             sizeof(struct netlink_listener));
     this->listener->construct = construct_netlink_listener;
     this->listener->destruct = destruct_netlink_listener;

@@ -14,30 +14,20 @@
  *
  */
 
-#include <stdbool.h>
-#include <stdarg.h>
-#include <stdlib.h>
+#ifndef CONFIGURE_FILE_H
+#define CONFIGURE_FILE_H
 
-#include <utils/log.h>
+struct configure_file {
+    void (*construct)(struct configure_file* this);
+    void (*destruct)(struct configure_file* this);
+    int (*parse)(struct configure_file* this, const char* path);
+    void (*dump)(struct configure_file* this);
+    char *version;
+    char *server_ip;
+    char *server_url;
+};
 
-#define LOG_TAG "assert"
+void construct_configure_file(struct configure_file* this);
+void destruct_configure_file(struct configure_file* this);
 
-#define BUF_SIZE    (1024 * 1)
-
-void assert_die_if(bool condition, const char* fmt, ...) {
-    if (!condition)
-        return;
-
-    va_list ap;
-    char buf[BUF_SIZE] = { 0 };
-
-    va_start(ap, fmt);
-    vsnprintf(buf, BUF_SIZE, fmt, ap);
-    va_end(ap);
-
-    LOGE("============ Assert Failed ============\n");
-    LOGE("Message: %s", buf);
-    LOGE("========== Assert Failed End ==========\n");
-
-    exit(-1);
-}
+#endif /* CONFIGURE_FILE_H */
