@@ -173,16 +173,10 @@ static int mount_volume(struct mount_manager* this, const char* device,
         return -1;
     }
 
-    error = mount(device, mount_point, filesystem,
-            MS_NOATIME | MS_NODEV | MS_NODIRATIME, "");
-    if (error < 0) {
-        LOGE("Failed to mount %s: %s\n", mount_point, strerror(errno));
-        return -1;
-    }
-#if 0
-    if (!strcmp(filesystem, "ext4")
-            || strcmp(filesystem, "vfat")
-            || strcmp(filesystem, "ntfs")) {
+    if (!strcmp(filesystem, "ext4") ||
+            !strcmp(filesystem, "vfat") ||
+            !strcmp(filesystem, "ntfs")) {
+
         error = mount(device, mount_point, filesystem,
                 MS_NOATIME | MS_NODEV | MS_NODIRATIME, "");
         if (error < 0) {
@@ -191,11 +185,9 @@ static int mount_volume(struct mount_manager* this, const char* device,
         }
 
     } else {
-        LOGE("Unsupport file system: \"%s\" for \"%s\"\n", filesystem ,
-                mount_point);
+        LOGE("Unsupport mount \"%s\" yet\n", filesystem);
         return -1;
     }
-#endif
     return 0;
 }
 
