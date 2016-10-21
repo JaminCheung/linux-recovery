@@ -107,6 +107,9 @@ error:
 int dir_create(const char* path) {
     char *buffer;
     char *p;
+
+    assert_die_if(path == NULL, "path is NULL\n");
+
     int len = (int) strlen(path);
 
     if (len <= 0)

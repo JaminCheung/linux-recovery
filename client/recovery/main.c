@@ -49,7 +49,7 @@ static void print_version() {
 static void print_help() {
     fprintf(stderr, "Usage: recovery [options] file\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "    -f <configure file>\tConfigure file\n");
+    fprintf(stderr, "    -c <configure file>\tConfigure file\n");
     fprintf(stderr, "    -k <RSA public key>\tRSA public key file\n");
     fprintf(stderr, "    -v\t\t\tDisplay version infomation\n");
     fprintf(stderr, "    -h\t\t\tDisplay this information\n");

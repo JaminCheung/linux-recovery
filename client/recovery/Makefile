@@ -75,6 +75,11 @@ OBJS-n += recovery/recovery_handler.o
 OBJS-y += net/net_interface.o
 
 #
+# Mount Manager
+#
+OBJS-y += mount/mount_manager.o
+
+#
 # EEPROM Manager
 #
 OBJS-n += eeprom/eeprom_manager.o
