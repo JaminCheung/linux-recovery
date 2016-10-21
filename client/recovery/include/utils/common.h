@@ -34,7 +34,6 @@
     free((void *)(P));                      \
 })
 
-extern const char* configure_file_path;
 extern const char* public_key_path;
 
 void msleep(uint64_t msec);

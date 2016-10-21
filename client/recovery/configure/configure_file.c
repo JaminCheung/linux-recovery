@@ -28,10 +28,11 @@
 
 #define LOG_TAG "configure_file"
 
-static const char* prefix_application_group = "Application";
-static const char* prefix_version_key = "version";
-static const char* prefix_server_ip_key = "server_ip";
-static const char* prefix_server_url_key = "server_url";
+static const char* prefix_application = "Application";
+static const char* prefix_version = "Version";
+static const char* prefix_server_setting = "Server";
+static const char* prefix_server_ip = "ip";
+static const char* prefix_server_url = "url";
 
 static void dump(struct configure_file* this) {
     LOGI("=========================\n");
@@ -46,6 +47,7 @@ static int parse(struct configure_file* this, const char* path) {
     assert_die_if(path == NULL, "path is NULL");
 
     config_t cfg;
+    config_setting_t *setting;
     char *buf = NULL;
     const char* version = NULL;
     const char* server_ip = NULL;
@@ -62,7 +64,7 @@ static int parse(struct configure_file* this, const char* path) {
         goto error;
     }
 
-    if(!config_lookup_string(&cfg, prefix_version_key, &version)) {
+    if(!config_lookup_string(&cfg, prefix_version, &version)) {
         LOGE("Failed to lookup %s: line %d - %s\n", config_error_file(&cfg),
                 config_error_line(&cfg), config_error_text(&cfg));
         goto error;
@@ -74,20 +76,25 @@ static int parse(struct configure_file* this, const char* path) {
         goto error;
     }
 
-    asprintf(&buf, "%s.%s", prefix_application_group, prefix_server_ip_key);
-    if(!config_lookup_string(&cfg, buf, &server_ip)) {
+    asprintf(&buf, "%s.%s", prefix_application, prefix_server_setting);
+    setting = config_lookup(&cfg, buf);
+    if (setting == NULL) {
         LOGE("Failed to lookup %s: line %d - %s\n", config_error_file(&cfg),
                 config_error_line(&cfg), config_error_text(&cfg));
         goto error;
     }
-    this->server_ip = strdup(server_ip);
 
-    asprintf(&buf, "%s.%s", prefix_application_group, prefix_server_url_key);
-    if(!config_lookup_string(&cfg, buf, &server_url)) {
-        LOGE("Failed to lookup %s: line %d - %s\n", config_error_file(&cfg),
-                config_error_line(&cfg), config_error_text(&cfg));
-        goto error;
+    int count = config_setting_length(setting);
+    for (int i = 0; i < count; i++) {
+        if(!(config_setting_lookup_string(setting, prefix_server_ip, &server_ip)
+             && config_setting_lookup_string(setting, prefix_server_url, &server_url)))
+          continue;
     }
+
+    if (server_ip == NULL || server_url == NULL)
+        goto error;
+
+    this->server_ip = strdup(server_ip);
     this->server_url = strdup(server_url);
 
     free(buf);

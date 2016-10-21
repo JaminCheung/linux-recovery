@@ -19,6 +19,7 @@ struct config_file app_config;
 
 int main(void) {
     config_t cfg;
+    config_setting_t *setting;
 
     config_init(&cfg);
 
@@ -32,7 +33,7 @@ int main(void) {
     }
 
     /* Get the store name. */
-    if(!config_lookup_string(&cfg, "version", &app_config.version)) {
+    if(!config_lookup_string(&cfg, "Version", &app_config.version)) {
         LOGE("%s:%d - %s\n", config_error_file(&cfg),
                 config_error_line(&cfg), config_error_text(&cfg));
         config_destroy(&cfg);
@@ -47,32 +48,24 @@ int main(void) {
         return -1;
     }
 
-    /*
-     * Get server ip address
-     */
-    if(!config_lookup_string(&cfg, "Application.server_ip", &app_config.ip)) {
-        LOGE("%s:%d - %s\n", config_error_file(&cfg),
-                config_error_line(&cfg), config_error_text(&cfg));
-        config_destroy(&cfg);
-        return -1;
+    setting = config_lookup(&cfg, "Application.Server");
+    if (setting != NULL) {
+        int count = config_setting_length(setting);
+        int i;
+
+        for(i = 0; i < count; ++i) {
+            if(!(config_setting_lookup_string(setting, "ip", &app_config.ip)
+                 && config_setting_lookup_string(setting, "url", &app_config.url)))
+              continue;
+        }
     }
 
-    /*
-     * Get server url
-     */
-    if(!config_lookup_string(&cfg, "Application.server_url", &app_config.url)) {
-        LOGE("%s:%d - %s\n", config_error_file(&cfg),
-                config_error_line(&cfg), config_error_text(&cfg));
-        config_destroy(&cfg);
-        return -1;
-    }
-
-    LOGI("=====================");
-    LOGI("Dump %s", CONFIG_FILE);
-    LOGI("version: %s", app_config.version);
-    LOGI("ip: %s", app_config.ip);
-    LOGI("url: %s", app_config.url);
-    LOGI("=====================");
+    LOGI("=====================\n");
+    LOGI("Dump %s\n", CONFIG_FILE);
+    LOGI("version: %s\n", app_config.version);
+    LOGI("ip: %s\n", app_config.ip);
+    LOGI("url: %s\n", app_config.url);
+    LOGI("=====================\n");
 
     config_destroy(&cfg);
 

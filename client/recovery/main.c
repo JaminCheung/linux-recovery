@@ -23,7 +23,6 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <pthread.h>
 
 #include <version.h>
 #include <utils/log.h>
@@ -33,13 +32,13 @@
 #include <utils/assert.h>
 #include <utils/common.h>
 #include <ota/ota_manager.h>
+#include <configure/configure_file.h>
 
 #define LOG_TAG "main"
 
 static const char* temporary_log_file = "/tmp/recovery.log";
 static const char* opt_string = "vhc:k:";
 
-const char* configure_file_path;
 const char* public_key_path;
 
 static void print_version() {
@@ -116,6 +115,7 @@ __attribute__((__unused__)) static void redirect_stdio() {
 }
 
 int main(int argc, char* argv[]) {
+    const char* configure_file_path = NULL;
     int opt = 0;
 
     if (argc < 2) {
@@ -157,6 +157,15 @@ int main(int argc, char* argv[]) {
 
     if (configure_file_path == NULL || public_key_path == NULL) {
         print_help();
+        return -1;
+    }
+
+    /*
+     * Instance configure_file
+     */
+    struct configure_file* cf = _new(struct configure_file, configure_file);
+    if (cf->parse(cf, configure_file_path) < 0) {
+        LOGE("Failed to parse %s: %s\n", configure_file_path, strerror(errno));
         return -1;
     }
 
