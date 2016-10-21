@@ -52,10 +52,17 @@ OBJS-y += utils/signal_handler.o                                               \
           utils/common.o
 
 #
-# Flash Manager
+# Block Manager
 #
-OBJS-y += flash/flash_manager.o
-OBJS-y += flash/ubi/ubi.o
+OBJS-y += block/block_manager.o
+OBJS-y += block/blocks/mtd/mtd.o
+OBJS-y += block/blocks/mmc.o
+OBJS-y += block/fs/fs_manager.o
+OBJS-y += block/fs/normal.o
+OBJS-y += block/fs/jffs2.o
+OBJS-y += block/fs/cramfs.o
+OBJS-y += block/fs/ubifs.o
+OBJS-y += block/fs/yaffs2.o
 
 #
 # Recovery Handler
@@ -107,7 +114,7 @@ LIBS-y += lib/zlib/zlib-1.2.8/adler32.o                                        \
 #
 LIBS-y += lib/mtd/libmtd_legacy.o                                              \
           lib/mtd/libmtd.o                                                     \
-          lib/mtd/ubi/libubi.o                                                 \
+          #lib/mtd/ubi/libubi.o                                                 \
           lib/mtd/ubi/libubigen.o                                              \
           lib/mtd/ubi/libscan.o
 
