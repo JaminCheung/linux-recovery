@@ -32,14 +32,15 @@ struct mount_manager {
     void (*destruct)(struct mount_manager* this);
     void (*scan_mounted_volumes)(struct mount_manager* this);
     void (*dump_mounted_volumes)(struct mount_manager* this);
-    const struct mounted_volume*
+    struct mounted_volume*
         (*find_mounted_volume_by_device)(struct mount_manager* this, const char* device);
-    const struct mounted_volume*
+    struct mounted_volume*
         (*find_mounted_volume_by_mount_point)(struct mount_manager* this, const char* mount_point);
     int (*umount_volume)(struct mount_manager* this,
             struct mounted_volume* volume);
     int (*mount_volume)(struct mount_manager* this, const char* device,
             const char* mount_point, const char* filesystem);
+    const char** supported_filesystem_list;
     struct list_head list;
 };
 

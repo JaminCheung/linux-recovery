@@ -30,6 +30,13 @@
 
 #define PROC_MOUNTS_FILENAME "/proc/mounts"
 
+const char* supported_filesystem_list[] = {
+        "vfat",
+        "ntfs",
+        "ext4",
+        NULL
+};
+
 static void dump_mounted_volumes(struct mount_manager* this) {
     struct list_head* pos;
 
@@ -98,7 +105,7 @@ static void scan_mounted_volumes(struct mount_manager* this) {
     fclose(fp);
 }
 
-static const struct mounted_volume*
+static struct mounted_volume*
     find_mounted_volume_by_device(struct mount_manager* this,
             const char* device) {
     assert_die_if(device == NULL, "device is NULL\n");
@@ -116,7 +123,7 @@ static const struct mounted_volume*
     return NULL;
 }
 
-static const struct mounted_volume*
+static struct mounted_volume*
     find_mounted_volume_by_mount_point(struct mount_manager* this,
             const char* mount_point) {
     assert_die_if(mount_point == NULL, "mount_point is NULL\n");
@@ -153,6 +160,26 @@ static int mount_volume(struct mount_manager* this, const char* device,
 
     dir_create(mount_point);
 
+    int i;
+    for (i = 0; supported_filesystem_list[i]; i++) {
+        const char* fs = supported_filesystem_list[i];
+        if (!strcmp(fs, filesystem))
+            break;
+    }
+
+    if (supported_filesystem_list[i] == NULL) {
+        LOGE("Unsupport file system: \"%s\" for \"%s\"\n", filesystem ,
+                mount_point);
+        return -1;
+    }
+
+    error = mount(device, mount_point, filesystem,
+            MS_NOATIME | MS_NODEV | MS_NODIRATIME, "");
+    if (error < 0) {
+        LOGE("Failed to mount %s: %s\n", mount_point, strerror(errno));
+        return -1;
+    }
+#if 0
     if (!strcmp(filesystem, "ext4")
             || strcmp(filesystem, "vfat")
             || strcmp(filesystem, "ntfs")) {
@@ -168,7 +195,7 @@ static int mount_volume(struct mount_manager* this, const char* device,
                 mount_point);
         return -1;
     }
-
+#endif
     return 0;
 }
 
@@ -199,11 +226,10 @@ void construct_mount_manager(struct mount_manager* this) {
     this->find_mounted_volume_by_mount_point = find_mounted_volume_by_mount_point;
     this->mount_volume = mount_volume;
     this->umount_volume = umount_volume;
+    this->supported_filesystem_list = supported_filesystem_list;
     this->dump_mounted_volumes = dump_mounted_volumes;
 
     INIT_LIST_HEAD(&this->list);
-
-    scan_mounted_volumes(this);
 }
 
 void destruct_mount_manager(struct mount_manager* this) {
