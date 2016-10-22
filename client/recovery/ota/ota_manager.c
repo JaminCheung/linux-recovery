@@ -14,9 +14,10 @@
  *
  */
 
-#define _GNU_SOURCE
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/reboot.h>
 
 #include <utils/log.h>
 #include <utils/assert.h>
@@ -24,6 +25,8 @@
 #include <utils/common.h>
 #include <utils/compare_string.h>
 #include <utils/file_ops.h>
+#include <utils/minizip.h>
+#include <utils/verifier.h>
 #include <netlink/netlink_event.h>
 #include <ota/ota_manager.h>
 
@@ -151,14 +154,15 @@ static void handle_block_event(struct netlink_handler* nh,
 
 static void handle_event(struct netlink_handler* nh,
         struct netlink_event* event) {
+    const char* subsystem = event->get_subsystem(event);
 
-    if (!strcmp(event->get_subsystem(event), "block"))
+    if (!strcmp(subsystem, "block"))
         event->dump(event);
 
-    if (!strcmp(event->get_subsystem(event), "block")) {
+    if (!strcmp(subsystem, "block")) {
         handle_block_event(nh, event);
 
-    } else if (!strcmp(event->get_subsystem(event), "net")) {
+    } else if (!strcmp(subsystem, "net")) {
         handle_net_event(nh, event);
     }
 }
@@ -222,7 +226,19 @@ static void umount_all(struct ota_manager* this) {
 static void recovery_finish(int error) {
     LOGI("Recovery finish %s!\n", !error ? "success" : "failure");
 
-    exit(error);
+    sync();
+
+    if (error < 0) {
+        reboot(RB_POWER_OFF);
+
+    } else {
+        reboot(RB_AUTOBOOT);
+    }
+
+    for (;;) {
+        LOGE("Should not come here...\n");
+        sleep(1);
+    }
 }
 
 static int update_from_storage(struct ota_manager* this) {

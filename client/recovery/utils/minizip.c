@@ -14,8 +14,6 @@
  *
  */
 
-#include "../include/utils/minizip.h"
-
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <limits.h>
@@ -24,6 +22,7 @@
 
 #include <utils/log.h>
 #include <utils/assert.h>
+#include <utils/minizip.h>
 #include <lib/zip/minizip/zip.h>
 #include <lib/zip/minizip/unzip.h>
 
