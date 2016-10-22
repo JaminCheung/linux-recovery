@@ -23,6 +23,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <errno.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <types.h>
 #include <utils/log.h>
@@ -32,6 +35,51 @@
 #define LOG_TAG "common"
 
 static const char* prefix_wget_path = "/usr/bin/wget";
+
+static void do_cold_boot(DIR *d, int lvl) {
+    struct dirent *de;
+    int dfd, fd;
+
+    dfd = dirfd(d);
+
+    fd = openat(dfd, "uevent", O_WRONLY);
+    if (fd >= 0) {
+        if (write(fd, "add\n", 4) < 0)
+            close(fd);
+        else
+            close(fd);
+    }
+
+    while ((de = readdir(d))) {
+        DIR *d2;
+
+        if (de->d_name[0] == '.')
+            continue;
+
+        if (de->d_type != DT_DIR && lvl > 0)
+            continue;
+
+        fd = openat(dfd, de->d_name, O_RDONLY | O_DIRECTORY);
+        if (fd < 0)
+            continue;
+
+        d2 = fdopendir(fd);
+        if (d2 == 0)
+            close(fd);
+        else {
+            do_cold_boot(d2, lvl + 1);
+            closedir(d2);
+        }
+    }
+}
+
+void cold_boot(const char *path) {
+    DIR *d = opendir(path);
+    if (d) {
+        do_cold_boot(d, 0);
+        closedir(d);
+    }
+}
 
 void msleep(uint64_t msec) {
     struct timespec ts;

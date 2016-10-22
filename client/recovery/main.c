@@ -19,10 +19,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #include <version.h>
 #include <utils/log.h>
@@ -53,51 +49,6 @@ static void print_help() {
     fprintf(stderr, "    -k <RSA public key>\tRSA public key file\n");
     fprintf(stderr, "    -v\t\t\tDisplay version infomation\n");
     fprintf(stderr, "    -h\t\t\tDisplay this information\n");
-}
-
-static void do_cold_boot(DIR *d, int lvl) {
-    struct dirent *de;
-    int dfd, fd;
-
-    dfd = dirfd(d);
-
-    fd = openat(dfd, "uevent", O_WRONLY);
-    if (fd >= 0) {
-        if (write(fd, "add\n", 4) < 0)
-            close(fd);
-        else
-            close(fd);
-    }
-
-    while ((de = readdir(d))) {
-        DIR *d2;
-
-        if (de->d_name[0] == '.')
-            continue;
-
-        if (de->d_type != DT_DIR && lvl > 0)
-            continue;
-
-        fd = openat(dfd, de->d_name, O_RDONLY | O_DIRECTORY);
-        if (fd < 0)
-            continue;
-
-        d2 = fdopendir(fd);
-        if (d2 == 0)
-            close(fd);
-        else {
-            do_cold_boot(d2, lvl + 1);
-            closedir(d2);
-        }
-    }
-}
-
-static void cold_boot(const char *path) {
-    DIR *d = opendir(path);
-    if (d) {
-        do_cold_boot(d, 0);
-        closedir(d);
-    }
 }
 
 __attribute__((__unused__)) static void redirect_stdio() {
@@ -178,8 +129,9 @@ int main(int argc, char* argv[]) {
      * Instances ota_manager
      */
     struct ota_manager *om = _new(struct ota_manager, ota_manager);
+    om->load_configure(om, cf);
 
-    nm->register_handler(nm, om->get_hotplug_handler(om));
+    nm->register_handler(nm, om->nh);
 
     /*
      * Start ota manager
@@ -196,9 +148,6 @@ int main(int argc, char* argv[]) {
         LOGE("Unable to start netlink_manager\n");
         goto error;
     }
-
-    cold_boot("/sys/block");
-    cold_boot("/sys/class/net");
 
     while (true)
         sleep(1000);

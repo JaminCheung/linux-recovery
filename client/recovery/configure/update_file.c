@@ -49,8 +49,6 @@ static int parse_update_xml(struct update_file* this, const char* path) {
     mxml_node_t *node = NULL;
     mxml_node_t *sub_node = NULL;
 
-    INIT_LIST_HEAD(&this->update_info.list);
-
     fp = fopen(path, "r");
     if (fp == NULL) {
         LOGE("Failed to open %s: %s", path, strerror(errno));
@@ -239,8 +237,6 @@ static int parse_device_xml(struct update_file* this, const char *path) {
     mxml_node_t *node = NULL;
     mxml_node_t *sub_node = NULL;
 
-    INIT_LIST_HEAD(&this->device_info.list);
-
     fp = fopen(path, "r");
     if (fp == NULL) {
         LOGE("Failed to open %s: %s", path, strerror(errno));
@@ -379,6 +375,9 @@ static void dump_device_xml(struct update_file* this) {
 }
 
 void construct_update_file(struct update_file* this) {
+    INIT_LIST_HEAD(&this->update_info.list);
+    INIT_LIST_HEAD(&this->device_info.list);
+
     this->parse_device_xml = parse_device_xml;
     this->parse_update_xml = parse_update_xml;
     this->dump_device_xml = dump_device_xml;
@@ -386,6 +385,23 @@ void construct_update_file(struct update_file* this) {
 }
 
 void destruct_update_file(struct update_file* this) {
+    struct list_head* pos;
+    struct list_head* next_pos;
+
+    list_for_each_safe(pos, next_pos, &this->update_info.list) {
+        struct image_info* info = list_entry(pos, struct image_info, head);
+
+        list_del(&info->head);
+        free(info);
+    }
+
+    list_for_each_safe(pos, next_pos, &this->device_info.list) {
+        struct part_info* info = list_entry(pos, struct part_info, head);
+
+        list_del(&info->head);
+        free(info);
+    }
+
     this->parse_device_xml = NULL;
     this->parse_update_xml = NULL;
     this->dump_device_xml = NULL;

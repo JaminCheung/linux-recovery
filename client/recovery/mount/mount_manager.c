@@ -158,7 +158,11 @@ static int mount_volume(struct mount_manager* this, const char* device,
     if (volume)
         return 0;
 
-    dir_create(mount_point);
+    if (dir_create(mount_point)) {
+        LOGE("Failed to create mount point \"%s\": %s\n", mount_point,
+                strerror(errno));
+        return -1;
+    }
 
     int i;
     for (i = 0; supported_filesystem_list[i]; i++) {
@@ -170,7 +174,7 @@ static int mount_volume(struct mount_manager* this, const char* device,
     if (supported_filesystem_list[i] == NULL) {
         LOGE("Unsupport file system: \"%s\" for \"%s\"\n", filesystem ,
                 mount_point);
-        return -1;
+        goto error;
     }
 
     if (!strcmp(filesystem, "ext4") ||
@@ -180,15 +184,22 @@ static int mount_volume(struct mount_manager* this, const char* device,
         error = mount(device, mount_point, filesystem,
                 MS_NOATIME | MS_NODEV | MS_NODIRATIME, "");
         if (error < 0) {
-            LOGE("Failed to mount %s: %s\n", mount_point, strerror(errno));
-            return -1;
+            LOGE("Failed to mount \"%s\" to \"%s\" with \"%s\" : %s\n", device,
+                    mount_point, filesystem, strerror(errno));
+            goto error;
         }
 
     } else {
         LOGE("Unsupport mount \"%s\" yet\n", filesystem);
-        return -1;
+        goto error;
     }
+
     return 0;
+
+error:
+    dir_delete(mount_point);
+
+    return -1;
 }
 
 static int umount_volume(struct mount_manager* this,
@@ -202,9 +213,12 @@ static int umount_volume(struct mount_manager* this,
 
     error = umount(volume->mount_point);
     if (error < 0) {
-        LOGE("Failed to umount %s: %s\n", volume->mount_point, strerror(errno));
+        LOGE("Failed to umount \"%s\" from \"%s\": %s\n", volume->device,
+                volume->mount_point, strerror(errno));
         return -1;
     }
+
+    dir_delete(volume->mount_point);
 
     list_del(&volume->head);
     free(volume);
@@ -225,6 +239,17 @@ void construct_mount_manager(struct mount_manager* this) {
 }
 
 void destruct_mount_manager(struct mount_manager* this) {
+    struct list_head* pos;
+    struct list_head* next_pos;
+
+    list_for_each_safe(pos, next_pos, &this->list) {
+        struct mounted_volume* volume = list_entry(pos, struct mounted_volume,
+                head);
+
+        list_del(&volume->head);
+        free(volume);
+    }
+
     this->scan_mounted_volumes = NULL;
     this->find_mounted_volume_by_device = NULL;
     this->find_mounted_volume_by_mount_point = NULL;

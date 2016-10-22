@@ -108,7 +108,7 @@ static const char *find_param(struct netlink_event* this,
             return ++ptr;
     }
 
-    LOGE("Parameter '%s' not found\n", param_name);
+    LOGD("Parameter '%s' not found\n", param_name);
 
     return NULL;
 }

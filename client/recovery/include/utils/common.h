@@ -37,7 +37,7 @@
 extern const char* public_key_path;
 
 void msleep(uint64_t msec);
-
+void cold_boot(const char *path);
 int get_multiplier(const char *str);
 long long get_bytes(const char *str);
 void print_bytes(long long bytes, int bracket);
