@@ -239,10 +239,17 @@ static void recovery_finish(int error) {
     sync();
 
     if (error < 0) {
+#ifdef LOCAL_DEBUG
         reboot(RB_POWER_OFF);
-
+#else
+        exit(-1);
+#endif
     } else {
+#ifdef LOCAL_DEBUG
         reboot(RB_AUTOBOOT);
+#else
+        exit(0);
+#endif
     }
 
     for (;;) {
@@ -372,7 +379,15 @@ static int update_from_storage(struct ota_manager* this) {
 }
 
 static int update_from_network(struct ota_manager* this) {
-    return -1;
+    int error = 0;
+
+    error = this->ni->icmp_echo(this->ni, this->cf->server_ip, 2000);
+    if (error < 0) {
+        LOGE("Server \"%s\" is unreachable\n", this->cf->server_ip);
+        return -1;
+    }
+
+    return 0;
 }
 
 static void *main_task(void* param) {
@@ -428,6 +443,15 @@ void construct_ota_manager(struct ota_manager* this) {
      * Instance update file
      */
     this->uf = _new(struct update_file, update_file);
+
+    /*
+     * Instance net interface
+     */
+    this->ni = (struct net_interface*) calloc(1, sizeof(struct net_interface));
+    this->ni->construct = construct_net_interface;
+    this->ni->destruct = destruct_net_interface;
+    this->ni->construct(this->ni, NULL);
+    this->ni->init_socket(this->ni);
 }
 
 void destruct_ota_manager(struct ota_manager* this) {
@@ -456,4 +480,10 @@ void destruct_ota_manager(struct ota_manager* this) {
      */
     this->nh->deconstruct(this->nh);
     this->nh = NULL;
+
+    /*
+     * Destruct net_interface
+     */
+    this->ni->destruct(this->ni);
+    this->ni = NULL;
 }

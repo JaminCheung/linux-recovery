@@ -39,6 +39,7 @@
 
 #include <utils/log.h>
 #include <utils/assert.h>
+#include <utils/common.h>
 #include <net/net_interface.h>
 
 #define LOG_TAG "net_interface"
@@ -53,25 +54,14 @@
 #define ICMP_MAX_LEN            76
 #define IP_MAX_LEN              60
 
-struct ethtool_value
-{
+struct ethtool_value {
     unsigned int cmd;
     unsigned int data;
 };
 
-static void msleep(long long msec) {
-    struct timespec ts;
-    int err;
-
-    ts.tv_sec = (msec / 1000);
-    ts.tv_nsec = (msec % 1000) * 1000 * 1000;
-
-    do {
-        err = nanosleep(&ts, &ts);
-    } while (err < 0 && errno == EINTR);
-}
-
 static void init_ifr(struct net_interface* this, struct ifreq* ifr) {
+    assert_die_if(this->if_name == NULL, "if_name is NULL\n");
+
     memset(ifr, 0, sizeof(struct ifreq));
     strncpy(ifr->ifr_name, this->if_name, IFNAMSIZ);
     ifr->ifr_name[IFNAMSIZ - 1] = '\0';
@@ -160,7 +150,7 @@ static int cal_chksum(unsigned short *buf, int size) {
     return (~sum);
 }
 
-static bool icmp_echo(struct net_interface* this, const char* host, int timeout) {
+static int icmp_echo(struct net_interface* this, const char* host, int timeout) {
     int n;
     int packet_size;
     int try_count = 0;
@@ -198,7 +188,7 @@ static bool icmp_echo(struct net_interface* this, const char* host, int timeout)
                 (struct sockaddr *) &dest, sizeof(struct sockaddr_in));
         if (n != packet_size) {
             LOGE("Failed to send icmp packet to %s: %s\n", host, strerror(errno));
-            return false;
+            return -1;
         }
 
         while (1) {
@@ -229,14 +219,14 @@ static bool icmp_echo(struct net_interface* this, const char* host, int timeout)
             if (icmp_pkt->icmp_id == pid
                     || icmp_pkt->icmp_type == ICMP_ECHOREPLY) {
                 LOGD("Sucess to sending icmp packet to %s\n", host);
-                return true;
+                return 0;
             }
         }
     }
 
     LOGE("Failed to send icmp packet to %s: %s\n", host, strerror(errno));
 
-    return false;
+    return -1;
 }
 
 static int get_hwaddr(struct net_interface* this, unsigned char* hwaddr) {
@@ -510,7 +500,8 @@ void construct_net_interface(struct net_interface* this, const char* if_name) {
 
     this->detect_listener = NULL;
     this->detect_param = NULL;
-    this->if_name = strdup(if_name);
+    if (if_name)
+        this->if_name = strdup(if_name);
     this->socket = -1;
     this->icmp_socket = -1;
     this->detect_stopped = true;

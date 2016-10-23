@@ -9,3 +9,4 @@ core.*
 *.d.*
 out
 *.pyc
+recovery.tar.xz

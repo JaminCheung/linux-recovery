@@ -22,6 +22,7 @@
 #include <configure/update_file.h>
 #include <mount/mount_manager.h>
 #include <netlink/netlink_handler.h>
+#include <net/net_interface.h>
 
 struct storage_dev {
     char name[64];
@@ -40,6 +41,7 @@ struct ota_manager {
     struct mount_manager* mm;
     struct configure_file* cf;
     struct update_file* uf;
+    struct net_interface* ni;
     struct list_head storage_dev_list;
 };
 

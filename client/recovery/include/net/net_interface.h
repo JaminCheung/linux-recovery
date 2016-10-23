@@ -31,7 +31,7 @@ typedef void (*detect_listener_t)(void* param, bool state);
 struct net_interface {
     void (*construct)(struct net_interface* this, const char* if_name);
     void (*destruct)(struct net_interface* this);
-    bool (*icmp_echo)(struct net_interface* this, const char* server_addr, int timeout);
+    int (*icmp_echo)(struct net_interface* this, const char* server_addr, int timeout);
     int (*get_hwaddr)(struct net_interface* this, unsigned char *hwaddr);
     int (*set_hwaddr)(struct net_interface* this, const unsigned char* hwaddr);
     int (*get_addr)(struct net_interface* this, in_addr_t* addr);

@@ -80,6 +80,11 @@ OBJS-y += net/net_interface.o
 OBJS-y += mount/mount_manager.o
 
 #
+# Input Manager
+#
+OBJS-y += input/input_manager.o
+
+#
 # EEPROM Manager
 #
 OBJS-n += eeprom/eeprom_manager.o
@@ -153,11 +158,6 @@ LIBS-y += lib/mincrypt/rsa.o                                                   \
           lib/mincrypt/rsa_e_3.o                                               \
           lib/mincrypt/rsa_e_f4.o                                              \
           lib/mincrypt/sha.o
-
-#
-# Input Lib
-#
-LIBS-y +=
 
 #
 # Base64 Lib
