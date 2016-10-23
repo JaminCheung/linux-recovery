@@ -111,6 +111,10 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+#ifndef LOCAL_DEBUG
+    redirect_stdio();
+#endif
+
     /*
      * Instance configure_file
      */
