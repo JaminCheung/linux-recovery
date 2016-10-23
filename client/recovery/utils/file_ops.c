@@ -104,11 +104,29 @@ error:
     return -1;
 }
 
+
+int dir_exist(const char* path) {
+    assert_die_if(path == NULL, "path is NULL");
+
+    DIR* dp;
+
+    dp = opendir(path);
+    if (dp == NULL)
+        return -1;
+
+    closedir(dp);
+
+    return 0;
+}
+
 int dir_create(const char* path) {
     char *buffer;
     char *p;
 
     assert_die_if(path == NULL, "path is NULL\n");
+
+    if (!dir_exist(path))
+        return 0;
 
     int len = (int) strlen(path);
 

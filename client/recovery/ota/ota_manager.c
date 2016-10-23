@@ -18,6 +18,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/reboot.h>
+#include <dirent.h>
 
 #include <utils/log.h>
 #include <utils/assert.h>
@@ -32,8 +33,13 @@
 
 #define LOG_TAG "ota_manager"
 
-static const char* prefix_volume_mount_point = "/recovery-mount";
+static const char* prefix_device_xml = "partition.xml";
+static const char* prefix_update_xml = "update.xml";
+static const char* prefix_volume_mount_point = "/mnt";
 static const char* prefix_volume_device_path = "/dev";
+static const char* prefix_update_path = "recovery-update";
+static const char* prefix_update_info_pkg = "update000.zip";
+static const char* prefix_local_update_path = "/tmp/update";
 
 static void *main_task(void *param);
 
@@ -60,6 +66,8 @@ static inline int ensure_volume_mounted(struct ota_manager* this,
         return -1;
     }
 
+    this->mm->scan_mounted_volumes(this->mm);
+
     return 0;
 }
 
@@ -82,6 +90,8 @@ static inline int ensure_volume_unmounted(struct ota_manager* this,
                 strerror(errno));
         return -1;
     }
+
+    this->mm->scan_mounted_volumes(this->mm);
 
     return 0;
 }
@@ -241,13 +251,128 @@ static void recovery_finish(int error) {
     }
 }
 
+static int check_update_pkg(struct ota_manager* this, const char* path) {
+    int nkeys = 0;
+
+    RSAPublicKey* keys = load_keys(public_key_path, &nkeys);
+    if (keys == NULL) {
+        LOGE("Failed to load public keys from: %s\n", public_key_path);
+        return -1;
+    }
+
+    if (verify_file(path, keys, nkeys) < 0) {
+        LOGE("Failed to verify file: %s\n", path);
+        return -1;
+    }
+
+    return 0;
+}
+
+static struct mounted_volume* find_valid_update_volume(struct ota_manager* this) {
+    char path[PATH_MAX] = {0};
+    struct list_head* pos;
+
+    /*
+     * For each mounted volumes
+     */
+    list_for_each(pos, &this->mm->list) {
+        struct mounted_volume *volume = list_entry(pos, struct mounted_volume,
+                head);
+        sprintf(path, "%s/%s", volume->mount_point, prefix_update_path);
+
+        /*
+         * Check update dir on mounted vloume
+         */
+        if (dir_exist(path) < 0)
+            continue;
+
+        /*
+         * Verifier update000.zip
+         */
+        sprintf(path, "%s/%s", path, prefix_update_info_pkg);
+        if (file_exist(path) < 0 || check_update_pkg(this, path) < 0)
+            continue;
+
+        /*
+         * Create unzip dir
+         */
+        if (dir_create(prefix_local_update_path) < 0)
+            continue;
+
+        /*
+         * Un-zip update pkg
+         */
+        if (unzip(path, prefix_local_update_path, NULL, 1) < 0)
+            continue;
+
+        /*
+         * Parse & check device info
+         */
+        memset(path, 0, sizeof(path));
+        sprintf(path, "%s/%s", prefix_local_update_path, prefix_device_xml);
+        if (this->uf->parse_device_xml(this->uf, path) < 0)
+            continue;
+
+        this->uf->dump_device_xml(this->uf);
+
+        //TODO: check device info
+
+        /*
+         * Parse update info
+         */
+        memset(path, 0, sizeof(path));
+        sprintf(path, "%s/%s", prefix_local_update_path, prefix_update_xml);
+        if (this->uf->parse_update_xml(this->uf, path) < 0)
+            continue;
+        this->uf->dump_update_xml(this->uf);
+
+        uint32_t chunk_count = 0;
+        struct list_head* sub_pos;
+        list_for_each(sub_pos, &this->uf->update_info.list) {
+            struct image_info * info = list_entry(sub_pos, struct image_info,
+                    head);
+            if (info->chunkcount == 0)
+                chunk_count += 1;
+            else
+                chunk_count += info->chunkcount;
+        }
+
+        DIR * dir = opendir(prefix_local_update_path);
+        if (dir == NULL)
+            continue;
+
+        uint32_t pkg_count = 0;
+        struct dirent *de;
+        while ((de = readdir(dir)) != NULL) {
+            if (!strcmp(de->d_name, "..") || !strcmp(de->d_name, "."))
+                continue;
+
+            if (is_prefixed_with(de->d_name, "update")
+                    && is_suffixed_with(de->d_name, ".zip"))
+                pkg_count++;
+        }
+
+        if (chunk_count != (pkg_count - 1))
+            continue;
+    }
+
+    return NULL;
+}
+
 static int update_from_storage(struct ota_manager* this) {
+    struct mounted_volume *volume= find_valid_update_volume(this);
+
+    if (volume == NULL) {
+        LOGE("Failed to found valid volume contain update package\n");
+        return -1;
+    }
+
 
     return 0;
 }
 
 static int update_from_network(struct ota_manager* this) {
-    return 0;
+    return -1;
 }
 
 static void *main_task(void* param) {

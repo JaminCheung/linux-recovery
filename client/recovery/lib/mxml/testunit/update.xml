@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <update>
-    <devctl type="integer">1234</devctl>
+    <devctl type="integer">0</devctl>
 
     <imagelist count="3">
         <image>
