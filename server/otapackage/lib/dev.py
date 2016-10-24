@@ -8,6 +8,7 @@ from otapackage import config
 class Device(object):
 
     printer = None
+    partition_cnt = 0
     @base.struct('devinfo', 'partition')
     def __init__(self, *value):
         pass
@@ -78,12 +79,14 @@ class Device(object):
             Device.printer.debug("generate partition[\'%s\'] config" %(self.name))
             eroot = et.SubElement(element, 'item')
             element_name = et.SubElement(eroot, 'name')
+            element_name.attrib = {"type": config.xml_data_type_string}
             element_name.text = self.name
             element_type = et.SubElement(eroot, 'offset')
             element_type.text = '0x%x' % self.offset
             element_offset = et.SubElement(eroot, 'size')
             element_offset.text = '0x%x' % self.size
             element_size = et.SubElement(eroot, 'blockname')
+            element_size.attrib = {"type": config.xml_data_type_string}
             element_size.text = self.type
             return eroot
 
@@ -136,6 +139,7 @@ class Device(object):
         plist = ini_parser.get_options('partition')
         partitions = []
         section = 'partition'
+        cls.partition_cnt = len(plist)
         for i in range(0, len(plist)):
             item = ini_parser.get(section, plist[i])
             if plist[i] != "item%d"%(i+1):
@@ -212,11 +216,13 @@ class Device(object):
 
         devinfo_root = et.Element('devinfo')
         devinfo_type_root = et.SubElement(devinfo_root, 'type')
+        devinfo_type_root.attrib = {"type": config.xml_data_type_string}
         devinfo_type_root.text = self.devinfo.devtype
         devinfo_size_root = et.SubElement(devinfo_root, 'capacity')
-        devinfo_size_root.text = base.bytes2human(self.devinfo.devsize)
+        devinfo_size_root.text = '0x%x' % self.devinfo.devsize
 
         partition_root = et.Element('partition')
+        partition_root.attrib = {"count": "%s" %self.partition_cnt}
         for partition in self.partition:
             partition.generate_config(partition_root)
 

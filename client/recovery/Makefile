@@ -56,6 +56,7 @@ OBJS-y += utils/signal_handler.o                                               \
 #
 OBJS-y += block/block_manager.o
 OBJS-y += block/blocks/mtd/mtd.o
+OBJS-y += block/blocks/mtd/base.o
 OBJS-y += block/blocks/mmc.o
 OBJS-y += block/fs/fs_manager.o
 OBJS-y += block/fs/normal.o

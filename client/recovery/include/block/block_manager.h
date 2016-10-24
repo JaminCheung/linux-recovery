@@ -13,12 +13,13 @@
  *  675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
-#ifndef  BLOCK_MANAGER_H
+#ifndef BLOCK_MANAGER_H
 #define BLOCK_MANAGER_H
 
 #include <inttypes.h>
 #include <lib/libmtd.h>
 #include <types.h>
+
 
 #define BM_BLOCK_TYPE_MTD   "mtd"
 #define BM_BLOCK_TYPE_MTD_NAND  BM_BLOCK_TYPE_MTD"_nand"
@@ -32,10 +33,10 @@
     }
 
 #define BM_FILE_TYPE_NORMAL  "normal"
-#define BM_FILE_TYPE_CRAMFS   "cramfs"
-#define BM_FILE_TYPE_JFFS2       "jffs2"
-#define BM_FILE_TYPE_UBIFS      "ubifs"
-#define BM_FILE_TYPE_YAFFS2    "yaffs2"
+#define BM_FILE_TYPE_JFFS2   "jffs2"
+#define BM_FILE_TYPE_UBIFS   "ubifs"
+#define BM_FILE_TYPE_YAFFS2  "yaffs2"
+#define BM_FILE_TYPE_CRAMFS  "cramfs"
 
 #define BM_FILE_TYPE_INIT(name)      \
     char *name[] = {\
@@ -46,13 +47,13 @@
         BM_FILE_TYPE_YAFFS2,\
     }
 
-enum block_operation {
+enum bm_operation {
     BLOCK_OPERATION_ERASE,
     BLOCK_OPERATION_WRITE,
     BLOCK_OPERATION_READ,
 };
 
-enum block_operation_method {
+enum bm_operation_method {
     BLOCK_OPERATION_METHOD_PARTITION,
     BLOCK_OPERATION_METHOD_RANDOM,
 };
@@ -64,6 +65,7 @@ enum block_operation_method {
     }
 
 struct bm_operate_prepare_info {
+    pid_t tid;
     long long write_start;
     unsigned long physical_unit_size;
     unsigned long logical_unit_size;
@@ -72,7 +74,7 @@ struct bm_operate_prepare_info {
 
 struct bm_operation_option {
     int method;     /* one in block_operation_method*/
-    char* filetype;     /* one in BM_FILE_TYPE_INIT*/
+    char filetype[20];     /* one in BM_FILE_TYPE_INIT*/
 };
 
 struct bm_event {
@@ -80,7 +82,8 @@ struct bm_event {
     int operation;
     int progress;
 };
-typedef void (*bm_event_listener_t)(void* param, struct bm_event* event);
+struct block_manager;
+typedef void (*bm_event_listener_t)(struct block_manager *bm, struct bm_event* event);
 
 union bm_dev_info {
     struct mtd_dev_info mtd_dev_info;
@@ -90,6 +93,18 @@ struct bm_part_info {
     long long start;
     int fd;
     char *path;
+    int id;
+};
+
+struct bm_mtd_info {
+    libmtd_t mtd_desc;
+    struct mtd_info mtd_info;
+    void *map;
+    bm_event_listener_t event_listener;
+};
+
+union bm_info {
+    struct bm_mtd_info mtd;
 };
 
 struct block_manager {
@@ -100,19 +115,18 @@ struct block_manager {
     void (*get_supported_filetype)(struct block_manager* this, char *buf);
     struct bm_operation_option* (*set_operation_option) (struct block_manager* this,
             int method, char *filetype);
-    int (*erase)(struct block_manager* this, long long offset, long long length,
+    long long (*erase)(struct block_manager* this, long long offset, long long length,
                  struct bm_operation_option *option);
-    int (*write)(struct block_manager* this, long long offset, char* buf, long long length,
+    long long (*write)(struct block_manager* this, long long offset, char* buf, long long length,
                  struct bm_operation_option *option);
-    int (*read)(struct block_manager* this, long long offset, char* buf,
+    long long (*read)(struct block_manager* this, long long offset, char* buf,
                 long long length, struct bm_operation_option *option);
-    struct bm_operate_prepare_info* (*prepare)(
-                struct block_manager* this,
-                long long offset,
-                long long length,
-                struct bm_operation_option *option);
+    struct bm_operate_prepare_info* (*prepare)(struct block_manager* this,
+                long long offset, long long length, struct bm_operation_option *option);
+    void (*switch_prepare_context)(struct block_manager* this, 
+                    struct bm_operate_prepare_info* prepared);
     unsigned long (*get_prepare_leb_size)(struct block_manager* this);
-    unsigned long (*get_max_size_mapped_in)(struct block_manager* this);
+    unsigned long (*get_prepare_max_mapped_size)(struct block_manager* this);
     int (*finish)(struct block_manager* this);
     long long (*get_partition_size_by_offset)(struct block_manager* this,
             long long offset);
@@ -121,19 +135,13 @@ struct block_manager {
     long long (*get_capacity)(struct block_manager* this);
     int (*get_blocksize)(struct block_manager* this, long long offset);
 
-    struct mtd_dev_info* (*get_mtd_dev_info_by_name)(struct block_manager* this,
-            const char* name);
-    // struct mtd_info* (*get_mtd_info)(struct block_manager* this);
-    // struct mtd_dev_info* (*get_mtd_dev_info_by_name)(struct block_manager* this, const char* mtdchar);
     struct bm_operation_option operate_option;
     struct bm_operate_prepare_info *prepared;
 
-    libmtd_t mtd_desc;
-    struct mtd_info mtd_info;
-    // struct mtd_dev_info* mtd_dev_info;
+    // libmtd_t mtd_desc;
+    // struct mtd_info mtd_info;
+    union bm_info desc;
     struct bm_part_info *part_info;
-
-    bm_event_listener_t event_listener;
 
     char *name;
     struct list_head  list_cell;
@@ -141,6 +149,18 @@ struct block_manager {
     struct list_head  list_fs_head;
     void* param;
 };
+
+#define BM_GET_MTD_DESC(bm) ((bm->desc.mtd.mtd_desc))
+#define BM_GET_MTD_INFO(bm) (&(bm->desc.mtd.mtd_info))
+#define BM_GET_MTD_NAND_MAP(bm, type) ((type**)(&bm->desc.mtd.map))
+#define BM_GET_LISTENER(bm) (bm->desc.mtd.event_listener)
+#define BM_GET_PARTINFO(bm) (bm->part_info)
+#define BM_GET_PARTINFO_START(bm, i) (bm->part_info[i].start)
+#define BM_GET_PARTINFO_FD(bm, i) (&(bm->part_info[i].fd))
+#define BM_GET_PARTINFO_PATH(bm, i) (bm->part_info[i].path)
+#define BM_GET_PARTINFO_ID(bm, i) (bm->part_info[i].id)
+#define BM_GET_PARTINFO_MTD_DEV(bm, i)  (&(bm->part_info[i].part.mtd_dev_info))
+#define BM_GET_PREPARE_INFO(bm)   (bm->prepared)
 
 void construct_block_manager(struct block_manager* this, char *blockname,
                              bm_event_listener_t listener, void* param);

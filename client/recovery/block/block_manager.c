@@ -114,29 +114,32 @@ static void get_supported_filetype(struct block_manager* this, char *buf) {
 //     }
 //     return false;    
 // }
-static struct bm_operation_option * set_operation_option(struct block_manager* this, 
-                                                                                      int method, 
-                                                                                      char *filetype) {
-    // if (filetype && !is_filetype_supported(this, filetype)) {
-    //     LOGE("Parameter filetype:\"%s\" is not supported\n", filetype);
-    //     return false;
-    // }
+static struct bm_operation_option* set_operation_option(struct block_manager* this,
+            int method, char *filetype) {
+    static struct bm_operation_option option;
 
-    this->operate_option.method = method;
-    this->operate_option.filetype = filetype;
-    return &this->operate_option;
+    memset(&option, 0, sizeof(option));
+    option.method = method;
+    strcpy(option.filetype, filetype);
+    return &option;
 }
 
 void construct_block_manager(struct block_manager* this, char *blockname,
                              bm_event_listener_t listener, void* param) {
+
     mtd_manager_init();
     // mmc_manager_init();
-    memcpy(this, get_block_manager(this, blockname), sizeof(*this));
+    struct block_manager* bm = get_block_manager(this, blockname);
+    if (bm == NULL) {
+        LOGI("Block manager \''%s\' is not exist\n", blockname);
+        return;
+    }
+    bm->param = param;
+    BM_GET_LISTENER(bm) = listener;
+    memcpy(this, bm, sizeof(*this));
     this->get_supported = get_supported_block_managers;
     this->get_supported_filetype = get_supported_filetype;
     this->set_operation_option = set_operation_option;
-    this->event_listener = listener;
-    this->param = param;
     return;
 }
 

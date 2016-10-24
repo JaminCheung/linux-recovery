@@ -90,8 +90,10 @@ class Image(object):
                 "generate imageinfo[\'%s\'] config" % (self.name))
             eroot = et.SubElement(element, 'image')
             element_name = et.SubElement(eroot, 'name')
+            element_name.attrib = {"type": config.xml_data_type_string}
             element_name.text = self.name
             element_type = et.SubElement(eroot, 'type')
+            element_type.attrib = {"type": config.xml_data_type_string}
             element_type.text = self.type
             element_offset = et.SubElement(eroot, 'offset')
             element_offset.text = '0x%x' % self.offset
@@ -99,11 +101,14 @@ class Image(object):
             element_size.text = '%d' % self.size
             element_mode = et.SubElement(eroot, 'updatemode')
             element_mode_type = et.SubElement(element_mode, 'type')
+            element_mode_type.attrib = {"type": config.xml_data_type_integer}
             element_mode_type.text = '0x%x' % self.updatemode.type
             if self.updatemode.type == config.e_updatemodes['slice']:
-                element_mode_size = et.SubElement(element_mode, 'size')
+                element_mode_size = et.SubElement(element_mode, 'chunksize')
+                element_mode_size.attrib = {"type": config.xml_data_type_integer}
                 element_mode_size.text = '%d' % self.updatemode.size
-                element_mode_count = et.SubElement(element_mode, 'count')
+                element_mode_count = et.SubElement(element_mode, 'chunkcount')
+                element_mode_count.attrib = {"type": config.xml_data_type_integer}
                 element_mode_count.text = '%d' % self.updatemode.count
             return eroot
 
@@ -249,6 +254,7 @@ class Image(object):
             os.makedirs(default_config_dir)
 
         devctl_root = et.Element('devctl')
+        devctl_root.attrib = {"type": config.xml_data_type_integer}
         devctl_root.text = "%d" % (self.devctl)
         imglist_root = et.Element('imagelist')
         imglist_root.attrib = {"count": "%d" % self.imgcnt}

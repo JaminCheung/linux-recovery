@@ -38,12 +38,14 @@ signature_rsa_private_key = "%s/%s" % (signature_key_dir, "testkey.pk8")
 # file containing all the update infomation of packages
 output_package_name = "update"
 output_config_name = "update.xml"
-output_partition_name = "partition.xml"
+output_partition_name = "device.xml"
 output_pack_config_index = 0
 output_pack_config_dir = "%s%03d" % (
     output_package_name, output_pack_config_index)
 xml_encoding = "utf-8"
 xml_declaration = True
+xml_data_type_string = "opaque"
+xml_data_type_integer = "integer"
 # device type supported by predefine
 device_types = ('nor', 'nand', 'mmc')
 # enum defination relative to device_types

@@ -20,18 +20,34 @@
 
 #define LOG_TAG "filesystem"
 
+int target_endian = __BYTE_ORDER;
 extern struct filesystem fs_normal;
-// extern struct filesystem fs_jffs2;
-// extern struct filesystem fs_ubifs;
-// extern struct filesystem fs_yaffs2;
-// extern struct filesystem fs_cramfs;
+extern struct filesystem fs_jffs2;
+extern struct filesystem fs_ubifs;
+extern struct filesystem fs_yaffs2;
+extern struct filesystem fs_cramfs;
 static struct filesystem* fs_supported_list[] = {
     &fs_normal,
-    // &fs_jffs2,
-    // &fs_ubifs,
-    // &fs_yaffs2,
-    // &fs_cramfs,
+    &fs_jffs2,
+    &fs_ubifs,
+    &fs_yaffs2,
+    &fs_cramfs,
 };
+
+int fs_init(struct filesystem *this) {
+    if (this->params) {
+        LOGW("Parameter of filesystem \"%s\" is already  allocated\n", 
+            this->name);
+        return true;
+    }
+    this->params = malloc(sizeof(*this->params));
+    if (this->params == NULL) {
+        LOGE("Cannot get memory space, request size is %d\n", 
+            sizeof(*this->params));
+        return false;
+    }
+    return true;
+}
 
 int fs_register(struct list_head *head, struct filesystem* this) {
     struct filesystem *m;
@@ -93,9 +109,8 @@ struct filesystem* fs_get_suppoted_by_name(char *filetype) {
     return NULL;
 }
 
-void fs_set_parameter(struct filesystem* fs,
-                      struct fs_operation_params *p) {
-    fs->params = p;
-}
-
-
+// void fs_set_content_boundary(struct filesystem *this, long long max_mapped_size, 
+//                     long long content_start) {
+//     this->params->max_mapped_size = max_mapped_size;
+//     this->params->content_start = content_start;
+// }
