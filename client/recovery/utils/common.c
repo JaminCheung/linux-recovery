@@ -26,6 +26,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/wait.h>
 
 #include <types.h>
 #include <utils/log.h>
@@ -105,15 +106,28 @@ int download_file(const char* file, const char* path) {
         return -1;
     }
 
-    do {
-        error = execl("/usr/bin/wget", "wget", "-c", file, "-P", path,
-                (char*) 0);
-        timeout--;
-    } while (error != 0 && timeout != 0);
-
-    if (error < 0 || timeout == 0) {
-        LOGE("Failed execl(): %s\n", strerror(errno));
+    pid_t pid = fork();
+    if (pid < 0) {
+        LOGE("fork() fail: %s", strerror(errno));
         return -1;
+    }
+
+    if (!pid) {
+        do {
+            error = execl("/usr/bin/wget", "wget", "-c", file, "-P", path,
+                    (char*) 0);
+            timeout--;
+        } while (error != 0 && timeout != 0);
+
+        if (error < 0 || timeout == 0) {
+            LOGE("Failed execl(): %s\n", strerror(errno));
+            return -1;
+        }
+    } else {
+        int status = 0;
+        waitpid(pid, &status, 0);
+        if (status)
+            return -1;
     }
 
     return 0;

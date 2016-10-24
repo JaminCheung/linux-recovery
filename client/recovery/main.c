@@ -124,6 +124,11 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    if (strcmp(cf->version, VERSION)) {
+        LOGE("Configure file version error: %s - %s", cf->version, VERSION);
+        return -1;
+    }
+
     /*
      * Instances netlink manager
      */

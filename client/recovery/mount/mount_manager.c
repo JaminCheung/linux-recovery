@@ -182,7 +182,7 @@ static int mount_volume(struct mount_manager* this, const char* device,
             !strcmp(filesystem, "ntfs")) {
 
         error = mount(device, mount_point, filesystem,
-                MS_NOATIME | MS_NODEV | MS_NODIRATIME, "");
+                MS_NOATIME | MS_NODEV | MS_NODIRATIME | MS_RDONLY, "");
         if (error < 0) {
             LOGE("Failed to mount \"%s\" to \"%s\" with \"%s\" : %s\n", device,
                     mount_point, filesystem, strerror(errno));

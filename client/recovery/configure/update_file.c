@@ -251,6 +251,8 @@ static int parse_update_xml(struct update_file* this, const char* path) {
             } else {
                 image->chunkcount = mxmlGetInteger(sub_node);
             }
+        } else {
+            image->chunkcount = 1;
         }
 
         count++;

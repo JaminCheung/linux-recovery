@@ -36,6 +36,7 @@
 
 extern const char* public_key_path;
 
+int download_file(const char* file, const char* path);
 void msleep(uint64_t msec);
 void cold_boot(const char *path);
 int get_multiplier(const char *str);

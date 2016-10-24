@@ -125,9 +125,6 @@ int dir_create(const char* path) {
 
     assert_die_if(path == NULL, "path is NULL\n");
 
-    if (!dir_exist(path))
-        return 0;
-
     int len = (int) strlen(path);
 
     if (len <= 0)

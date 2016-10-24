@@ -99,7 +99,7 @@ static int do_extract_currentfile(unzFile uf, const int* junk_path,
         }
 
         if (fout != NULL) {
-            LOGI(" extracting: %s\n", write_filename);
+            LOGD(" extracting: %s\n", write_filename);
 
             do {
                 err = unzReadCurrentFile(uf, buf, size_buf);

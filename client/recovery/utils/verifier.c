@@ -73,7 +73,7 @@ int verify_file(const char* path, const RSAPublicKey *pKeys, unsigned int numKey
 
     size_t comment_size = footer[4] + (footer[5] << 8);
     size_t signature_start = footer[0] + (footer[1] << 8);
-    LOGI("comment is %d bytes; signature %d bytes from end\n",
+    LOGD("comment is %d bytes; signature %d bytes from end\n",
          comment_size, signature_start);
 
     if (signature_start - FOOTER_SIZE < RSANUMBYTES) {
@@ -174,11 +174,11 @@ int verify_file(const char* path, const RSAPublicKey *pKeys, unsigned int numKey
         // the signing tool appends after the signature itself.
         if (RSA_verify(pKeys+i, eocd + eocd_size - 6 - RSANUMBYTES,
                        RSANUMBYTES, sha1)) {
-            LOGI("whole-file signature verified against key %d\n", i);
+            LOGD("whole-file signature verified against key %d\n", i);
             free(eocd);
             return VERIFY_SUCCESS;
         } else {
-            LOGI("failed to verify against key %d\n", i);
+            LOGE("failed to verify against key %d\n", i);
         }
     }
     free(eocd);
@@ -272,7 +272,7 @@ load_keys(const char* filename, int* numKeys) {
                 goto exit;
             }
 
-            LOGI("read key e=%d\n", key->exponent);
+            LOGD("read key e=%d\n", key->exponent);
         }
     }
 

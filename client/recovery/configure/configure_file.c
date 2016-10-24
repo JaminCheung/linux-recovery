@@ -71,11 +71,6 @@ static int parse(struct configure_file* this, const char* path) {
     }
     this->version = strdup(version);
 
-    if (strcmp(this->version, VERSION)) {
-        LOGE("Configure file version error: %s - %s", this->version, VERSION);
-        goto error;
-    }
-
     asprintf(&buf, "%s.%s", prefix_application, prefix_server_setting);
     setting = config_lookup(&cfg, buf);
     if (setting == NULL) {
