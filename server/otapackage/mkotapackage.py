@@ -58,6 +58,16 @@ class Maker(object):
                 if cb == fc:
                     effectives.append(cb)
 
+        i = 0
+        for difftype in config.device_types_diff:
+            for e in effectives:
+                if difftype == e:
+                    i += 1
+        if i == len(config.device_types_diff):
+            self.printer.error("%s cannot exist on the same time", 
+                    config.device_types_diff)
+            return []
+
         self.printer.debug(effectives)
         return effectives
 
@@ -96,15 +106,15 @@ class Maker(object):
         os._exit(0)
 
     def generate(self, list_devs):
-        branch = et.Element('devices')
-        branch.attrib = {"type": config.xml_data_type_string}
-        branch.text = ""
+
+        root_element_list = []
         for i in range(0, len(list_devs)):
-            branch.text += list_devs[i]
-            if i != (len(list_devs)-1):
-                branch.text += ','
+            branch = et.Element('device')
+            branch.attrib = {"type": config.xml_data_type_string}
+            branch.text =  list_devs[i]
+            root_element_list.append(branch)
+            
         root = et.Element('global')
-        root_element_list = [branch]
         root.extend(root_element_list)
         tree = et.ElementTree(root)
 

@@ -52,6 +52,7 @@ xml_declaration = True
 xml_data_type_string = "opaque"
 xml_data_type_integer = "integer"
 # device type supported by predefine
+device_types_diff = ('nor', 'nand')
 device_types = ('nor', 'nand', 'mmc')
 # enum defination relative to device_types
 enum_device_types = base.enum_f2('nor', 'nand', 'mmc')
