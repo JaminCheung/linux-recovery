@@ -2,10 +2,14 @@ from otapackage.lib import base
 import sys
 
 #### Info for configuration file ####
+customer_suffix = 'nor'
+configuration_file_suffix = '.conf'
 # partition file contain a partition table for specified device
-partition_file_name = 'partition.conf'
+partition_file = 'partition'
+partition_file_name = "%s%s" %(partition_file, configuration_file_suffix)
 # customize file contain descriptions for images to be update
-customize_file_name = 'customization.conf'
+customize_file = 'customization'
+customize_file_name = "%s%s" %(customize_file, configuration_file_suffix)
 # where is partition.conf/customize.conf deployed
 customer_path = 'otapackage/customer/generated/'
 
@@ -36,6 +40,7 @@ signature_rsa_private_key = "%s/%s" % (signature_key_dir, "testkey.pk8")
 # will be superseded by specific number, maximum is the slice count
 # update configuration name called 'update.xml' which is a desctiption
 # file containing all the update infomation of packages
+output_global_config_name = "global.xml"
 output_package_name = "update"
 output_config_name = "update.xml"
 output_partition_name = "device.xml"
@@ -95,9 +100,12 @@ class Config(object):
         'slicesize': slicesize,
         'public_key': signature_rsa_public_key,
         'private_key': signature_rsa_private_key,
+        'partition_file_name': partition_file_name,       #exclusively used for judge configuration file "partition_*.conf, customization_*.conf"
+        'customize_file_name': customize_file_name,
+        'customer_suffix': customer_suffix, #exclusively used for judge configuration file "partition_*.conf, customization_*.conf"
     }
-    # where is customized image configuration
 
+    # where is customized image configuration
     @classmethod
     def get_image_cfg_path(cls):
         return cls.v['image_cfg_path']
@@ -150,3 +158,16 @@ class Config(object):
     @classmethod
     def set_private_key(cls, key):
         cls.v['private_key'] = key
+
+    # configuration file name
+    @classmethod
+    def get_customer_files_suffix(cls):
+        return cls.v['customize_file_name']
+
+    @classmethod
+    def set_customer_files_suffix(cls, key):
+        cls.v['customize_file_name'] = key
+
+    @classmethod
+    def make_customer_files_fullname(cls, prefix):
+        return "%s_%s%s" %(prefix, cls.get_customer_files_suffix(),configuration_file_suffix)

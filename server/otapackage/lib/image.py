@@ -59,8 +59,10 @@ class Image(object):
                 "imageinfo[\'%s\'] generation is starting" % (
                     self.name))
             path_src_image = os.path.join(
-                config.Config.get_image_path(), ('%s' % (self.name)))
-            path_dst_image_dir = config.Config.get_outputdir_path()
+                config.Config.get_image_path(),
+                "%s/%s" %(config.Config.get_customer_files_suffix(), self.name))
+            path_dst_image_dir = "%s/%s" %(
+                    config.Config.get_outputdir_path(), config.Config.get_customer_files_suffix())
             if element == None:
                 Image.printer.error('error while getting parameter element')
                 return None
@@ -133,7 +135,7 @@ class Image(object):
                 return False
             return True
 
-    @base.struct('imgcnt', 'devctl', 'imageinfo')
+    @base.struct('mediumtype', 'imgcnt', 'devctl', 'imageinfo')
     def __init__(self, *value):
         pass
 
@@ -143,15 +145,16 @@ class Image(object):
 
     @classmethod
     def get_image_size(cls, imagename):
+        imgfull = "%s/%s" %(config.Config.get_customer_files_suffix() ,imagename)
         apath = os.path.join(
-            config.Config.get_image_path(), ('%s' % (imagename)))
+            config.Config.get_image_path(), ('%s' % (imgfull)))
         if not file.is_readable(apath):
-            cls.printer.error('file %s is not readable' % (imagename))
+            cls.printer.error('file %s is not readable' % (apath))
             return 0
         imagesize = os.path.getsize(apath)
         if not imagesize:
             cls.printer.error(
-                'error while getting file \'%s\' size' % (imagename))
+                'error while getting file \'%s\' size' % (apath))
             return 0
         return imagesize
 
@@ -161,8 +164,13 @@ class Image(object):
         cls.printer.debug(
             "image customization parser is starting")
         imagecfg = '%s/%s' % (config.Config.get_image_cfg_path(),
-                              config.customize_file_name)
+                              config.Config.make_customer_files_fullname(config.customize_file))
         ini_parser = ini.ParserIni(imagecfg)
+        mediumtype =  ini_parser.get('update', 'mediumtype')
+        if mediumtype == '':
+            cls.printer.error(
+                    'label update  or mediumtype is lost')
+            return None
         imgcnt = ini_parser.get('update', 'imgcnt')
         if imgcnt == '':
             cls.printer.error(
@@ -201,13 +209,17 @@ class Image(object):
             imageinfo = cls.Imageinfo(
                 name, imgsize, imgtype, base.str2int(offset), updateinfo)
             imageinfos.append(imageinfo)
-        image = cls(imgcnt, devctl, imageinfos)
+        image = cls(mediumtype, imgcnt, devctl, imageinfos)
         if not image.judge():
             return None
+        cls.imagesum = config.output_pack_config_index
         return image
 
     def judge(self):
         self.printer.debug("image judgement is starting")
+        if self.mediumtype not in config.device_types:
+            self.printer.error('mediumtype %s is not in %s' % (self.mediumtype, config.device_types))
+            return False
         if self.imgcnt != len(self.imageinfo):
             return False
         hit = 0
@@ -243,11 +255,16 @@ class Image(object):
 
     def generate(self):
         self.printer.debug("image generation is starting")
-        if os.path.exists(config.Config.get_outputdir_path()):
-            shutil.rmtree(config.Config.get_outputdir_path())
+        path = "%s/%s" % (config.Config.get_outputdir_path(),
+                    config.Config.get_customer_files_suffix())
 
-        default_config_dir = "%s/%s" % (
-            config.Config.get_outputdir_path(), config.output_pack_config_dir)
+        if os.path.exists(path):
+            shutil.rmtree(path)
+
+        default_config_dir = "%s/%s/%s" % (
+            config.Config.get_outputdir_path(),
+            config.Config.get_customer_files_suffix(),
+            config.output_pack_config_dir)
         default_config = "%s/%s" % (default_config_dir,
                                     config.output_config_name)
         if not os.path.exists(default_config_dir):

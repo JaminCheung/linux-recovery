@@ -127,7 +127,8 @@ class Device(object):
         cls.printer = log.Logger.get_logger(config.log_console)
         cls.printer.debug("dev customization parser is starting")
         pathdev = os.path.join(
-            config.Config.get_image_cfg_path(), config.partition_file_name)
+            config.Config.get_image_cfg_path(),
+            "%s" %(config.Config.make_customer_files_fullname(config.partition_file)))
         ini_parser = ini.ParserIni(pathdev)
         section = 'storageinfo'
         devtype = ini_parser.get(section, 'mediumtype')
@@ -205,7 +206,8 @@ class Device(object):
 
     def generate(self):
         self.printer.debug("dev generation is starting")
-        default_config_dir = "%s/%s" % (config.Config.get_outputdir_path(),
+        default_config_dir = "%s/%s/%s" % (config.Config.get_outputdir_path(),
+                                        config.Config.get_customer_files_suffix(),
                                         config.output_pack_config_dir)
 
         default_config = "%s/%s" % (default_config_dir,
@@ -214,12 +216,12 @@ class Device(object):
         if not os.path.exists(default_config_dir):
             os.makedirs(default_config_dir)
 
-        devinfo_root = et.Element('devinfo')
-        devinfo_type_root = et.SubElement(devinfo_root, 'type')
-        devinfo_type_root.attrib = {"type": config.xml_data_type_string}
-        devinfo_type_root.text = self.devinfo.devtype
-        devinfo_size_root = et.SubElement(devinfo_root, 'capacity')
-        devinfo_size_root.text = '0x%x' % self.devinfo.devsize
+        # devinfo_root = et.Element('devinfo')
+        # devinfo_type_root = et.SubElement(devinfo_root, 'type')
+        # devinfo_type_root.attrib = {"type": config.xml_data_type_string}
+        # devinfo_type_root.text = self.devinfo.devtype
+        # devinfo_size_root = et.SubElement(devinfo_root, 'capacity')
+        # devinfo_size_root.text = '0x%x' % self.devinfo.devsize
 
         partition_root = et.Element('partition')
         partition_root.attrib = {"count": "%s" %self.partition_cnt}
@@ -227,7 +229,9 @@ class Device(object):
             partition.generate_config(partition_root)
 
         root = et.Element('device')
-        root_element_list = [devinfo_root, partition_root]
+        root.attrib =  {"type": "%s" %self.devinfo.devtype, "capacity":"0x%x" %self.devinfo.devsize}
+        # root_element_list = [devinfo_root,partition_root]
+        root_element_list = [partition_root]
         root.extend(root_element_list)
         tree = et.ElementTree(root)
         path = default_config

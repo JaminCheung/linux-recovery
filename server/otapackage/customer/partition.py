@@ -8,14 +8,16 @@ from otapackage.lib import base
 from otapackage.customer.config import *
 
 class DeviceConfig(object):
-    devfile = config.partition_file_name
+    devfile = config.partition_file
+    filesuffix = config.configuration_file_suffix
     devtypes = []
     devsizes = []
     devpartitions = []
+    medium_current = ""
     for k in sorted(local):
+        if k[0:3] != local['search_prefix']:
+            continue
         if re.search('_tag', k):
-            if k[0:3] != local['search_prefix']:
-                continue
             devtypes.append(local[k])
         if re.search('_device_size', k):
             devsizes.append(local[k])
@@ -63,7 +65,7 @@ class DeviceConfig(object):
 
     def create_device_descript(self, filepath):
         buf = ''
-        filename = '%s/%s'%(filepath, self.devfile)
+        filename = '%s/%s_%s%s'%(filepath, self.devfile, self.medium_current, self.filesuffix)
         fd = open(filename,'w')
         buf = self.generate_output()
         fd.write(buf)
@@ -79,6 +81,7 @@ class DeviceConfig(object):
         if args.mediumtype not in cls.devtypes:
             print '%s: error: medium type %s is not one in %s' %(__file__, args.mediumtype, tuple(cls.devtypes))
             os._exit(0)
+        cls.medium_current = args.mediumtype
         return args
 
 
