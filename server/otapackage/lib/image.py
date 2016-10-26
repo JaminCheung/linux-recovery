@@ -270,9 +270,9 @@ class Image(object):
         if not os.path.exists(default_config_dir):
             os.makedirs(default_config_dir)
 
-        devctl_root = et.Element('devctl')
-        devctl_root.attrib = {"type": config.xml_data_type_integer}
-        devctl_root.text = "%d" % (self.devctl)
+        # devctl_root = et.Element('devctl')
+        # devctl_root.attrib = {"type": config.xml_data_type_integer}
+        # devctl_root.text = "%d" % (self.devctl)
         imglist_root = et.Element('imagelist')
         imglist_root.attrib = {"count": "%d" % self.imgcnt}
 
@@ -280,7 +280,9 @@ class Image(object):
             imginfo_root = imageinfo.generate(imglist_root)
 
         root = et.Element('update')
-        root_element_list = [devctl_root, imglist_root]
+        root_element_list = [imglist_root]
+        root.attrib =  {"devtype": "%s" %config.Config.get_customer_files_suffix(),
+                              "devcontrol":"0x%x" %self.devctl}
         root.extend(root_element_list)
         tree = et.ElementTree(root)
         path = default_config
