@@ -27,6 +27,7 @@
 #include <utils/file_ops.h>
 #include <utils/assert.h>
 #include <utils/common.h>
+#include <utils/signal_handler.h>
 #include <ota/ota_manager.h>
 #include <configure/configure_file.h>
 
@@ -129,6 +130,14 @@ int main(int argc, char* argv[]) {
         LOGE("Configure file version error: %s - %s", cf->version, VERSION);
         return -1;
     }
+
+    /*
+     * Instance signal handler
+     */
+    struct signal_handler *sh = _new(struct signal_handler, signal_handler);
+    sh->set_signal_handler(sh, SIGINT, NULL);
+    sh->set_signal_handler(sh, SIGQUIT, NULL);
+    sh->set_signal_handler(sh, SIGTERM, NULL);
 
     /*
      * Instances netlink manager

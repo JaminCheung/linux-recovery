@@ -21,21 +21,24 @@
 
 #define LOG_TAG "signal_handler"
 
-static void init(struct signal_handler* this, int signal,
+static void set_signal_handler(struct signal_handler* this, int signal,
         signal_handler_t handler) {
-    struct sigaction action;
 
-    sigemptyset(&action.sa_mask);
-    action.sa_handler = handler;
-    action.sa_flags = 0;
+    if (handler == NULL)
+        this->action.sa_handler = SIG_IGN;
+    else
+        this->action.sa_handler = handler;
 
-    sigaction(signal, &action, NULL);
+    sigaction(signal, &this->action, NULL);
 }
 
 void construct_signal_handler(struct signal_handler* this) {
-    this->init = init;
+    sigemptyset(&this->action.sa_mask);
+    this->action.sa_flags = 0;
+
+    this->set_signal_handler = set_signal_handler;
 }
 
 void destruct_signal_handler(struct signal_handler* this) {
-    this->init = NULL;
+    this->set_signal_handler = NULL;
 }

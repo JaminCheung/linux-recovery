@@ -14,22 +14,7 @@
  *
  */
 
-#ifndef SIGNAL_HANDLER_H
-#define SIGNAL_HANDLER_H
+#ifndef ERROR_CODE_H
+#define ERROR_CODE_H
 
-#include <signal.h>
-
-typedef void(*signal_handler_t)(int signal);
-
-struct signal_handler {
-    void (*construct)(struct signal_handler *this);
-    void (*destruct)(struct signal_handler *this);
-    void (*set_signal_handler) (struct signal_handler* this,
-            int signal, signal_handler_t handler);
-
-    struct sigaction action;
-};
-
-void construct_signal_handler(struct signal_handler *this);
-void destruct_signal_handler(struct signal_handler* this);
-#endif /* SIGNAL_HANDLER_H */
+#endif /* ERROR_CODE_H */

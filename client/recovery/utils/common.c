@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #include <types.h>
 #include <utils/log.h>
@@ -99,36 +100,39 @@ int download_file(const char* file, const char* path) {
     assert_die_if(path == NULL, "path is NULL\n");
 
     int error = 0;
-    int timeout = 3;
+    int status = 0;
+    pid_t pid;
 
     if (file_executable(prefix_wget_path) < 0) {
         LOGE("%s not execuable\n", prefix_wget_path);
         return -1;
     }
 
-    pid_t pid = fork();
+    pid = fork();
     if (pid < 0) {
-        LOGE("fork() fail: %s", strerror(errno));
+        LOGE("fork() fail: %s\n", strerror(errno));
         return -1;
     }
 
     if (!pid) {
-        do {
-            error = execl("/usr/bin/wget", "wget", "-c", "-q", file, "-P", path,
-                    (char*) 0);
-            timeout--;
-        } while (error != 0 && timeout != 0);
-
-        if (error < 0 || timeout == 0) {
-            LOGE("Failed execl(): %s\n", strerror(errno));
+        error = execl("/usr/bin/wget", "wget", "-c", "-T", "20", "-q", file,
+                "-P", path, (char*) 0);
+        if (error < 0) {
+            LOGE("execl() fail: %s\n", strerror(errno));
             return -1;
         }
+
     } else {
-        int status = 0;
-        waitpid(pid, &status, 0);
-        if (status)
-            return -1;
+        while(waitpid(pid, &status, 0) < 0) {
+            if(errno != EINTR){
+                status = -1;
+                break;
+            }
+        }
     }
+
+    if (status)
+        return -1;
 
     return 0;
 }

@@ -239,7 +239,7 @@ static void recovery_finish(int error) {
 
     sync();
 
-    if (error < 0) {
+    if (error) {
 #ifdef LOCAL_DEBUG
         //reboot(RB_POWER_OFF);
 #else
@@ -558,6 +558,7 @@ static int update_from_network(struct ota_manager* this) {
     /*
      * Check network
      */
+    LOGI("Checking network\n");
     error = this->ni->icmp_echo(this->ni, this->cf->server_ip, 2000);
     if (error < 0) {
         LOGE("Server \"%s\" is unreachable\n", this->cf->server_ip);

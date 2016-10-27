@@ -25,16 +25,18 @@ CLIENT_DIR := $(OUTDIR)/client-side
 SERVER_DIR := $(OUTDIR)/server-side
 TOOLS_DIR := $(OUTDIR)/tools
 DOC_DIR := $(OUTDIR)/document
+RES_DIR := $(OUTDIR)/resource
 
-.PHONY: all client server tools document
+.PHONY: all client server tools document resource
 
 all: clean $(TARGET)
 
-$(TARGET): client server tools document
+$(TARGET): client server tools document resource
 	@cd $(OUTDIR) &&  tar -cvJf ../$(TARGET) .
 	@echo -e "\n=========================="
 	@echo -e "$(TARGET) is ready."
 	@echo -e "==========================\n"
+
 #
 # For client side
 #
@@ -79,6 +81,15 @@ document:
 	@echo -e "Document is ready."
 	@echo -e "==================\n"
 
+#
+# For resource
+#
+resource:
+	@mkdir -p $(RES_DIR)
+	@cp -av resource/* $(RES_DIR)
+	@echo -e "=================="
+	@echo -e "Resource is ready."
+	@echo -e "==================\n"
 
 clean:
 	rm -rf $(OUTDIR) $(TARGET)
