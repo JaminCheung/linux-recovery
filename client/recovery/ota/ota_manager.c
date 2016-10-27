@@ -33,11 +33,12 @@
 
 #define LOG_TAG "ota_manager"
 
+static const char* prefix_global_xml = "global.xml";
 static const char* prefix_device_xml = "device.xml";
 static const char* prefix_update_xml = "update.xml";
 static const char* prefix_volume_mount_point = "/mnt";
 static const char* prefix_volume_device_path = "/dev";
-static const char* prefix_update_path = "recovery-update";
+static const char* prefix_storage_update_path = "recovery-update";
 static const char* prefix_update_pkg = "update";
 static const char* prefix_local_update_path = "/tmp/update";
 
@@ -267,7 +268,7 @@ static int verify_update_pkg(struct ota_manager* this, const char* path) {
         return -1;
     }
 
-    if (verify_file(path, keys, nkeys) < 0) {
+    if (verify_file(path, keys, nkeys) == VERIFY_FAILURE) {
         LOGE("Failed to verify file: %s\n", path);
         return -1;
     }
@@ -275,7 +276,8 @@ static int verify_update_pkg(struct ota_manager* this, const char* path) {
     return 0;
 }
 
-static int check_device_info(struct ota_manager* this) {
+static int check_device_info(struct ota_manager* this,
+        struct device_info* device_info) {
     return 0;
 }
 
@@ -303,7 +305,9 @@ static struct mounted_volume* find_valid_update_volume(struct ota_manager* this)
     list_for_each(pos, &this->mm->list) {
         struct mounted_volume *volume = list_entry(pos, struct mounted_volume,
                 head);
-        sprintf(path, "%s/%s", volume->mount_point, prefix_update_path);
+        sprintf(path, "%s/%s", volume->mount_point, prefix_storage_update_path);
+
+        LOGI("Lookup mount point: %s\n", volume->mount_point);
 
         /*
          * Check update dir on mounted vloume
@@ -312,86 +316,148 @@ static struct mounted_volume* find_valid_update_volume(struct ota_manager* this)
             continue;
 
         /*
-         * Verifier update000.zip
-         */
-        sprintf(path, "%s/%s%s", path, prefix_update_pkg, "000.zip");
-        if (file_exist(path) < 0 || verify_update_pkg(this, path) < 0) {
-            LOGE("Failed to verify %s\n", path);
-            continue;
-        }
-
-        /*
-         * Un-zip update pkg
-         */
-        if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
-            LOGE("Failed to unzip %s to %s\n", path, prefix_local_update_path);
-            continue;
-        }
-
-        /*
-         * Parse & check device info
+         * Parse global.xml
          */
         memset(path, 0, sizeof(path));
-        sprintf(path, "%s/%s", prefix_local_update_path, prefix_device_xml);
-        if (this->uf->parse_device_xml(this->uf, path) < 0) {
-            LOGE("Failed to parse %s\n", path);
+        sprintf(path, "%s/%s/%s", volume->mount_point, prefix_storage_update_path,
+                prefix_global_xml);
+        if (file_exist(path) < 0)
+            continue;
+
+        if (this->uf->parse_global_xml(this->uf, path) < 0) {
+            LOGE("Failed to parse %s\n", prefix_global_xml);
             continue;
         }
-
-        this->uf->dump_device_xml(this->uf);
+        this->uf->dump_device_type_list(this->uf);
 
         /*
-         * Check device info
+         * For each device type
          */
-        if (check_device_info(this) < 0) {
-            LOGE("Failed to check device info\n");
-            continue;
-        }
+        int i;
+        const char** device_type_list = this->uf->get_device_type_list(this->uf);
+        for (i = 0; device_type_list[i]; i++) {
+            const char* devtype = device_type_list[i];
 
-        /*
-         * Parse update info
-         */
-        memset(path, 0, sizeof(path));
-        sprintf(path, "%s/%s", prefix_local_update_path, prefix_update_xml);
-        if (this->uf->parse_update_xml(this->uf, path) < 0)
-            continue;
-        this->uf->dump_update_xml(this->uf);
+            LOGI("Lookup for device: %s\n", devtype);
 
-        uint32_t chunk_count = 0;
-        struct list_head* sub_pos;
-        list_for_each(sub_pos, &this->uf->update_info.list) {
-            struct image_info * info = list_entry(sub_pos, struct image_info,
-                    head);
-            chunk_count += info->chunkcount;
-        }
+            struct device_info* device_info =
+                    this->uf->get_device_info_by_devtype(this->uf, devtype);
+            struct update_info* update_info =
+                    this->uf->get_update_info_by_devtype(this->uf, devtype);
+            if (device_info == NULL || update_info == NULL) {
+                LOGE("Failed to find device info or update_info for %s\n", devtype);
+                break;
+            }
 
-        memset(path, 0, sizeof(path));
-        sprintf(path, "%s/%s", volume->mount_point, prefix_update_path);
-        if (dir_exist(path) < 0) {
-            LOGE("Failed to access %s: %s\n", path, strerror(errno));
-            continue;
-        }
+            memset(path, 0, sizeof(path));
+            sprintf(path, "%s/%s/%s", volume->mount_point, prefix_storage_update_path,
+                    devtype);
 
-        DIR * dir = opendir(path);
-        uint32_t pkg_count = 0;
-        struct dirent *de;
-        while ((de = readdir(dir)) != NULL) {
-            if (!strcmp(de->d_name, "..") || !strcmp(de->d_name, "."))
-                continue;
+            if (dir_exist(path) < 0) {
+                LOGE("Failed to found %s\n", path);
+                break;
+            }
 
-            if (is_prefixed_with(de->d_name, "update")
-                    && is_suffixed_with(de->d_name, ".zip"))
-                pkg_count++;
-        }
+            /*
+             * Verifier update000.zip
+             */
+            memset(path, 0, sizeof(path));
+            sprintf(path, "%s/%s/%s/%s%s", volume->mount_point,
+                    prefix_storage_update_path, devtype, prefix_update_pkg,
+                    "000.zip");
 
-        if (chunk_count != (pkg_count - 1)) {
-            LOGE("update pakage count error, pkg count %u, actual count %u\n",
-                    chunk_count, pkg_count);
+            LOGI("Verifying %s\n", path);
+
+            if (file_exist(path) < 0 || verify_update_pkg(this, path) < 0)
+                break;
+
+            /*
+             * Un-zip update pkg
+             */
+            LOGI("Unziping %s\n", path);
+            if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
+                LOGE("Failed to unzip %s to %s\n", path, prefix_local_update_path);
+                break;
+            }
+
+            /*
+             * Parse & check device info
+             */
+            memset(path, 0, sizeof(path));
+            sprintf(path, "%s/%s", prefix_local_update_path, prefix_device_xml);
+
+            LOGI("Parsing %s\n", path);
+
+            if (this->uf->parse_device_xml(this->uf, path, device_info) < 0) {
+                LOGE("Failed to parse %s\n", path);
+                break;
+            }
+            this->uf->dump_device_info(this->uf, device_info);
+
+            /*
+             * Check device info
+             */
+            LOGI("Checking device info: %s\n", devtype);
+            if (check_device_info(this, device_info) < 0) {
+                LOGE("Failed to check device info for %s\n", devtype);
+                break;
+            }
+
+            /*
+             * Parse update info
+             */
+            memset(path, 0, sizeof(path));
+            sprintf(path, "%s/%s", prefix_local_update_path, prefix_update_xml);
+
+            LOGI("Parsing %s\n", path);
+
+            if (this->uf->parse_update_xml(this->uf, path, update_info) < 0) {
+                LOGE("Failed to parse %s\n", path);
+                break;
+            }
+            this->uf->dump_update_info(this->uf, update_info);
+
+            uint32_t chunk_count = 0;
+            struct list_head* sub_pos;
+            list_for_each(sub_pos, &update_info->list) {
+                struct image_info * info = list_entry(sub_pos, struct image_info,
+                        head);
+                chunk_count += info->chunkcount;
+            }
+
+            memset(path, 0, sizeof(path));
+            sprintf(path, "%s/%s/%s", volume->mount_point, prefix_storage_update_path,
+                    devtype);
+            if (dir_exist(path) < 0) {
+                LOGE("Failed to access %s: %s\n", path, strerror(errno));
+                break;
+            }
+
+            DIR * dir = opendir(path);
+            uint32_t pkg_count = 0;
+            struct dirent *de;
+            while ((de = readdir(dir)) != NULL) {
+                if (!strcmp(de->d_name, "..") || !strcmp(de->d_name, "."))
+                    continue;
+
+                if (is_prefixed_with(de->d_name, "update")
+                        && is_suffixed_with(de->d_name, ".zip"))
+                    pkg_count++;
+            }
+
+            if (chunk_count != (pkg_count - 1)) {
+                LOGE("update pakage count error, pkg count %u, actual count %u\n",
+                        chunk_count, pkg_count);
+                closedir(dir);
+                break;
+            }
+
             closedir(dir);
-            continue;
         }
 
-        closedir(dir);
+        if (device_type_list[i] != NULL)
+            continue;
+
         dir_delete(prefix_local_update_path);
 
         return volume;
@@ -411,54 +477,67 @@ static int update_from_storage(struct ota_manager* this) {
         return -1;
     }
 
-    int index = 1;
-    struct list_head* pos;
-    list_for_each(pos, &this->uf->update_info.list) {
-        struct image_info* info = list_entry(pos, struct image_info, head);
+    int i;
+    const char** device_type_list = this->uf->get_device_type_list(this->uf);
+    for (i = 0; device_type_list[i]; i++) {
+        const char* devtype = device_type_list[i];
+        struct update_info* update_info =
+                this->uf->get_update_info_by_devtype(this->uf, devtype);
 
-        LOGI("Updating image: \"%s\"\n", info->name);
+        LOGI("Updating device: \"%s\"\n", devtype);
 
-        for (int i = 1; i <= info->chunkcount; i++) {
-            /*
-             * Create unzip dir
-             */
-            dir_delete(prefix_local_update_path);
-            if (dir_create(prefix_local_update_path) < 0) {
-                LOGE("Failed to create %s\n", prefix_local_update_path);
-                return -1;
+        int index = 1;
+        struct list_head* pos;
+        list_for_each(pos, &update_info->list) {
+            struct image_info* info = list_entry(pos, struct image_info, head);
+
+            LOGI("Updating image: \"%s\"\n", info->name);
+
+            for (int i = 1; i <= info->chunkcount; i++) {
+                /*
+                 * Create unzip dir
+                 */
+                dir_delete(prefix_local_update_path);
+                if (dir_create(prefix_local_update_path) < 0) {
+                    LOGE("Failed to create %s\n", prefix_local_update_path);
+                    return -1;
+                }
+
+                memset(path, 0, sizeof(path));
+                sprintf(path, "%s/%s/%s/%s%03d.zip", volume->mount_point,
+                        prefix_storage_update_path, devtype, prefix_update_pkg, index);
+
+                LOGI("Verifying %s\n", path);
+                if (file_exist(path) < 0 || verify_update_pkg(this, path) < 0)
+                    goto error;
+
+                LOGI("Unziping %s\n", path);
+                if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
+                    LOGE("Failed to unzip %s to %s\n", path,
+                            prefix_local_update_path);
+                    goto error;
+                }
+
+                memset(path, 0, sizeof(path));
+                if (info->chunkcount == 1)
+                    sprintf(path, "%s/%s", prefix_local_update_path, info->name);
+                else
+                    sprintf(path, "%s/%s_%03d", prefix_local_update_path,
+                            info->name, i);
+
+                if (file_exist(path) < 0) {
+                    LOGE("Failed to access %s: %s\n", path, strerror(errno));
+                    goto error;
+                }
+
+                index++;
+
+                LOGI("Updating \"%s\"\n", path);
+                if (write_update_pkg(this, path, info) < 0) {
+                    LOGE("Failed to write %s\n", path);
+                    goto error;
+                }
             }
-
-            memset(path, 0, sizeof(path));
-            sprintf(path, "%s/%s/%s%03d.zip", volume->mount_point,
-                    prefix_update_path, prefix_update_pkg, index);
-
-            if (file_exist(path) < 0 || verify_update_pkg(this, path) < 0) {
-                LOGE("Failed to verify %s\n", path);
-                goto error;
-            }
-
-            if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
-                LOGE("Failed to unzip %s to %s\n", path,
-                        prefix_local_update_path);
-                goto error;
-            }
-
-            memset(path, 0, sizeof(path));
-            if (info->chunkcount == 1)
-                sprintf(path, "%s/%s", prefix_local_update_path, info->name);
-            else
-                sprintf(path, "%s/%s_%03d", prefix_local_update_path,
-                        info->name, i);
-
-            if (file_exist(path) < 0) {
-                LOGE("Failed to access %s: %s\n", path, strerror(errno));
-                goto error;
-            }
-
-            index++;
-            LOGI("Chunk: \"%s\"\n", path);
-
-            write_update_pkg(this, path, info);
         }
     }
 
@@ -477,15 +556,6 @@ static int update_from_network(struct ota_manager* this) {
     char path[PATH_MAX] = {0};
 
     /*
-     * Create unzip dir
-     */
-    dir_delete(prefix_local_update_path);
-    if (dir_create(prefix_local_update_path) < 0) {
-        LOGE("Failed to create %s\n", prefix_local_update_path);
-        return -1;
-    }
-
-    /*
      * Check network
      */
     error = this->ni->icmp_echo(this->ni, this->cf->server_ip, 2000);
@@ -495,131 +565,202 @@ static int update_from_network(struct ota_manager* this) {
     }
 
     /*
-     * Download update000.zip
+     * Create unzip dir
      */
-    sprintf(path, "%s/%s%s", this->cf->server_url, prefix_update_pkg, "000.zip");
+    dir_delete(prefix_local_update_path);
+    if (dir_create(prefix_local_update_path) < 0) {
+        LOGE("Failed to create %s\n", prefix_local_update_path);
+        return -1;
+    }
+
+    /*
+     * Download global.xml
+     */
+    memset(path, 0, sizeof(path));
+    sprintf(path, "%s/%s", this->cf->server_url, prefix_global_xml);
+    LOGI("Downloading %s\n", path);
     if (download_file(path, prefix_local_update_path) < 0) {
         LOGE("Failed to download %s\n", path);
         return -1;
     }
 
     /*
-     * Verify  update000.zip
+     * Parse global.xml
      */
     memset(path, 0, sizeof(path));
-    sprintf(path, "%s/%s%s", prefix_local_update_path, prefix_update_pkg, "000.zip");
-    if (verify_update_pkg(this, path) < 0) {
-        LOGE("Failed to verify %s\n", path);
-        return -1;
-    }
-
-    if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
-        LOGE("Failed to unzip %s\n", path);
-        return -1;
-    }
-
-    /*
-     * Parse & check device info
-     */
-    memset(path, 0, sizeof(path));
-    sprintf(path, "%s/%s", prefix_local_update_path, prefix_device_xml);
-    if (this->uf->parse_device_xml(this->uf, path) < 0) {
+    sprintf(path, "%s/%s", prefix_local_update_path, prefix_global_xml);
+    LOGI("Parsing %s\n", path);
+    if (this->uf->parse_global_xml(this->uf, path) < 0) {
         LOGE("Failed to parse %s\n", path);
         return -1;
     }
-    this->uf->dump_device_xml(this->uf);
+    this->uf->dump_device_type_list(this->uf);
 
-    /*
-     * Check device info
-     */
-    if (check_device_info(this) < 0) {
-        LOGE("Failed to check device info\n");
-        return -1;
-    }
+    int i;
+    const char** device_type_list = this->uf->get_device_type_list(this->uf);
+    for (i = 0; device_type_list[i]; i++) {
+        const char* devtype = device_type_list[i];
 
-    /*
-     * Parse update info
-     */
-    memset(path, 0, sizeof(path));
-    sprintf(path, "%s/%s", prefix_local_update_path, prefix_update_xml);
-    if (this->uf->parse_update_xml(this->uf, path) < 0) {
-        LOGE("Failed to parse %s\n", path);
-        return -1;
-    }
-    this->uf->dump_update_xml(this->uf);
+        LOGI("Updating device: \"%s\"\n", devtype);
 
-    /*
-     * Get update pkg count
-     */
-    uint32_t chunk_count = 0;
-    struct list_head* sub_pos;
-    list_for_each(sub_pos, &this->uf->update_info.list) {
-        struct image_info * info = list_entry(sub_pos, struct image_info,
-                head);
-        if (info->chunkcount == 0)
-            chunk_count += 1;
-        else
-            chunk_count += info->chunkcount;
-    }
+        /*
+         * Create unzip dir
+         */
+        dir_delete(prefix_local_update_path);
+        if (dir_create(prefix_local_update_path) < 0) {
+            LOGE("Failed to create %s\n", prefix_local_update_path);
+            goto error;
+        }
 
-    int index = 1;
-    struct list_head* pos;
-    list_for_each(pos, &this->uf->update_info.list) {
-        struct image_info* info = list_entry(pos, struct image_info, head);
+        struct device_info* device_info =
+                this->uf->get_device_info_by_devtype(this->uf, devtype);
+        struct update_info* update_info =
+                this->uf->get_update_info_by_devtype(this->uf, devtype);
+        if (device_info == NULL || update_info == NULL) {
+            LOGE("Failed to find device info or update_info for %s\n", devtype);
+            goto error;
+        }
 
-        LOGI("Updating image: \"%s\"\n", info->name);
+        /*
+         * Download update000.zip
+         */
+        memset(path, 0, sizeof(path));
+        sprintf(path, "%s/%s/%s%s", this->cf->server_url, devtype,
+                prefix_update_pkg, "000.zip");
+        LOGI("Downloading %s\n", path);
 
-        for (int i = 1; i <= info->chunkcount; i++) {
-            /*
-             * Create unzip dir
-             */
-            dir_delete(prefix_local_update_path);
-            if (dir_create(prefix_local_update_path) < 0) {
-                LOGE("Failed to create %s\n", prefix_local_update_path);
-                return -1;
-            }
+        if (download_file(path, prefix_local_update_path) < 0) {
+            LOGE("Failed to download %s\n", path);
+            goto error;
+        }
 
-            memset(path, 0, sizeof(path));
-            sprintf(path, "%s/%s%03d.zip", this->cf->server_url,
-                    prefix_update_pkg, index);
+        /*
+         * Verify update000.zip
+         */
+        memset(path, 0, sizeof(path));
+        sprintf(path, "%s/%s%s", prefix_local_update_path, prefix_update_pkg, "000.zip");
 
-            LOGI("Downloading %s\n", path);
-            if (download_file(path, prefix_local_update_path) < 0) {
-                LOGE("Failed to download %s to %s\n", path,
-                        prefix_local_update_path);
-                return -1;
-            }
+        LOGI("Verifying %s\n", path);
+        if (verify_update_pkg(this, path) < 0)
+            goto error;
 
-            memset(path, 0, sizeof(path));
-            sprintf(path, "%s/%s%03d.zip", prefix_local_update_path,
-                    prefix_update_pkg, index);
-            if (file_exist(path) < 0 || verify_update_pkg(this, path) < 0) {
-                LOGE("Failed to verify %s\n", path);
-                goto error;
-            }
+        LOGI("Unziping %s\n", path);
+        if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
+            LOGE("Failed to unzip %s\n", path);
+            goto error;
+        }
 
-            if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
-                LOGE("Failed to unzip %s to %s\n", path,
-                        prefix_local_update_path);
-                goto error;
-            }
+        /*
+         * Parse & check device info
+         */
+        memset(path, 0, sizeof(path));
+        sprintf(path, "%s/%s", prefix_local_update_path, prefix_device_xml);
+        LOGI("Parsing %s\n", path);
 
-            memset(path, 0, sizeof(path));
-            if (info->chunkcount == 1)
-                sprintf(path, "%s/%s", prefix_local_update_path, info->name);
+        if (this->uf->parse_device_xml(this->uf, path, device_info) < 0) {
+            LOGE("Failed to parse %s\n", path);
+            goto error;
+        }
+        this->uf->dump_device_info(this->uf, device_info);
+
+        /*
+         * Check device info
+         */
+        LOGI("Checking device info: %s\n", devtype);
+        if (check_device_info(this, device_info) < 0) {
+            LOGE("Failed to check device info for %s\n", devtype);
+            goto error;
+        }
+
+        /*
+         * Parse update info
+         */
+        memset(path, 0, sizeof(path));
+        sprintf(path, "%s/%s", prefix_local_update_path, prefix_update_xml);
+        LOGI("Parsing %s\n", path);
+
+        if (this->uf->parse_update_xml(this->uf, path, update_info) < 0) {
+            LOGE("Failed to parse %s\n", path);
+            goto error;
+        }
+        this->uf->dump_update_info(this->uf, update_info);
+
+        /*
+         * Get update pkg count
+         */
+        uint32_t chunk_count = 0;
+        struct list_head* sub_pos;
+        list_for_each(sub_pos, &update_info->list) {
+            struct image_info * info = list_entry(sub_pos, struct image_info,
+                    head);
+            if (info->chunkcount == 0)
+                chunk_count += 1;
             else
-                sprintf(path, "%s/%s_%03d", prefix_local_update_path,
-                        info->name, i);
+                chunk_count += info->chunkcount;
+        }
 
-            if (file_exist(path) < 0) {
-                LOGE("Failed to access %s: %s\n", path, strerror(errno));
-                goto error;
+        int index = 1;
+        struct list_head* pos;
+        list_for_each(pos, &update_info->list) {
+            struct image_info* info = list_entry(pos, struct image_info, head);
+
+            LOGI("Updating image: \"%s\"\n", info->name);
+
+            for (int i = 1; i <= info->chunkcount; i++) {
+                /*
+                 * Create unzip dir
+                 */
+                dir_delete(prefix_local_update_path);
+                if (dir_create(prefix_local_update_path) < 0) {
+                    LOGE("Failed to create %s\n", prefix_local_update_path);
+                    goto error;
+                }
+
+                memset(path, 0, sizeof(path));
+                sprintf(path, "%s/%s/%s%03d.zip", this->cf->server_url, devtype,
+                        prefix_update_pkg, index);
+
+                LOGI("Downloading %s\n", path);
+                if (download_file(path, prefix_local_update_path) < 0) {
+                    LOGE("Failed to download %s to %s\n", path,
+                            prefix_local_update_path);
+                    goto error;
+                }
+
+                memset(path, 0, sizeof(path));
+                sprintf(path, "%s/%s%03d.zip", prefix_local_update_path,
+                        prefix_update_pkg, index);
+                LOGI("Verifying %s\n", path);
+                if (file_exist(path) < 0 || verify_update_pkg(this, path) < 0)
+                    goto error;
+
+                LOGI("Unziping %s\n", path);
+                if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
+                    LOGE("Failed to unzip %s to %s\n", path,
+                            prefix_local_update_path);
+                    goto error;
+                }
+
+                memset(path, 0, sizeof(path));
+                if (info->chunkcount == 1)
+                    sprintf(path, "%s/%s", prefix_local_update_path, info->name);
+                else
+                    sprintf(path, "%s/%s_%03d", prefix_local_update_path,
+                            info->name, i);
+
+                if (file_exist(path) < 0) {
+                    LOGE("Failed to access %s: %s\n", path, strerror(errno));
+                    goto error;
+                }
+
+                index++;
+
+                LOGI("Updating \"%s\"\n", path);
+                if (write_update_pkg(this, path, info) < 0) {
+                    LOGE("Failed to write %s\n", path);
+                    goto error;
+                }
             }
-
-            index++;
-            LOGI("Chunk: \"%s\"\n", path);
-
-            write_update_pkg(this, path, info);
         }
     }
 
@@ -643,11 +784,29 @@ static void *main_task(void* param) {
 
     mount_all(this);
 
+    LOGI("Try update from storage\n");
+
+    /*
+     * Instance update file
+     */
+    this->uf = _new(struct update_file, update_file);
+
     error = update_from_storage(this);
-    if (error < 0)
+    if (error < 0) {
+        _delete(this->uf);
+
+        /*
+         * Instance update file
+         */
+        this->uf = _new(struct update_file, update_file);
+
+        LOGI("Try update from network\n");
         error = update_from_network(this);
+    }
 
     umount_all(this);
+
+    _delete(this->uf);
 
     recovery_finish(error);
 
@@ -683,11 +842,6 @@ void construct_ota_manager(struct ota_manager* this) {
     this->mm = _new(struct mount_manager, mount_manager);
 
     /*
-     * Instance update file
-     */
-    this->uf = _new(struct update_file, update_file);
-
-    /*
      * Instance net interface
      */
     this->ni = (struct net_interface*) calloc(1, sizeof(struct net_interface));
@@ -709,11 +863,9 @@ void destruct_ota_manager(struct ota_manager* this) {
     }
 
     _delete(this->cf);
-    _delete(this->uf);
     _delete(this->mm);
 
     this->cf = NULL;
-    this->uf = NULL;
     this->start = NULL;
     this->stop = NULL;
     this->load_configure = NULL;

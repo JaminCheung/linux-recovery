@@ -52,13 +52,13 @@ static void print_help() {
 }
 
 __attribute__((__unused__)) static void redirect_stdio() {
-    if (freopen(temporary_log_file, "a", stderr))
+    if (freopen(temporary_log_file, "w", stderr))
         setbuf(stderr, NULL);
     else
         LOGW("Failed to redirect stderr to file %s: %s\n", temporary_log_file,
                 strerror(errno));
 
-    if (freopen(temporary_log_file, "a", stderr))
+    if (freopen(temporary_log_file, "w", stderr))
         setbuf(stderr, NULL);
     else
         LOGW("Failed to redirect stderr to file %s: %s\n", temporary_log_file,
@@ -112,7 +112,8 @@ int main(int argc, char* argv[]) {
     }
 
 #ifndef LOCAL_DEBUG
-    redirect_stdio();
+    //TODO
+    //redirect_stdio();
 #endif
 
     /*

@@ -35,9 +35,11 @@ struct image_info {
 };
 
 struct update_info {
+    char devtype[NAME_MAX];
     uint32_t devctl;
     uint32_t image_count;
     struct list_head list;
+    struct list_head head;
 };
 
 struct part_info {
@@ -53,17 +55,35 @@ struct device_info {
     uint64_t capacity;
     uint32_t part_count;
     struct list_head list;
+    struct list_head head;
 };
 
 struct update_file {
     void (*construct)(struct update_file* this);
     void (*destruct)(struct update_file* this);
-    int (*parse_device_xml)(struct update_file* this, const char* path);
-    int (*parse_update_xml)(struct update_file* this, const char* path);
-    void (*dump_update_xml)(struct update_file* this);
-    void (*dump_device_xml)(struct update_file* this);
-    struct update_info update_info;
-    struct device_info device_info;
+
+    int (*parse_device_xml)(struct update_file* this, const char* path,
+            struct device_info* device_info);
+    int (*parse_update_xml)(struct update_file* this, const char* path,
+            struct update_info* update_info);
+    int (*parse_global_xml)(struct update_file* this, const char* path);
+
+    void (*dump_update_info)(struct update_file* this,
+            struct update_info* update_info);
+    void (*dump_device_info)(struct update_file* this,
+            struct device_info* device_info);
+
+    struct update_info* (*get_update_info_by_devtype)(struct update_file* this,
+            const char* devtype);
+    struct device_info* (*get_device_info_by_devtype)(struct update_file* this,
+            const char* devtype);
+
+    const char** (*get_device_type_list)(struct update_file* this);
+    void (*dump_device_type_list)(struct update_file* this);
+
+    struct list_head device_list;
+    struct list_head update_list;
+
 };
 
 void construct_update_file(struct update_file* this);
