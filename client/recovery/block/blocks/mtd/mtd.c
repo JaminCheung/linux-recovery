@@ -54,8 +54,12 @@ static inline struct mtd_dev_info* mtd_get_dev_info_by_node(
 
 static int64_t mtd_get_partition_size_by_offset(struct block_manager* this,
         int64_t offset) {
-    struct mtd_dev_info* mtd = mtd_get_dev_info_by_offset(this, offset);
-
+    struct mtd_dev_info* mtd;
+    if (this == NULL) {
+        LOGE("Parameter block_manager is null\n");
+        return -1;
+    }
+    mtd = mtd_get_dev_info_by_offset(this, offset);
     if (mtd == NULL) {
         LOGI("Cannot get mtd devinfo at 0x%llx", offset);
         return 0;
@@ -64,12 +68,27 @@ static int64_t mtd_get_partition_size_by_offset(struct block_manager* this,
     return mtd->size;
 }
 
+static int mtd_get_partition_count(struct block_manager* this) {
+     struct mtd_info *mtd_info;
+    if (this == NULL) {
+        LOGE("Parameter block_manager is null\n");
+        return -1;
+    }
+    mtd_info = BM_GET_MTD_INFO(this);
+    return mtd_info->mtd_dev_cnt;
+}
+
 static int64_t mtd_get_partition_size_by_name(struct block_manager* this,
         char *name) {
-    struct mtd_info *mtd_info = BM_GET_MTD_INFO(this);
+    struct mtd_info *mtd_info;
     int i;
     int len =  strlen(BM_BLOCK_TYPE_MTD);
 
+    if (this == NULL) {
+        LOGE("Parameter block_manager is null\n");
+        return -1;
+    }
+    mtd_info = BM_GET_MTD_INFO(this);
     if ((name == NULL) || strncmp(name, 
             BM_BLOCK_TYPE_MTD, len)){
         LOGE("Parameter %s is wrong\n", name);
@@ -91,6 +110,10 @@ static int64_t mtd_get_partition_size_by_name(struct block_manager* this,
 
 static int64_t mtd_get_partition_start_by_offset(struct block_manager* this,
         int64_t offset) {
+    if (this == NULL) {
+        LOGE("Parameter block_manager is null\n");
+        return -1;
+    }
     struct mtd_dev_info* mtd = mtd_get_dev_info_by_offset(this, offset);
     if (mtd == NULL) {
         LOGI("Cannot get mtd devinfo at 0x%llx", offset);
@@ -101,10 +124,15 @@ static int64_t mtd_get_partition_start_by_offset(struct block_manager* this,
 
 static int64_t mtd_get_partition_start_by_name(struct block_manager* this,
         char *name) {
-    struct mtd_info *mtd_info = BM_GET_MTD_INFO(this);
+    struct mtd_info * mtd_info;
     int i;
     int len =  strlen(BM_BLOCK_TYPE_MTD);
 
+    if (this == NULL) {
+        LOGE("Parameter block_manager is null\n");
+        return -1;
+    }
+    mtd_info = BM_GET_MTD_INFO(this);
     if ((name == NULL) || strncmp(name, 
             BM_BLOCK_TYPE_MTD, len)){
         LOGE("Parameter %s is wrong\n", name);
@@ -538,6 +566,7 @@ static struct block_manager mtd_manager =  {
     .get_prepare_write_start = mtd_get_prepare_write_start,
     .get_prepare_max_mapped_size = mtd_get_max_size_mapped_in,
     .finish = mtd_block_finish,
+    .get_partition_count = mtd_get_partition_count,
     .get_partition_size_by_name = mtd_get_partition_size_by_name,
     .get_partition_size_by_offset = mtd_get_partition_size_by_offset,
     .get_partition_start_by_name =  mtd_get_partition_start_by_name,

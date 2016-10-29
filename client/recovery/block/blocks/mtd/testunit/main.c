@@ -125,6 +125,30 @@ static struct offset_tlb* is_file_recognize(char *path) {
     return NULL;
 }
 
+static void api_test(struct block_manager *this){
+    int i;
+    char buf[256];
+    long long s;
+    // int64_t (*get_partition_size_by_offset)(struct block_manager* this,
+    //         int64_t offset);
+    // int64_t (*get_partition_size_by_name)(struct block_manager* this,
+    //                                         char *name);
+    // int64_t (*get_partition_start_by_offset)(struct block_manager* this,
+    //         int64_t offset);
+    // int64_t (*get_partition_start_by_name)(struct block_manager* this,
+    //                                         char *name);
+    // int (*get_partition_count)(struct block_manager* this);
+    LOGI("partition count = %d\n", this->get_partition_count(this));
+    for (i = 0; i < this->get_partition_count(this); i++) {
+        sprintf(buf, "mtd%d", i);
+        LOGI("partition = %s\n", buf);
+        s = this->get_partition_size_by_name(this, buf);
+        LOGI("size = %lld\n", s);
+        s = this->get_partition_start_by_name(this, buf);
+        LOGI("size = %lld\n", s);
+    }
+}
+
 int main(int argc, char **argv) {
 
     struct block_manager *bm = (struct block_manager *)calloc(1, sizeof(*bm));
@@ -146,6 +170,7 @@ int main(int argc, char **argv) {
     bm->destruct = destruct_block_manager;
     bm->construct(bm, "mtd", bm_mtd_event_listener, bm_params);
 
+    api_test(bm);
     bm->get_supported(bm, tmp);
     LOGI("suported blocks : %s\n", tmp);
     bm->get_supported_filetype(bm, tmp);
