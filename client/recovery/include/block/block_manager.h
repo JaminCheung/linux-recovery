@@ -138,8 +138,12 @@ struct block_manager {
 
     int64_t (*get_partition_size_by_offset)(struct block_manager* this,
             int64_t offset);
-    int64_t (*get_partition_size_by_node)(struct block_manager* this,
-                                            char *mtdchar);
+    int64_t (*get_partition_size_by_name)(struct block_manager* this,
+                                            char *name);
+    int64_t (*get_partition_start_by_offset)(struct block_manager* this,
+            int64_t offset);
+    int64_t (*get_partition_start_by_name)(struct block_manager* this,
+                                            char *name);
     int64_t (*get_capacity)(struct block_manager* this);
     int (*get_blocksize)(struct block_manager* this, int64_t offset);
     int (*get_iosize)(struct block_manager* this, int64_t offset);

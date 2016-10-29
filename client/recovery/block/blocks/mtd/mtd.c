@@ -55,21 +55,67 @@ static inline struct mtd_dev_info* mtd_get_dev_info_by_node(
 static int64_t mtd_get_partition_size_by_offset(struct block_manager* this,
         int64_t offset) {
     struct mtd_dev_info* mtd = mtd_get_dev_info_by_offset(this, offset);
+
     if (mtd == NULL) {
         LOGI("Cannot get mtd devinfo at 0x%llx", offset);
         return 0;
     }
+
     return mtd->size;
 }
 
-static int64_t mtd_get_partition_size_by_node(struct block_manager* this,
-        char *mtdchar) {
-    struct mtd_dev_info* mtd = mtd_get_dev_info_by_node(this, mtdchar);
+static int64_t mtd_get_partition_size_by_name(struct block_manager* this,
+        char *name) {
+    struct mtd_info *mtd_info = BM_GET_MTD_INFO(this);
+    int i;
+    int len =  strlen(BM_BLOCK_TYPE_MTD);
+
+    if ((name == NULL) || strncmp(name, 
+            BM_BLOCK_TYPE_MTD, len)){
+        LOGE("Parameter %s is wrong\n", name);
+        return -1;
+    }
+    i = strtoul(&name[len], NULL, 10);
+    if (i > mtd_info->mtd_dev_cnt) {
+        LOGE("Parameter %s is over the right limit of mtd\n", name);
+        return -1;
+    }
+
+    struct mtd_dev_info* mtd = BM_GET_PARTINFO_MTD_DEV(this, i);
     if (mtd == NULL) {
-        LOGI("Cannot get mtd devinfo by name:\"%s\"", mtdchar);
-        return 0;
+        LOGI("Cannot get mtd devinfo by index \'%d\'\n", i);
+        return -1;
     }
     return mtd->size;
+}
+
+static int64_t mtd_get_partition_start_by_offset(struct block_manager* this,
+        int64_t offset) {
+    struct mtd_dev_info* mtd = mtd_get_dev_info_by_offset(this, offset);
+    if (mtd == NULL) {
+        LOGI("Cannot get mtd devinfo at 0x%llx", offset);
+        return 0;
+    }
+    return MTD_DEV_INFO_TO_START(mtd);
+}
+
+static int64_t mtd_get_partition_start_by_name(struct block_manager* this,
+        char *name) {
+    struct mtd_info *mtd_info = BM_GET_MTD_INFO(this);
+    int i;
+    int len =  strlen(BM_BLOCK_TYPE_MTD);
+
+    if ((name == NULL) || strncmp(name, 
+            BM_BLOCK_TYPE_MTD, len)){
+        LOGE("Parameter %s is wrong\n", name);
+        return -1;
+    }
+    i = strtoul(&name[len], NULL, 10);
+    if (i > mtd_info->mtd_dev_cnt) {
+        LOGE("Parameter %s is over the right limit of mtd\n", name);
+        return -1;
+    }
+    return BM_GET_PARTINFO_START(this, i);
 }
 
 static int64_t mtd_get_capacity(struct block_manager* this) {
@@ -492,8 +538,10 @@ static struct block_manager mtd_manager =  {
     .get_prepare_write_start = mtd_get_prepare_write_start,
     .get_prepare_max_mapped_size = mtd_get_max_size_mapped_in,
     .finish = mtd_block_finish,
+    .get_partition_size_by_name = mtd_get_partition_size_by_name,
     .get_partition_size_by_offset = mtd_get_partition_size_by_offset,
-    .get_partition_size_by_node = mtd_get_partition_size_by_node,
+    .get_partition_start_by_name =  mtd_get_partition_start_by_name,
+    .get_partition_start_by_offset =  mtd_get_partition_start_by_offset,
     .get_capacity = mtd_get_capacity,
     .get_blocksize = mtd_get_blocksize_by_offset,
     .get_iosize = mtd_get_pagesize_by_offset
