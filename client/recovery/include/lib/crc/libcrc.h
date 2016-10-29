@@ -41,10 +41,10 @@ uint8_t local_crc7(uint8_t crc, const uint8_t *buffer, size_t len);
  * @len: Length of buffer in bytes
  * @return CRC8 checksum
  */
-uint32_t local_crc8(uint32_t crc_start, const uint8_t *vptr, uint32_t len);
+uint32_t local_crc8(uint32_t crc_start, const uint8_t *vptr, int32_t len);
 
 uint16_t local_crc16(uint8_t *s, uint32_t len);
 
-uint32_t local_crc32(uint32_t val, const void *ss, uint32_t len);
+uint32_t local_crc32(uint32_t val, const void *ss, int32_t len);
 
 #endif /* LIB_CRC_H */

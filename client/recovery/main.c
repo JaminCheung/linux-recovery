@@ -67,15 +67,10 @@ __attribute__((__unused__)) static void redirect_stdio() {
 }
 
 
-extern int block_manager_testcase(void);
-
 int main(int argc, char* argv[]) {
     const char* configure_file_path = NULL;
     int opt = 0;
 
-    block_manager_testcase();
-    LOGI("done...\n");
-    return -1;
     if (argc < 2) {
         print_help();
         return -1;

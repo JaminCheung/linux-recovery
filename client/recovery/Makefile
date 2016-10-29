@@ -63,7 +63,6 @@ OBJS-y += block/fs/jffs2.o
 OBJS-y += block/fs/cramfs.o
 OBJS-y += block/fs/ubifs.o
 OBJS-y += block/fs/yaffs2.o
-OBJS-y += block/blocks/mtd/testcase/main.o
 
 #
 # Recovery Handler
@@ -212,6 +211,7 @@ testunit:
 	make -C lib/ini/testunit all
 	make -C lib/gpio/testunit all
 	make -C lib/zip/testunit all
+	make -C block/blocks/mtd/testunit all
 
 testunit_clean:
 	make -C lib/mxml/testunit clean
@@ -221,6 +221,7 @@ testunit_clean:
 	make -C lib/ini/testunit clean
 	make -C lib/gpio/testunit clean
 	make -C lib/zip/testunit clean
+	make -C block/blocks/mtd/testunit clean
 
 $(TARGET): $(OBJS) $(LIBS)
 	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(OBJS) $(LIBS) $(LDFLAGS) $(LDLIBS)
