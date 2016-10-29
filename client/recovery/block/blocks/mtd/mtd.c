@@ -92,6 +92,14 @@ int mtd_get_blocksize_by_offset(struct block_manager* this, int64_t offset) {
     return mtd->eb_size;
 }
 
+int mtd_get_pagesize_by_offset(struct block_manager* this, int64_t offset) {
+    struct mtd_dev_info* mtd = mtd_get_dev_info_by_offset(this, offset);
+    if (mtd == NULL) {
+        LOGI("Cannot get mtd devinfo at 0x%llx", offset);
+        return 0;
+    }
+    return mtd->min_io_size;
+}
 
 static int mtd_install_filesystem(struct block_manager* this) {
     BM_FILE_TYPE_INIT(user_list);
@@ -488,6 +496,7 @@ static struct block_manager mtd_manager =  {
     .get_partition_size_by_node = mtd_get_partition_size_by_node,
     .get_capacity = mtd_get_capacity,
     .get_blocksize = mtd_get_blocksize_by_offset,
+    .get_iosize = mtd_get_pagesize_by_offset
 };
 
 int mtd_manager_init(void) {

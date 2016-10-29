@@ -130,6 +130,7 @@ struct block_manager {
                       int64_t length);
     // void (*switch_prepare_context)(struct block_manager* this,
     //                                struct bm_operate_prepare_info* prepared);
+    uint32_t (*get_prepare_io_size)(struct block_manager* this);
     uint32_t (*get_prepare_leb_size)(struct block_manager* this);
     int64_t (*get_prepare_write_start)(struct block_manager* this);
     int64_t (*get_prepare_max_mapped_size)(struct block_manager* this);
@@ -141,7 +142,7 @@ struct block_manager {
                                             char *mtdchar);
     int64_t (*get_capacity)(struct block_manager* this);
     int (*get_blocksize)(struct block_manager* this, int64_t offset);
-
+    int (*get_iosize)(struct block_manager* this, int64_t offset);
     struct bm_operation_option operate_option;
     struct bm_operate_prepare_info *prepared;
     union bm_info desc;
