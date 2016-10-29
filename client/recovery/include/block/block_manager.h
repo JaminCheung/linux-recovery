@@ -48,28 +48,29 @@
     }
 
 enum bm_operation {
-    BLOCK_OPERATION_ERASE,
-    BLOCK_OPERATION_WRITE,
-    BLOCK_OPERATION_READ,
+    BM_OPERATION_ERASE = 0x100,
+    BM_OPERATION_WRITE,
+    BM_OPERATION_READ,
 };
 
 enum bm_operation_method {
-    BLOCK_OPERATION_METHOD_PARTITION,
-    BLOCK_OPERATION_METHOD_RANDOM,
+    BM_OPERATION_METHOD_PARTITION = 0x200,
+    BM_OPERATION_METHOD_RANDOM,
 };
 
 #define BM_OPERATE_METHOD_INIT(name)      \
     char *name[] = {\
-        BLOCK_OPERATION_METHOD_PARTITION,  \
-        BLOCK_OPERATION_METHOD_RANDOM,\
+        BM_OPERATION_METHOD_PARTITION,  \
+        BM_OPERATION_METHOD_RANDOM,\
     }
 
 struct bm_operate_prepare_info {
     pid_t tid;
-    long long write_start;
-    unsigned long physical_unit_size;
-    unsigned long logical_unit_size;
-    long long max_size_mapped_in_partition;
+    int64_t write_start;
+    uint32_t physical_unit_size;
+    uint32_t logical_unit_size;
+    int64_t max_size_mapped_in_partition;
+    void *context_handle;
 };
 
 struct bm_operation_option {
@@ -90,9 +91,9 @@ union bm_dev_info {
 };
 struct bm_part_info {
     union bm_dev_info part;
-    long long start;
+    int64_t start;
     int fd;
-    char *path;
+    char path[16];
     int id;
 };
 
@@ -111,41 +112,42 @@ struct block_manager {
     void (*construct)(struct block_manager* this, char *blockname,
                       bm_event_listener_t listener, void* param);
     void (*destruct)(struct block_manager* this);
+    
     void (*get_supported)(struct block_manager* this, char *buf);
     void (*get_supported_filetype)(struct block_manager* this, char *buf);
+    
     struct bm_operation_option* (*set_operation_option) (struct block_manager* this,
             int method, char *filetype);
-    long long (*erase)(struct block_manager* this, long long offset, long long length,
-                 struct bm_operation_option *option);
-    long long (*write)(struct block_manager* this, long long offset, char* buf, long long length,
-                 struct bm_operation_option *option);
-    long long (*read)(struct block_manager* this, long long offset, char* buf,
-                long long length, struct bm_operation_option *option);
+
     struct bm_operate_prepare_info* (*prepare)(struct block_manager* this,
-                long long offset, long long length, struct bm_operation_option *option);
-    void (*switch_prepare_context)(struct block_manager* this, 
-                    struct bm_operate_prepare_info* prepared);
-    unsigned long (*get_prepare_leb_size)(struct block_manager* this);
-    unsigned long (*get_prepare_max_mapped_size)(struct block_manager* this);
+            int64_t offset, int64_t length, struct bm_operation_option *option);
+    int (*chip_erase)(struct block_manager* this);
+    int64_t (*erase)(struct block_manager* this, int64_t offset,
+                       int64_t length);
+    int64_t (*write)(struct block_manager* this, int64_t offset,
+                       char* buf, int64_t length);
+    int64_t (*read)(struct block_manager* this, int64_t offset, char* buf,
+                      int64_t length);
+    // void (*switch_prepare_context)(struct block_manager* this,
+    //                                struct bm_operate_prepare_info* prepared);
+    uint32_t (*get_prepare_leb_size)(struct block_manager* this);
+    int64_t (*get_prepare_write_start)(struct block_manager* this);
+    int64_t (*get_prepare_max_mapped_size)(struct block_manager* this);
     int (*finish)(struct block_manager* this);
-    long long (*get_partition_size_by_offset)(struct block_manager* this,
-            long long offset);
-    long long (*get_partition_size_by_node)(struct block_manager* this,
+
+    int64_t (*get_partition_size_by_offset)(struct block_manager* this,
+            int64_t offset);
+    int64_t (*get_partition_size_by_node)(struct block_manager* this,
                                             char *mtdchar);
-    long long (*get_capacity)(struct block_manager* this);
-    int (*get_blocksize)(struct block_manager* this, long long offset);
+    int64_t (*get_capacity)(struct block_manager* this);
+    int (*get_blocksize)(struct block_manager* this, int64_t offset);
 
     struct bm_operation_option operate_option;
     struct bm_operate_prepare_info *prepared;
-
-    // libmtd_t mtd_desc;
-    // struct mtd_info mtd_info;
     union bm_info desc;
     struct bm_part_info *part_info;
-
     char *name;
     struct list_head  list_cell;
-    struct list_head  list_head;
     struct list_head  list_fs_head;
     void* param;
 };
@@ -161,6 +163,7 @@ struct block_manager {
 #define BM_GET_PARTINFO_ID(bm, i) (bm->part_info[i].id)
 #define BM_GET_PARTINFO_MTD_DEV(bm, i)  (&(bm->part_info[i].part.mtd_dev_info))
 #define BM_GET_PREPARE_INFO(bm)   (bm->prepared)
+#define BM_GET_PREPARE_INFO_CONTEXT(bm) (bm->prepared->context_handle)
 
 void construct_block_manager(struct block_manager* this, char *blockname,
                              bm_event_listener_t listener, void* param);

@@ -72,7 +72,7 @@ static const uint32_t crc32_table[256] = {
 	0x2d02ef8dL
 };
 
-uint32_t local_crc32(uint32_t val, const void *ss, uint32_t len)
+uint32_t local_crc32(uint32_t val, const void *ss, int32_t len)
 {
 	const uint8_t *s = ss;
 
@@ -117,7 +117,7 @@ static const uint16_t crc16_tab[] = {
     0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0,
 };
 
-uint16_t local_crc16(uint8_t *buf, uint32_t len)
+uint16_t local_crc16(uint8_t *buf, int32_t len)
 {
     int i;
     uint16_t cksum;
@@ -195,7 +195,7 @@ static uint8_t crc7_byte(uint8_t crc, uint8_t data)
     return crc7_syndrome_table[(crc << 1) ^ data];
 }
 
-uint8_t local_crc7(uint8_t crc, const uint8_t *buffer, size_t len) {
+uint8_t local_crc7(uint8_t crc, const uint8_t *buffer, int32_t len) {
     while (len--)
         crc = crc7_byte(crc, *buffer++);
 

@@ -21,7 +21,6 @@ endif
 include config.mk
 
 AUTOCONF := $(INCLUDES)/autoconf.h
-
 #
 # Application Entry
 #
@@ -64,6 +63,7 @@ OBJS-y += block/fs/jffs2.o
 OBJS-y += block/fs/cramfs.o
 OBJS-y += block/fs/ubifs.o
 OBJS-y += block/fs/yaffs2.o
+OBJS-y += block/blocks/mtd/testcase/main.o
 
 #
 # Recovery Handler

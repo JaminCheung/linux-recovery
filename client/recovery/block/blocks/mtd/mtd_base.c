@@ -160,7 +160,7 @@ static int mtd_basic_erase(struct filesystem *fs) {
 
         /* write cleanmarker */
         if (isNAND) {
-            if (mtd_write_oob(this->mtd_desc, mtd, fd, (uint64_t)offset + clmpos, clmlen, &cleanmarker) != 0) {
+            if (mtd_write_oob(this->mtd_desc, mtd, fd, (uint64_t_t)offset + clmpos, clmlen, &cleanmarker) != 0) {
                 LOGE("%s: MTD writeoob failure", params->partition);
                 continue;
             }

@@ -2,8 +2,8 @@
 #define MTD_H
 
 #define MTD_LARGEST_PARTITION_NUM  10
-#define MTD_DEV_ROOT    "/dev/"
-#define MTD_PART_HEAD "/dev/mtd"
+#define MTD_CHAR_HEAD "/dev/mtd"
+// #define MTD_OPEN_DEBUG
 
 enum {
     MTD_BLK_PREFIX = 0x5A5A5A00,
@@ -21,9 +21,9 @@ enum {
 struct mtd_nand_map {
     char *name;
     unsigned int *es;
-    long long start;
-    long long eb_cnt;
-    int bad_cnt;
+    int64_t eb_start;
+    int64_t eb_cnt;
+    int64_t bad_cnt;
     int dirty;
 };
 
@@ -34,24 +34,25 @@ struct mtd_part_char {
     int fd;
 };
 
-int mtd_get_blocksize_by_offset(struct block_manager* this, long long offset);
+int mtd_get_blocksize_by_offset(struct block_manager* this, int64_t offset);
 int mtd_type_is_nand(struct mtd_dev_info *mtd);
 int mtd_type_is_mlc_nand(struct mtd_dev_info *mtd);
 int mtd_type_is_nor(struct mtd_dev_info *mtd);
-int mtd_is_block_scaned(struct block_manager* this, long long offset);
-void mtd_scan_dump(struct block_manager* this, long long offset, 
+int mtd_is_block_scaned(struct block_manager* this, int64_t offset);
+void mtd_scan_dump(struct block_manager* this, int64_t offset, 
                         struct mtd_nand_map* mi);
-long long mtd_block_scan(struct filesystem *fs);
-long long mtd_basic_erase(struct filesystem *fs);
-long long mtd_basic_write(struct filesystem *fs);
-long long mtd_basic_read(struct filesystem *fs);
+int64_t mtd_block_scan(struct filesystem *fs);
+int64_t mtd_basic_erase(struct filesystem *fs);
+int64_t mtd_basic_write(struct filesystem *fs);
+int64_t mtd_basic_read(struct filesystem *fs);
 
 #define MTD_DEV_INFO_TO_FD(mtd)   container_of(mtd, struct bm_part_info, part.mtd_dev_info)->fd
 #define MTD_DEV_INFO_TO_START(mtd)  container_of(mtd, struct bm_part_info, part.mtd_dev_info)->start
 #define MTD_DEV_INFO_TO_ID(mtd)     container_of(mtd, struct bm_part_info, part.mtd_dev_info)->id
+#define MTD_DEV_INFO_TO_PATH(mtd)     container_of(mtd, struct bm_part_info, part.mtd_dev_info)->path
 #define MTD_OFFSET_TO_EB_INDEX(mtd, off)   ((off)/mtd->eb_size)
 // #define MTD_BOUNDARY_IS_ALIGNED(mtd, off)  (off%mtd->eb_size == 0)
-#define MTD_BOUNDARY_IS_ALIGNED(mtd, off)  (((off)&(~mtd->eb_size + 1)) == (off))
+#define MTD_IS_BLOCK_ALIGNED(mtd, off)  (((off)&(~mtd->eb_size + 1)) == (off))
 #define MTD_BLOCK_ALIGN(mtd, off)   ((off)&(~mtd->eb_size + 1))
 
 #endif
