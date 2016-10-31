@@ -19,7 +19,9 @@
 
 #include <types.h>
 
-#define ARRAY_SIZE(a) ((sizeof(a)) / (sizeof(a[0])))
+#ifndef ARRAY_SIZE
+    #define ARRAY_SIZE(a) ((sizeof(a)) / (sizeof(a[0])))
+#endif
 
 #define _new(T, P)                          \
 ({                                          \
@@ -35,6 +37,9 @@
     P->destruct(P);                         \
     free((void *)(P));                      \
 })
+
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#define MIX(a,b) ((a) < (b) ? (a) : (b))
 
 extern const char* public_key_path;
 

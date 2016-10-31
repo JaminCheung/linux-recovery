@@ -172,6 +172,13 @@ LIBS-y += lib/ini/iniparser/src/dictionary.o                                   \
           lib/ini/iniparser/src/iniparser.o
 
 #
+# Serial Port Lib
+#
+LIBS-n += lib/serial/libserialport/serialport.o                                \
+          lib/serial/libserialport/linux_termios.o                             \
+          lib/serial/libserialport/linux.o
+
+#
 # MD5 Lib
 #
 LIBS-y += lib/md5/libmd5.o
@@ -211,6 +218,7 @@ testunit:
 	make -C lib/ini/testunit all
 	make -C lib/gpio/testunit all
 	make -C lib/zip/testunit all
+	make -C lib/serial//testunit all
 	make -C block/blocks/mtd/testunit all
 
 testunit_clean:
@@ -221,6 +229,7 @@ testunit_clean:
 	make -C lib/ini/testunit clean
 	make -C lib/gpio/testunit clean
 	make -C lib/zip/testunit clean
+	make -C lib/serial//testunit clean
 	make -C block/blocks/mtd/testunit clean
 
 $(TARGET): $(OBJS) $(LIBS)

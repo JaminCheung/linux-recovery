@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
      */
     struct configure_file* cf = _new(struct configure_file, configure_file);
     if (cf->parse(cf, configure_file_path) < 0) {
-        LOGE("Failed to parse %s: %s\n", configure_file_path, strerror(errno));
+        LOGE("Failed to parse %s\n", configure_file_path);
         return -1;
     }
 
