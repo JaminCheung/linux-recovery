@@ -54,6 +54,7 @@ extern int i2c_smbus_block_process_call(int fd, unsigned char cmd,
         unsigned char length, unsigned char *values);
 
 extern int i2c_smbus_open(int i2cbus);
+extern int i2c_smbus_close(int fd);
 extern int i2c_smbus_get_funcs_matrix(int fd, unsigned long *funcs);
 extern int i2c_smbus_set_slave_addr(int fd, int addr, bool force);
 

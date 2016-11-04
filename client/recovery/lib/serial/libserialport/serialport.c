@@ -1062,13 +1062,9 @@ SP_API enum sp_return sp_blocking_read(struct sp_port *port, void *buf,
 				 * select() first, but handle anyway.
 				 */
 				continue;
-			else {
-			    printf("xxxxxxxxxxxxxxxxxxx %d errno=%s\n", __LINE__,strerror(errno));
+			else
 				/* This is an actual failure. */
-
 				RETURN_FAIL("read() failed");
-
-			}
 		}
 
 		bytes_read += result;

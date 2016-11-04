@@ -11,7 +11,9 @@
 
 #include <types.h>
 #include <utils/log.h>
+#include <lib/serial/libserialport_config.h>
 #include <lib/serial/libserialport.h>
+#include <lib/serial/libserialport_internal.h>
 
 #define LOG_TAG "test_libserialport"
 
@@ -22,8 +24,14 @@ static const char write_buf[] = "This is write test...\n\r";
 
 int main() {
     struct sp_port* port;
+    struct sp_port_config *config;
 
-    port = (struct sp_port* ) malloc(sizeof(port));
+    port = (struct sp_port* ) malloc(sizeof(struct sp_port));
+
+    if (sp_new_config(&config) < 0) {
+        LOGE("Failed to create new config\n");
+        return -1;
+    }
 
     if (sp_get_port_by_name(SERIAL_PORT, &port) < 0) {
         LOGE("Failed to get port\n");
@@ -35,7 +43,12 @@ int main() {
         return -1;
     }
 
-    if (sp_set_config_bits(port, 8) < 0) {
+    if (sp_get_config(port, config) < 0) {
+        LOGE("Failed to get current port config\n");
+        return -1;
+    }
+
+    if (sp_set_config_bits(config, 8) < 0) {
         LOGE("Failed to set data bits\n");
         return -1;
     }
@@ -54,6 +67,8 @@ int main() {
         LOGE("Failed to set baudrate\n");
         return -1;
     }
+
+    sp_free_config(config);
 
     if (sp_blocking_write(port, write_buf, sizeof(write_buf), 300) < 0) {
         LOGE("Failed to write\n");

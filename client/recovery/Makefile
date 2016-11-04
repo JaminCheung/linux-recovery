@@ -95,6 +95,11 @@ OBJS-n += eeprom/eeprom_manager.o
 OBJS-y += configure/configure_file.o                                           \
           configure/update_file.o
 
+#
+# Framebuffer Manager
+#
+OBJS-y += fb/fb_manager.o
+
 OBJS := $(OBJS-y)
 
 #
@@ -219,6 +224,7 @@ testunit:
 	make -C lib/gpio/testunit all
 	make -C lib/zip/testunit all
 	make -C lib/serial//testunit all
+	make -C fb/testunit all
 	make -C block/blocks/mtd/testunit all
 
 testunit_clean:
@@ -230,6 +236,7 @@ testunit_clean:
 	make -C lib/gpio/testunit clean
 	make -C lib/zip/testunit clean
 	make -C lib/serial//testunit clean
+	make -C fb/testunit clean
 	make -C block/blocks/mtd/testunit clean
 
 $(TARGET): $(OBJS) $(LIBS)

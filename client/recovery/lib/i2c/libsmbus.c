@@ -223,6 +223,15 @@ int i2c_smbus_open(int i2cbus) {
     return fd;
 }
 
+int i2c_smbus_close(int fd) {
+    if (fd < 0)
+        return -1;
+
+    close(fd);
+
+    return 0;
+}
+
 int i2c_smbus_get_funcs_matrix(int fd, unsigned long *funcs) {
     int retval = 0;
 
