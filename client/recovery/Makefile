@@ -125,6 +125,26 @@ LIBS-y += lib/zlib/zlib-1.2.8/adler32.o                                        \
           lib/zlib/zlib-1.2.8/gzwrite.o                                        \
 
 #
+# PNG Lib
+#
+LIBS-y += lib/png/libpng-1.6.26/png.o                                          \
+          lib/png/libpng-1.6.26/pngerror.o                                     \
+          lib/png/libpng-1.6.26/pngget.o                                       \
+          lib/png/libpng-1.6.26/pngmem.o                                       \
+          lib/png/libpng-1.6.26/pngpread.o                                     \
+          lib/png/libpng-1.6.26/pngread.o                                      \
+          lib/png/libpng-1.6.26/pngrio.o                                       \
+          lib/png/libpng-1.6.26/pngrtran.o                                     \
+          lib/png/libpng-1.6.26/pngrutil.o                                     \
+          lib/png/libpng-1.6.26/pngset.o                                       \
+          lib/png/libpng-1.6.26/pngtrans.o                                     \
+          lib/png/libpng-1.6.26/pngwio.o                                       \
+          lib/png/libpng-1.6.26/pngwrite.o                                     \
+          lib/png/libpng-1.6.26/pngwtran.o                                     \
+          lib/png/libpng-1.6.26/pngwutil.o
+
+
+#
 # MTD Lib
 #
 LIBS-y += lib/mtd/libmtd_legacy.o                                              \
