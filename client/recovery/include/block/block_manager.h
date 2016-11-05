@@ -26,11 +26,8 @@
 #define BM_BLOCK_TYPE_MTD_NOR  BM_BLOCK_TYPE_MTD"_nor"
 #define BM_BLOCK_TYPE_MMC  "mmc"
 
-#define BM_BLOCK_TYPE_INIT(name)      \
-    char *name[] = {\
-        BM_BLOCK_TYPE_MTD,  \
-        BM_BLOCK_TYPE_MMC,\
-    }
+#define BM_BLOCK_MTD_ERRONO_START    0xffffff00
+#define BM_BLOCK_MTD_ERRONO_LIMIT      256
 
 #define BM_FILE_TYPE_NORMAL  "normal"
 #define BM_FILE_TYPE_JFFS2   "jffs2"
@@ -38,7 +35,7 @@
 #define BM_FILE_TYPE_YAFFS2  "yaffs2"
 #define BM_FILE_TYPE_CRAMFS  "cramfs"
 
-#define BM_FILE_TYPE_INIT(name)      \
+#define BM_MTD_FILE_TYPE_INIT(name)      \
     char *name[] = {\
         BM_FILE_TYPE_NORMAL,  \
         BM_FILE_TYPE_CRAMFS,\
@@ -51,6 +48,7 @@ enum bm_operation {
     BM_OPERATION_ERASE = 0x100,
     BM_OPERATION_WRITE,
     BM_OPERATION_READ,
+    BM_OPERATION_ERASE_WRITE,
 };
 
 enum bm_operation_method {
@@ -112,10 +110,10 @@ struct block_manager {
     void (*construct)(struct block_manager* this, char *blockname,
                       bm_event_listener_t listener, void* param);
     void (*destruct)(struct block_manager* this);
-    
+
     void (*get_supported)(struct block_manager* this, char *buf);
     void (*get_supported_filetype)(struct block_manager* this, char *buf);
-    
+
     struct bm_operation_option* (*set_operation_option) (struct block_manager* this,
             int method, char *filetype);
 
@@ -134,7 +132,7 @@ struct block_manager {
     uint32_t (*get_prepare_leb_size)(struct block_manager* this);
     int64_t (*get_prepare_write_start)(struct block_manager* this);
     int64_t (*get_prepare_max_mapped_size)(struct block_manager* this);
-    int (*finish)(struct block_manager* this);
+    int64_t (*finish)(struct block_manager* this);
 
     int64_t (*get_partition_size_by_offset)(struct block_manager* this,
             int64_t offset);
@@ -160,7 +158,7 @@ struct block_manager {
 
 #define BM_GET_MTD_DESC(bm) ((bm->desc.mtd.mtd_desc))
 #define BM_GET_MTD_INFO(bm) (&(bm->desc.mtd.mtd_info))
-#define BM_GET_MTD_NAND_MAP(bm, type) ((type**)(&bm->desc.mtd.map))
+#define BM_GET_MTD_BLOCK_MAP(bm, type) ((type**)(&bm->desc.mtd.map))
 #define BM_GET_LISTENER(bm) (bm->desc.mtd.event_listener)
 #define BM_GET_PARTINFO(bm) (bm->part_info)
 #define BM_GET_PARTINFO_START(bm, i) (bm->part_info[i].start)
@@ -171,6 +169,7 @@ struct block_manager {
 #define BM_GET_PREPARE_INFO(bm)   (bm->prepared)
 #define BM_GET_PREPARE_INFO_CONTEXT(bm) (bm->prepared->context_handle)
 
+extern unsigned long recovery_errorno;
 void construct_block_manager(struct block_manager* this, char *blockname,
                              bm_event_listener_t listener, void* param);
 void destruct_block_manager(struct block_manager* this);

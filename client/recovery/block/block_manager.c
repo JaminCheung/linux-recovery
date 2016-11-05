@@ -27,6 +27,8 @@ extern int mmc_manager_init(void);
 
 static LIST_HEAD(block_manager_list);
 
+unsigned long recovery_errorno;
+
 int register_block_manager(struct block_manager* this) {
     struct block_manager *m;
     struct list_head *cell;
@@ -34,12 +36,12 @@ int register_block_manager(struct block_manager* this) {
         m = list_entry(cell, struct block_manager, list_cell);
         if (!strcmp(m->name,  this->name)) {
             LOGE("Block manager \''%s\' is already registered\n", m->name);
-            return false;
+            return -1;
         }
     }
     list_add_tail(&this->list_cell, &block_manager_list);
     LOGI("Block manager \'%s\' is registered\n", this->name);
-    return true;
+    return 0;
 }
 
 int unregister_block_manager(struct block_manager* this) {
@@ -51,10 +53,10 @@ int unregister_block_manager(struct block_manager* this) {
         if (!strcmp(m->name,  this->name)) {
             LOGI("Block manager \''%s\' is removed successfully\n", m->name);
             list_del(cell);
-            return true;
+            return 0;
         }
     }
-    return false;
+    return -1;
 }
 
 struct block_manager* get_block_manager(struct block_manager* this, char *name) {
@@ -68,27 +70,8 @@ struct block_manager* get_block_manager(struct block_manager* this, char *name) 
     return NULL;
 }
 
-static void get_supported_block_managers(struct block_manager* this, char *buf) {
-    struct block_manager *m;
-    struct list_head *cell;
-    char list[128];
-    int i = 0;
-    list_for_each(cell, &block_manager_list) {
-        m = list_entry(cell, struct block_manager, list_cell);
-        if (i == 0)
-            strcpy(list, "[");
-        else
-            strcat(list, ",");
-        strcat(list, m->name);
-    }
-    strcat(list, "]");
-    strcpy(buf, list);
-    // LOGI("Block manager supporting list \'%s\'\n",  buf);
-    return;
-}
-
 static void get_supported_filetype(struct block_manager* this, char *buf) {
-    BM_FILE_TYPE_INIT(supported_array);
+    BM_MTD_FILE_TYPE_INIT(supported_array);
     char list[128];
     int i;
     for (i = 0; i < sizeof(supported_array)/sizeof(supported_array[0]); i++){
@@ -100,7 +83,7 @@ static void get_supported_filetype(struct block_manager* this, char *buf) {
     }
     strcat(list, "]");
     strcpy(buf, list);
-    // LOGI("Block manager supporting filesystem list  \'%s\'\n",  buf);
+    // printf("Block manager supporting filesystem list  \'%s\'\n",  buf);
     return;
 }
 
@@ -119,25 +102,40 @@ void construct_block_manager(struct block_manager* this, char *blockname,
 
     int retval;
     retval = mtd_manager_init();
-    // ret &= mmc_manager_init();
-    assert_die_if(!retval,
-        "Failed to init mtd block manager\n");
+    // retval &= mmc_manager_init();
+
+    if (retval < 0) {
+        LOGI("Failed to init mtd block manager\n");
+        goto out;
+    }
 
     struct block_manager* bm = get_block_manager(this, blockname);
-    assert_die_if(bm == NULL,
-        "Block manager you request is not exist\n");
+    if (bm == NULL) {
+        LOGI("Block manager you request is not exist\n");
+        goto out;
+    }
     bm->param = param;
     BM_GET_LISTENER(bm) = listener;
     memcpy(this, bm, sizeof(*this));
-    this->get_supported = get_supported_block_managers;
+    this->construct = construct_block_manager;
+    this->destruct = destruct_block_manager;
     this->get_supported_filetype = get_supported_filetype;
     this->set_operation_option = set_operation_option;
     return;
+out:
+    assert_die_if(1, "%s:%s:%d run crashed\n", __FILE__, __func__, __LINE__);
 }
 
 void destruct_block_manager(struct block_manager* this) {
+    int retval;
     // mmc_manager_destroy();
-    mtd_manager_destroy();
+    retval = mtd_manager_destroy();
+    if (retval < 0) {
+        LOGI("Failed to destory mtd block manager\n");
+        goto out;
+    }
     memset(this, 0, sizeof(* this));
     return;
+out:
+    assert_die_if(1, "%s:%s:%d run crashed\n", __FILE__, __func__, __LINE__);
 }

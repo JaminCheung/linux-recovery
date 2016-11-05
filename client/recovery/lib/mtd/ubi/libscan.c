@@ -60,20 +60,20 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 
 	si = calloc(1, sizeof(struct ubi_scan_info));
 	if (!si){
-		LOGE("cannot allocate %zd bytes of memory",
+		LOGE("cannot allocate %zd bytes of memory\n",
 				  sizeof(struct ubi_scan_info));
 		return -1;
 	}
 	si->ec = calloc(mtd->eb_cnt, sizeof(uint32_t));
 	if (!si->ec) {
-	    LOGE("cannot allocate %zd bytes of memory",
+	    LOGE("cannot allocate %zd bytes of memory\n",
 			   sizeof(struct ubi_scan_info));
 		goto out_si;
 	}
 
 	si->vid_hdr_offs = si->data_offs = -1;
 
-	LOGI("start scanning eraseblocks 0-%d", mtd->eb_cnt);
+	LOGI("start scanning eraseblocks 0-%d\n", mtd->eb_cnt);
 	for (eb = 0; eb < mtd->eb_cnt; eb++) {
 		int ret;
 		uint32_t crc;
@@ -81,7 +81,7 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 		unsigned long long ec;
 
 		if (v) {
-		    LOGI("scanning eraseblock %d", eb);
+		    LOGI("scanning eraseblock %d\n", eb);
 			fflush(stdout);
 		}
 		if (pr) {
@@ -97,7 +97,7 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 			si->bad_cnt += 1;
 			si->ec[eb] = EB_BAD;
 			if (v)
-			    LOGI(": bad");
+			    LOGI(": bad\n");
 			continue;
 		}
 
@@ -110,12 +110,12 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 				si->empty_cnt += 1;
 				si->ec[eb] = EB_EMPTY;
 				if (v)
-				    LOGI(": empty");
+				    LOGI(": empty\n");
 			} else {
 				si->alien_cnt += 1;
 				si->ec[eb] = EB_ALIEN;
 				if (v)
-				    LOGI(": alien");
+				    LOGI(": alien\n");
 			}
 			continue;
 		}
@@ -125,7 +125,7 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 			si->corrupted_cnt += 1;
 			si->ec[eb] = EB_CORRUPTED;
 			if (v)
-			    LOGI(": bad CRC %#08x, should be %#08x",
+			    LOGI(": bad CRC %#08x, should be %#08x\n",
 				       crc, be32_to_cpu(ech.hdr_crc));
 			continue;
 		}
@@ -135,7 +135,7 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 			if (pr)
 			    printf("\n");
 			LOGE("erase counter in EB %d is %llu, while this "
-			       "program expects them to be less than %u",
+			       "program expects them to be less than %u\n",
 			       eb, ec, EC_MAX);
 			goto out_ec;
 		}
@@ -149,9 +149,9 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 				if (v)
 					LOGI(": corrupted because of the below\n");
 				LOGW("bad data offset %d at eraseblock %d (n"
-					"of multiple of min. I/O unit size %d)",
+					"of multiple of min. I/O unit size %d)\n",
 					si->data_offs, eb, mtd->min_io_size);
-				LOGW("treat eraseblock %d as corrupted", eb);
+				LOGW("treat eraseblock %d as corrupted\n", eb);
 				si->corrupted_cnt += 1;
 				si->ec[eb] = EB_CORRUPTED;
 				continue;
@@ -164,10 +164,10 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 				if (v)
 				    LOGI(": corrupted because of the below\n");
 				LOGW("inconsistent VID header offset: was "
-					"%d, but is %d in eraseblock %d",
+					"%d, but is %d in eraseblock %d\n",
 					si->vid_hdr_offs,
 					be32_to_cpu(ech.vid_hdr_offset), eb);
-				LOGW("treat eraseblock %d as corrupted", eb);
+				LOGW("treat eraseblock %d as corrupted\n", eb);
 				si->corrupted_cnt += 1;
 				si->ec[eb] = EB_CORRUPTED;
 				continue;
@@ -178,10 +178,10 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 				if (v)
 				    LOGI(": corrupted because of the below\n");
 				LOGW("inconsistent data offset: was %d, but"
-					" is %d in eraseblock %d",
+					" is %d in eraseblock %d\n",
 					si->data_offs,
 					be32_to_cpu(ech.data_offset), eb);
-				LOGW("treat eraseblock %d as corrupted", eb);
+				LOGW("treat eraseblock %d as corrupted\n", eb);
 				si->corrupted_cnt += 1;
 				si->ec[eb] = EB_CORRUPTED;
 				continue;
@@ -206,7 +206,7 @@ int ubi_scan(struct mtd_dev_info *mtd, int fd, struct ubi_scan_info **info,
 
 	si->good_cnt = mtd->eb_cnt - si->bad_cnt;
 	LOGI("finished, mean EC %lld, %d OK, %d corrupted, %d empty, %d "
-		"alien, bad %d", si->mean_ec, si->ok_cnt, si->corrupted_cnt,
+		"alien, bad %d\n", si->mean_ec, si->ok_cnt, si->corrupted_cnt,
 		si->empty_cnt, si->alien_cnt, si->bad_cnt);
 
 	*info = si;

@@ -1,13 +1,14 @@
 #ifndef FS_MANAGER_H
 #define FS_MANAGER_H
 
+#define FS_OPEN_DEBUG
 #define FS_GET_TYPE(type, head, member)      (type *)(head->member)
 #define FS_GET_PARAM(fs)     (fs->params)
 #define FS_SET_PARAMS(fs, p) (fs->params = p)
 #define FS_SET_PRIVATE(fs, p) (fs->priv = p)
 
 #define FS_GET_BM(fs)   (struct block_manager *)(fs->priv)
-#define FS_GET_MTD_DEV(fs)  (struct mtd_dev_info *)(fs->params->mtd)
+#define FS_GET_MTD_DEV(fs)  (struct mtd_dev_info *)(fs->params->priv)
 
 enum {
     FS_FLAG_UNLOCK,
@@ -31,7 +32,7 @@ struct fs_operation_params {
     int64_t length;
     int64_t max_mapped_size;
     int64_t content_start;
-    void *mtd;
+    void *priv;
 };
 
 struct filesystem {
@@ -40,9 +41,11 @@ struct filesystem {
     int (*init)(struct filesystem *fs);
     int (*alloc_params)(struct filesystem *fs);
     int (*free_params)(struct filesystem *fs);
+    int (*chiperase_preset)(struct filesystem *fs);
     int64_t (*erase)(struct filesystem *fs);
     int64_t (*read)(struct filesystem *fs);
     int64_t (*write)(struct filesystem *fs);
+    int64_t (*done)(struct filesystem *fs);
     int64_t (*get_operate_start_address)(struct filesystem *fs);
     unsigned long (*get_leb_size)(struct filesystem *fs);
     int64_t (*get_max_mapped_size_in_partition)(struct filesystem *fs);
@@ -52,11 +55,10 @@ struct filesystem {
     void *priv;
 };
 
-#include "jffs2.h"
-#include "ubifs.h"
-#include "yaffs2.h"
-
 extern int target_endian;
+void fs_write_flags_get(struct filesystem *fs,
+                                int *noecc, int *autoplace, int *writeoob,
+                                int *oobsize, int *pad, int *markbad);
 int fs_alloc_params(struct filesystem *this);
 int fs_free_params(struct filesystem *this);
 int fs_register(struct list_head *head, struct filesystem* this);
@@ -64,7 +66,7 @@ int fs_unregister(struct list_head *head, struct filesystem* this);
 struct filesystem* fs_get_registered_by_name(struct list_head *head,
         char *filetype);
 struct filesystem* fs_get_suppoted_by_name(char *filetype);
-void fs_set_content_boundary(struct filesystem *this, int64_t max_mapped_size, 
+void fs_set_content_boundary(struct filesystem *this, int64_t max_mapped_size,
                     int64_t content_start);
 void fs_set_private_data(struct filesystem* this, void *data);
 

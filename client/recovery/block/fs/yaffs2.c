@@ -18,6 +18,7 @@
 #include <lib/crc/libcrc.h>
 #include <utils/list.h>
 #include <block/fs/fs_manager.h>
+#include <block/fs/yaffs2.h>
 #include <block/block_manager.h>
 #include <block/mtd/mtd.h>
 
@@ -28,7 +29,7 @@ static int yaffs2_init(struct filesystem *fs) {
     FS_FLAG_SET(fs, AUTOPLACE);
     FS_FLAG_SET(fs, WRITEOOB);
     FS_FLAG_SET(fs, MARKBAD);
-    return true;
+    return 0;
 };
 
 static int64_t yaffs2_erase(struct filesystem *fs) {

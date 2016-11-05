@@ -149,7 +149,7 @@ LIBS-y += lib/png/libpng-1.6.26/png.o                                          \
 #
 LIBS-y += lib/mtd/libmtd_legacy.o                                              \
           lib/mtd/libmtd.o                                                     \
-          #lib/mtd/ubi/libubi.o                                                 \
+          lib/mtd/ubi/libubi.o                                                 \
           lib/mtd/ubi/libubigen.o                                              \
           lib/mtd/ubi/libscan.o
 

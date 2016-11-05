@@ -26,7 +26,7 @@
 static int cramfs_init(struct filesystem *fs) {
     FS_FLAG_SET(fs, PAD);
     FS_FLAG_SET(fs, MARKBAD);
-    return true;
+    return 0;
 };
 
 static int64_t cramfs_erase(struct filesystem *fs) {

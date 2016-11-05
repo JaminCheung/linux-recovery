@@ -170,19 +170,9 @@ int ubigen_add_volume(const struct ubigen_info *ui,
  * writes the UBI volume to the output file @out. Returns zero on success and
  * %-1 on failure.
  */
-#ifndef CONFIG_UBI_VOLUME_WRITE_MTD
 int ubigen_write_volume(const struct ubigen_info *ui,
 			const struct ubigen_vol_info *vi, long long ec,
 			long long bytes, int in, int out);
-#else
-extern int ubi_write_volume_to_mtd(libmtd_t *libmtd, struct mtd_dev_info *mtd,
-        const struct ubigen_info *ui, struct ubi_scan_info *si, void *buf,
-        int len);
-int ubigen_write_volume(const struct ubigen_info *ui,
-            const struct ubigen_vol_info *vi, long long ec,
-            long long bytes, int in, libmtd_t *libmtd,
-            struct mtd_dev_info *mtd, struct ubi_scan_info *si);
-#endif
 /**
  * ubigen_write_layout_vol - write UBI layout volume
  * @ui: libubigen information
@@ -196,17 +186,9 @@ int ubigen_write_volume(const struct ubigen_info *ui,
  * This function creates the UBI layout volume which contains 2 copies of the
  * volume table. Returns zero in case of success and %-1 in case of failure.
  */
-#ifndef CONFIG_UBI_VOLUME_WRITE_MTD
 int ubigen_write_layout_vol(const struct ubigen_info *ui, int peb1, int peb2,
                 long long ec1, long long ec2,
-                struct ubi_vtbl_record *vtbl, int fd)
-#else
-int ubigen_write_layout_vol(const struct ubigen_info *ui, int peb1, int peb2,
-                long long ec1, long long ec2,
-                struct ubi_vtbl_record *vtbl, libmtd_t *libmtd,
-                struct mtd_dev_info *mtd, struct ubi_scan_info *si);
-#endif
-
+                struct ubi_vtbl_record *vtbl, int fd);
 #ifdef __cplusplus
 }
 #endif

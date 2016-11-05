@@ -22,6 +22,7 @@
 #define LOG_TAG "fs_manager"
 
 int target_endian = __BYTE_ORDER;
+
 extern struct filesystem fs_normal;
 extern struct filesystem fs_jffs2;
 extern struct filesystem fs_ubifs;
@@ -35,19 +36,36 @@ static struct filesystem* fs_supported_list[] = {
     &fs_cramfs,
 };
 
+void fs_write_flags_get(struct filesystem *fs,
+                                int *noecc, int *autoplace, int *writeoob,
+                                int *oobsize, int *pad, int *markbad) {
+    struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
+    *noecc = FS_FLAG_IS_SET(fs, NOECC);
+    *autoplace = FS_FLAG_IS_SET(fs, AUTOPLACE);
+    *writeoob = FS_FLAG_IS_SET(fs, WRITEOOB);
+    *oobsize = fs->tagsize ? fs->tagsize : mtd->oob_size;
+    *pad = FS_FLAG_IS_SET(fs, PAD);
+    *markbad = FS_FLAG_IS_SET(fs, MARKBAD);
+#ifdef FS_OPEN_DEBUG
+    LOGI("noecc = %d\n", *noecc);
+    LOGI("autoplace = %d\n", *autoplace);
+    LOGI("writeoob = %d\n", *writeoob);
+    LOGI("oobsize = %d\n", *oobsize);
+    LOGI("pad = %d\n", *pad);
+    LOGI("markbad = %d\n", *markbad);
+#endif
+}
+
 int fs_alloc_params(struct filesystem *this) {
-    if (this->params) {
-        LOGW("Parameter of filesystem \"%s\" is already  allocated\n", 
-            this->name);
-        return true;
-    }
-    this->params = malloc(sizeof(*this->params));
+    if (this->params)
+        return 0;
+    this->params = calloc(1, sizeof(*this->params));
     if (this->params == NULL) {
-        LOGE("Cannot get memory space, request size is %d\n", 
+        LOGE("Cannot get memory space, request size is %d\n",
             sizeof(*this->params));
-        return false;
+        return -1;
     }
-    return true;
+    return 0;
 }
 
 int fs_free_params(struct filesystem *this) {
@@ -55,7 +73,7 @@ int fs_free_params(struct filesystem *this) {
         free(this->params);
         this->params = NULL;
     }
-    return true;
+    return 0;
 }
 
 int fs_register(struct list_head *head, struct filesystem* this) {
@@ -64,46 +82,47 @@ int fs_register(struct list_head *head, struct filesystem* this) {
 
     if (head == NULL || this == NULL) {
         LOGE("list head or filesystem to be registered is null\n");
-        return false;
+        return -1;
     }
 
-    if (!this->init(this)) {
+    if (this->init(this) < 0) {
         LOGE("Filesystem \'%s\' init failed\n", this->name);
-        return false;
+        return -1;
     }
-
-    if (head->next == NULL || head->prev == NULL)
-        INIT_LIST_HEAD(head);
 
     list_for_each(cell, head) {
         m = list_entry(cell, struct filesystem, list_cell);
         if (!strcmp(m->name,  this->name)) {
-            LOGE("Filesystem \'%s\' is already registered", m->name);
-            return false;
+            LOGW("Filesystem \'%s\' is already registered", m->name);
+            return 0;
         }
     }
-
+    if (this->alloc_params(this) < 0) {
+        LOGE("Filesystem \'%s\' alloc parameter failed\n", this->name);
+        return -1;
+    }
     list_add_tail(&this->list_cell, head);
-    return true;
+    return 0;
 }
 
 int fs_unregister(struct list_head *head, struct filesystem* this) {
     struct filesystem *m;
     struct list_head *cell;
     struct list_head* next;
-    if (head || this) {
+    if (head == NULL || this == NULL) {
         LOGE("list head or filesystem to be unregistered is null\n");
-        return false;
+        return -1;
     }
     list_for_each_safe(cell, next, head) {
         m = list_entry(cell, struct filesystem, list_cell);
         if (!strcmp(m->name,  this->name)) {
             LOGI("Filesystem \''%s\' is removed successfully", m->name);
+            this->free_params(this);
             list_del(cell);
-            return true;
+            return 0;
         }
     }
-    return false;
+    return -1;
 }
 
 struct filesystem* fs_get_registered_by_name(struct list_head *head, char *filetype) {
@@ -127,9 +146,3 @@ struct filesystem* fs_get_suppoted_by_name(char *filetype) {
     }
     return NULL;
 }
-
-// void fs_set_content_boundary(struct filesystem *this, int64_t max_mapped_size, 
-//                     int64_t content_start) {
-//     this->params->max_mapped_size = max_mapped_size;
-//     this->params->content_start = content_start;
-// }

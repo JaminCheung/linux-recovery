@@ -25,7 +25,7 @@
 static int normal_init(struct filesystem *fs) {
     FS_FLAG_SET(fs, PAD);
     FS_FLAG_SET(fs, MARKBAD);
-    return true;
+    return 0;
 };
 
 static int64_t normal_erase(struct filesystem *fs) {
@@ -57,12 +57,13 @@ struct filesystem fs_normal = {
     .init = normal_init,
     .alloc_params = fs_alloc_params,
     .free_params = fs_free_params,
+    .chiperase_preset = mtd_basic_chiperase_preset,
     .erase = normal_erase,
     .read = normal_read,
     .write = normal_write,
     .get_operate_start_address = normal_get_operate_start_address,
     .get_leb_size = normal_get_leb_size,
-    .get_max_mapped_size_in_partition = 
+    .get_max_mapped_size_in_partition =
             normal_get_max_mapped_size_in_partition,
 };
 

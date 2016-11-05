@@ -30,18 +30,12 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
-
 #include <lib/mtd/ubi-media.h>
 #include <lib/mtd/mtd_swab.h>
 #include <lib/ubi/libubigen.h>
 #include <lib/crc/libcrc.h>
 #include <lib/libcommon.h>
 #include <utils/log.h>
-#include <lib/ubi/ubi.h>
-#ifdef CONFIG_UBI_VOLUME_WRITE_MTD
-#include <lib/libmtd.h>
-#include <lib/ubi/libscan.h>
-#endif
 
 #define LOG_TAG "libubigen"
 
@@ -176,16 +170,9 @@ void ubigen_init_vid_hdr(const struct ubigen_info *ui,
 	hdr->hdr_crc = cpu_to_be32(crc);
 }
 
-#ifndef CONFIG_UBI_VOLUME_WRITE_MTD
 int ubigen_write_volume(const struct ubigen_info *ui,
 			const struct ubigen_vol_info *vi, long long ec,
 			long long bytes, int in, int out)
-#else
-int ubigen_write_volume(const struct ubigen_info *ui,
-            const struct ubigen_vol_info *vi, long long ec,
-            long long bytes, int in, libmtd_t *libmtd,
-            struct mtd_dev_info *mtd, struct ubi_scan_info *si)
-#endif
 {
 	int len = vi->usable_leb_size, rd, lnum = 0;
 	char *inbuf, *outbuf;
@@ -244,17 +231,10 @@ int ubigen_write_volume(const struct ubigen_info *ui,
 		memcpy(outbuf + ui->data_offs, inbuf, len);
 		memset(outbuf + ui->data_offs + len, 0xFF,
 		       ui->peb_size - ui->data_offs - len);
-#ifndef CONFIG_UBI_VOLUME_WRITE_MTD
 		if (write(out, outbuf, ui->peb_size) != ui->peb_size) {
 		    LOGE("cannot write %d bytes to the output file", ui->peb_size);
 			goto out_free1;
 		}
-#else
-		if (ubi_write_volume_to_mtd(libmtd, mtd, ui, si, outbuf, ui->peb_size) < 0){
-		    LOGE("cannot write %d bytes to the output file", ui->peb_size);
-		    goto out_free1;
-		}
-#endif
 		lnum += 1;
 	}
 
@@ -269,24 +249,15 @@ out_free:
 	return -1;
 }
 
-#ifndef CONFIG_UBI_VOLUME_WRITE_MTD
 int ubigen_write_layout_vol(const struct ubigen_info *ui, int peb1, int peb2,
 			    long long ec1, long long ec2,
 			    struct ubi_vtbl_record *vtbl, int fd)
-#else
-int ubigen_write_layout_vol(const struct ubigen_info *ui, int peb1, int peb2,
-                long long ec1, long long ec2,
-                struct ubi_vtbl_record *vtbl, libmtd_t *libmtd,
-                struct mtd_dev_info *mtd, struct ubi_scan_info *si)
-#endif
 {
 	int ret;
 	struct ubigen_vol_info vi;
 	char *outbuf;
 	struct ubi_vid_hdr *vid_hdr;
-#ifndef CONFIG_UBI_VOLUME_WRITE_MTD
 	off_t seek;
-#endif
 
 	vi.bytes = ui->leb_size * UBI_LAYOUT_VOLUME_EBS;
 	vi.id = UBI_LAYOUT_VOLUME_ID;
@@ -311,46 +282,30 @@ int ubigen_write_layout_vol(const struct ubigen_info *ui, int peb1, int peb2,
 	memcpy(outbuf + ui->data_offs, vtbl, ui->vtbl_size);
 	memset(outbuf + ui->data_offs + ui->vtbl_size, 0xFF,
 	       ui->peb_size - ui->data_offs - ui->vtbl_size);
-#ifndef CONFIG_UBI_VOLUME_WRITE_MTD
 	seek = (off_t) peb1 * ui->peb_size;
 	if (lseek(fd, seek, SEEK_SET) != seek) {
 	    LOGE("cannot seek output file");
 		goto out_free;
 	}
-#endif
 	ubigen_init_ec_hdr(ui, (struct ubi_ec_hdr *)outbuf, ec1);
 	ubigen_init_vid_hdr(ui, &vi, vid_hdr, 0, NULL, 0);
-#ifndef CONFIG_UBI_VOLUME_WRITE_MTD
 	ret = write(fd, outbuf, ui->peb_size);
 	if (ret != ui->peb_size) {
 	    LOGE("cannot write %d bytes", ui->peb_size);
 		goto out_free;
 	}
-    seek = (off_t) peb2 * ui->peb_size;
-    if (lseek(fd, seek, SEEK_SET) != seek) {
-        LOGE("cannot seek output file");
-        goto out_free;
-    }
-#else
-	if ((ret = ubi_write_volume_to_mtd(libmtd, mtd, ui, si, outbuf, ui->peb_size)) < 0){
-        LOGE("cannot write %d bytes to the output file", ui->peb_size);
-        goto out_free;
-    }
-#endif
+	seek = (off_t) peb2 * ui->peb_size;
+	if (lseek(fd, seek, SEEK_SET) != seek) {
+	    LOGE("cannot seek output file");
+	    goto out_free;
+	}
 	ubigen_init_ec_hdr(ui, (struct ubi_ec_hdr *)outbuf, ec2);
 	ubigen_init_vid_hdr(ui, &vi, vid_hdr, 1, NULL, 0);
-#ifndef CONFIG_UBI_VOLUME_WRITE_MTD
 	ret = write(fd, outbuf, ui->peb_size);
 	if (ret != ui->peb_size) {
 	    LOGE("cannot write %d bytes", ui->peb_size);
 		goto out_free;
 	}
-#else
-    if ((ret = ubi_write_volume_to_mtd(libmtd, mtd, ui, si, outbuf, ui->peb_size)) < 0){
-        LOGE("cannot write %d bytes to the output file", ui->peb_size);
-        goto out_free;
-    }
-#endif
 
 	free(outbuf);
 	return 0;

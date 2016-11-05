@@ -18,6 +18,7 @@
 #include <lib/crc/libcrc.h>
 #include <utils/list.h>
 #include <block/fs/fs_manager.h>
+#include <block/fs/jffs2.h>
 #include <block/block_manager.h>
 #include <block/mtd/mtd.h>
 
@@ -29,17 +30,17 @@ static void jffs2_dump_cleanmarker(struct jffs2_unknown_node *marker,
     unsigned int nodetype;
     unsigned int totlen;
     unsigned int hdr_crc;
-    
+
     memcpy(&magic, &marker->magic, sizeof(magic));
     memcpy(&nodetype, &marker->nodetype, sizeof(nodetype));
     memcpy(&totlen, &marker->totlen, sizeof(totlen));
     memcpy(&hdr_crc, &marker->hdr_crc, sizeof(hdr_crc));
-    LOGI("clmpos = %d\n", *pos);
-    LOGI("clmlen = %d\n", *len);
-    LOGI("cleanmarker magic = 0x%x\n", magic);
-    LOGI("cleanmarker nodetype = 0x%x\n", nodetype);
-    LOGI("cleanmarker totlen = 0x%x\n", totlen);
-    LOGI("cleanmarker hdr_crc = 0x%x\n", hdr_crc);
+    // LOGI("clmpos = %d\n", *pos);
+    // LOGI("clmlen = %d\n", *len);
+    // LOGI("cleanmarker magic = 0x%x\n", magic);
+    // LOGI("cleanmarker nodetype = 0x%x\n", nodetype);
+    // LOGI("cleanmarker totlen = 0x%x\n", totlen);
+    // LOGI("cleanmarker hdr_crc = 0x%x\n", hdr_crc);
     return;
 }
 
@@ -52,12 +53,10 @@ int jffs2_init_cleanmarker(struct filesystem *fs,
     struct jffs2_unknown_node cleanmarker;
     int is_nand = mtd_type_is_nand(mtd);
 
-    printf("%s: %d is_nand = %d\n", __func__, __LINE__, is_nand);
     if (!strcmp(fs->name, BM_FILE_TYPE_JFFS2)) {
         cleanmarker.magic = cpu_to_je16 (JFFS2_MAGIC_BITMASK);
         cleanmarker.nodetype = cpu_to_je16 (JFFS2_NODETYPE_CLEANMARKER);
         if (!is_nand) {
-            printf("%s: %d\n", __func__, __LINE__);
             cleanmarker.totlen = cpu_to_je32(sizeof(cleanmarker));
         }
         else {
@@ -65,7 +64,7 @@ int jffs2_init_cleanmarker(struct filesystem *fs,
 
             if (ioctl(fd, MEMGETOOBSEL, &oobinfo) != 0){
                 LOGE("Unable to get NAND oobinfo");
-                return false;
+                return -1;
             }
 
             /* Check for autoplacement */
@@ -73,7 +72,7 @@ int jffs2_init_cleanmarker(struct filesystem *fs,
                 /* Get the position of the free bytes */
                 if (!oobinfo.oobfree[0][1]){
                     LOGE("Eeep. Autoplacement selected and no empty space in oob");
-                    return false;
+                    return -1;
                 }
                 clmpos = oobinfo.oobfree[0][0];
                 clmlen = oobinfo.oobfree[0][1];
@@ -103,11 +102,9 @@ int jffs2_init_cleanmarker(struct filesystem *fs,
 
     *pos = clmpos;
     *len = clmlen;
-    printf("%s: %d\n", __func__, __LINE__);
     memcpy(marker, &cleanmarker, sizeof(cleanmarker));
-    printf("%s: %d\n", __func__, __LINE__);
     jffs2_dump_cleanmarker(marker, pos, len);
-    return true;
+    return 0;
 }
 
 int jffs2_write_cleanmarker(struct filesystem *fs,
@@ -123,21 +120,21 @@ int jffs2_write_cleanmarker(struct filesystem *fs,
     if (is_nand) {
         if (mtd_write_oob(mtd_desc, mtd, fd, (uint64_t)offset + clmpos, clmlen, cleanmarker) != 0) {
             LOGE("MTD \"%s\" writeoob failure", mtd->name);
-            return false;
+            return -1;
         }
     } else {
         if (pwrite(fd, cleanmarker, sizeof(*cleanmarker), (loff_t)offset) != sizeof(*cleanmarker)) {
             LOGE("MTD \"%s\" write failure", mtd->name);
-            return false;
+            return -1;
         }
     }
-    return true;
+    return 0;
 }
 
 static int jffs2_init(struct filesystem *fs) {
     FS_FLAG_SET(fs, PAD);
     FS_FLAG_SET(fs, MARKBAD);
-    return true;
+    return 0;
 };
 
 static int64_t jffs2_erase(struct filesystem *fs) {
@@ -174,6 +171,6 @@ struct filesystem fs_jffs2 = {
     .write = jffs2_write,
     .get_operate_start_address = jffs2_get_operate_start_address,
     .get_leb_size = jffs2_get_leb_size,
-    .get_max_mapped_size_in_partition = 
+    .get_max_mapped_size_in_partition =
             jffs2_get_max_mapped_size_in_partition,
 };
