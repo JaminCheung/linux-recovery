@@ -29,10 +29,9 @@ struct fb_manager {
 
     void (*dump)(struct fb_manager* this);
 
-    int fd;
+    void (*fb_flip_display)(struct fb_manager* this);
+
     uint8_t* fbmem;
-    size_t screen_size;
-    struct fb_fix_screeninfo fb_fixinfo;
     struct fb_var_screeninfo fb_varinfo;
 };
 
