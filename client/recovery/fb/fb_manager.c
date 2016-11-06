@@ -22,6 +22,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <linux/kd.h>
 
 #include <utils/log.h>
 #include <utils/assert.h>
@@ -30,8 +31,11 @@
 #define LOG_TAG "fb_manager"
 
 const static char* prefix_fb_dev = "/dev/fb0";
+const static char* prefix_fb_bak_dev = "/dev/graphics/fd0";
+const static char* prefix_vt_dev = "/dev/tty0";
 
 static int fd;
+static int vt_fd;
 static uint8_t fb_count;
 static uint8_t fb_index;
 static uint8_t *fbmem;
@@ -52,8 +56,13 @@ static void dump(struct fb_manager* this) {
 static int init(struct fb_manager* this) {
     fd = open(prefix_fb_dev, O_RDWR | O_SYNC);
     if (fd < 0) {
-        LOGE("Failed to open %s: %s\n", prefix_fb_dev, strerror(errno));
-        return -1;
+        LOGW("Failed to open %s, try %s\n", prefix_fb_dev, prefix_fb_bak_dev);
+
+        fd = open(prefix_fb_bak_dev, O_RDWR | O_SYNC);
+        if (fd < 0) {
+            LOGE("Failed to open %s: %s\n", prefix_fb_bak_dev, strerror(errno));
+            return -1;
+        }
     }
 
     if (ioctl(fd, FBIOGET_VSCREENINFO, &this->fb_varinfo) < 0) {
@@ -86,6 +95,21 @@ static int init(struct fb_manager* this) {
     this->fbmem = (uint8_t *) malloc(sizeof(fb_fixinfo.line_length
             * this->fb_varinfo.yres));
 
+    vt_fd = open(prefix_vt_dev, O_RDWR | O_SYNC);
+    if (vt_fd < 0) {
+        LOGW("Failed to open %s: %s\n", prefix_vt_dev, strerror(errno));
+    } else if (ioctl(vt_fd, KDSETMODE, (void*)KD_GRAPHICS) < 0) {
+        LOGE("Failed to set KD_GRAPHICS on %s: %s\n", prefix_vt_dev,
+                strerror(errno));
+
+        close(fd);
+        free(this->fbmem);
+        ioctl(vt_fd, KDSETMODE, (void*) KD_TEXT);
+        close(vt_fd);
+
+        return -1;
+    }
+
     return 0;
 }
 
@@ -100,6 +124,10 @@ static int deinit(struct fb_manager* this) {
 
     close(fd);
     fd = -1;
+
+    ioctl(vt_fd, KDSETMODE, (void*) KD_TEXT);
+    close(vt_fd);
+    vt_fd = -1;
 
     return 0;
 }
@@ -145,6 +173,8 @@ void construct_fb_manager(struct fb_manager* this) {
     this->fb_flip_display = fb_flip_display;
 
     fd = -1;
+    vt_fd = -1;
+
     this->fbmem = NULL;
 }
 
@@ -156,5 +186,7 @@ void destruct_fb_manager(struct fb_manager* this) {
     this->fb_flip_display = NULL;
 
     fd = -1;
+    vt_fd = -1;
+
     this->fbmem = NULL;
 }

@@ -100,6 +100,12 @@ OBJS-y += configure/configure_file.o                                           \
 #
 OBJS-y += fb/fb_manager.o
 
+#
+# Graphics
+#
+OBJS-y += graphics/gr_drawer.o                                                 \
+          graphics/png_decoder.o
+
 OBJS := $(OBJS-y)
 
 #

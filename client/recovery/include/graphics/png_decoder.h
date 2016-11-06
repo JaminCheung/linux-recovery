@@ -14,12 +14,10 @@
  *
  */
 
-#include <graphics/gr_drawer.h>
+struct png_decoder {
+    void (*construct)(struct png_decoder* this);
+    void (*destruct)(struct png_decoder* this);
+};
 
-void construct_gr_drawr(struct gr_drawer* this) {
-
-}
-
-void destruct_gr_drawer(struct gr_drawer* this) {
-
-}
+void construct_png_decoder(struct png_decoder* this);
+void destruct_png_decoder(struct png_decoder* this);

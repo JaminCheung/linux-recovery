@@ -14,12 +14,15 @@
  *
  */
 
-#include <graphics/gr_drawer.h>
+#ifndef GR_DRAWER_H
+#define GR_DRAWER_H
 
-void construct_gr_drawr(struct gr_drawer* this) {
+struct gr_drawer {
+    void (*construct)(struct gr_drawer* this);
+    void (*destruct)(struct gr_drawer* this);
+};
 
-}
+void construct_gr_drawer(struct gr_drawer* this);
+void destruct_gr_drawer(struct gr_drawer* this);
 
-void destruct_gr_drawer(struct gr_drawer* this) {
-
-}
+#endif /* GR_DRAWER_H */
