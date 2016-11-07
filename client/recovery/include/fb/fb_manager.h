@@ -29,10 +29,13 @@ struct fb_manager {
 
     void (*dump)(struct fb_manager* this);
 
-    void (*fb_flip_display)(struct fb_manager* this);
+    void (*display)(struct fb_manager* this);
+
+    uint32_t (*get_screen_size)(struct fb_manager* this);
+    uint32_t (*get_screen_width)(struct fb_manager* this);
+    uint32_t (*get_screen_height)(struct fb_manager* this);
 
     uint8_t* fbmem;
-    struct fb_var_screeninfo fb_varinfo;
 };
 
 void construct_fb_manager(struct fb_manager* this);

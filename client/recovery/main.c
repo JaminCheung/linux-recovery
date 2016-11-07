@@ -33,10 +33,10 @@
 
 #define LOG_TAG "main"
 
+struct global_data g_data;
+
 static const char* temporary_log_file = "/tmp/recovery.log";
 static const char* opt_string = "vhc:k:";
-
-const char* public_key_path;
 
 static void print_version() {
     fprintf(stderr, "Linux recovery updater. Version: %s. Build: %s %s\n", VERSION,
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
                 print_help();
                 return -1;
             }
-            public_key_path = optarg;
+            g_data.public_key_path = optarg;
             break;
 
         case 'v':
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (configure_file_path == NULL || public_key_path == NULL) {
+    if (configure_file_path == NULL || g_data.public_key_path == NULL) {
         print_help();
         return -1;
     }
