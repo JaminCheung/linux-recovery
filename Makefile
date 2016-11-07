@@ -56,14 +56,12 @@ client:
 #
 server:
 	@mkdir -p $(SERVER_DIR)
-	@mkdir -p $(SERVER_DIR)/source
-	@mkdir -p $(SERVER_DIR)/package
-	@make -C server
-	@cp -arv server/otapackage $(SERVER_DIR)/source
-	@cp -arv server/out/* $(SERVER_DIR)/package
+	@cp -arv server/* $(SERVER_DIR)
+	@mkdir -p $(SERVER_DIR)/image
 	@echo -e "=================="
 	@echo -e "Server side is ready."
 	@echo -e "==================\n"
+#
 #
 # For tools
 #
@@ -72,11 +70,11 @@ tools:
 	@make clean -C tools/dump_publickey
 	@make all -C tools/dump_publickey
 	@cp -av tools/dump_publickey/out/dumpkey.jar $(TOOLS_DIR)
+	@cp -arv server/otapackage/depmod/signature/makekey/* $(TOOLS_DIR)/
 
 	@echo -e "=================="
 	@echo -e "Host tools is ready."
 	@echo -e "==================\n"
-
 #
 # For document
 #
@@ -98,4 +96,3 @@ resource:
 
 clean:
 	@rm -rf $(OUTDIR) $(TARGET)
-	@make clean -C server
