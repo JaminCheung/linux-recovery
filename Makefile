@@ -56,6 +56,11 @@ client:
 #
 server:
 	@mkdir -p $(SERVER_DIR)
+	@mkdir -p $(SERVER_DIR)/source
+	@mkdir -p $(SERVER_DIR)/package
+	@make -C server
+	@cp -arv server/otapackage $(SERVER_DIR)/source
+	@cp -arv server/out/* $(SERVER_DIR)/package
 	@echo -e "=================="
 	@echo -e "Server side is ready."
 	@echo -e "==================\n"
@@ -92,4 +97,5 @@ resource:
 	@echo -e "==================\n"
 
 clean:
-	rm -rf $(OUTDIR) $(TARGET)
+	@rm -rf $(OUTDIR) $(TARGET)
+	@make clean -C server
