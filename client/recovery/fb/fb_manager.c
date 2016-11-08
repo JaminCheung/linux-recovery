@@ -47,10 +47,11 @@ static struct fb_var_screeninfo fb_varinfo;
 static void dump(struct fb_manager* this) {
     LOGI("==========================\n");
     LOGI("Dump fb info\n");
+    LOGI("Screen count:%u\n", fb_count);
     LOGI("Screen size: %u\n", screen_size);
     LOGI("Width:       %u\n", fb_varinfo.xres);
     LOGI("Length:      %u\n", fb_varinfo.yres);
-    LOGI("BPP: %u\n", fb_varinfo.bits_per_pixel);
+    LOGI("BPP:         %u\n", fb_varinfo.bits_per_pixel);
     LOGI("==========================\n");
 }
 
@@ -93,8 +94,8 @@ static int init(struct fb_manager* this) {
 
     screen_size = fb_fixinfo.line_length * fb_varinfo.yres;
 
-    this->fbmem = (uint8_t *) calloc(1, sizeof(fb_fixinfo.line_length
-            * fb_varinfo.yres));
+    this->fbmem = (uint8_t *) calloc(1, fb_fixinfo.line_length
+            * fb_varinfo.yres);
 
     vt_fd = open(prefix_vt_dev, O_RDWR | O_SYNC);
     if (vt_fd < 0) {

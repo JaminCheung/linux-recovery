@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 
 #include <utils/log.h>
 #include <utils/common.h>
@@ -7,15 +8,39 @@
 
 #define LOG_TAG "test_png_decoder"
 
+struct image_info {
+    uint32_t height;
+    uint32_t width;
+    int color_type;
+    uint32_t channels;
+    int bit_depth;
+    uint32_t row_bytes;
+};
+
+static png_structp png_ptr;
+static png_infop info_ptr;
 static struct fb_manager* fb_manager;
+static struct image_info image_info;
+static uint8_t *g_mem;
 
 static void print_help() {
     fprintf(stderr, "test_png_decoder PNG_IMG\n");
 }
 
-static inline uint32_t  make_pixel(uint32_t r, uint32_t g, uint32_t b)
-{
-    return (uint32_t)(((r >> 3) << 11) | ((g >> 2) << 5 | (b >> 3)));
+static void dump_image_info() {
+    LOGI("=========================\n");
+    LOGI("Dump image info\n");
+    LOGI("Height:     %u\n", image_info.height);
+    LOGI("Width:      %u\n", image_info.width);
+    LOGI("Bit depth:  %d\n", image_info.bit_depth);
+    LOGI("Channels:   %u\n", image_info.channels);
+    LOGI("Row bytes:  %u\n", image_info.row_bytes);
+    LOGI("Color type: %d\n", image_info.color_type);
+    LOGI("=========================\n");
+}
+
+static inline uint16_t  make_pixel(uint8_t r, uint8_t g, uint8_t b) {
+    return (uint16_t)(((r >> 3) << 11) | ((g >> 2) << 5 | (b >> 3)));
 }
 
 static void transform_rgb_to_draw(unsigned char* input_row,
@@ -49,8 +74,36 @@ static void transform_rgb_to_draw(unsigned char* input_row,
 
         case 4:
             // copy RGBA to RGBX
-            memcpy(output_row, input_row, width*4);
+            memcpy(output_row, input_row, width * 4);
             break;
+    }
+}
+
+static void transform_rgba8888_to_fb() {
+    uint16_t *buf = (uint16_t *) fb_manager->fbmem;
+
+    memset(fb_manager->fbmem, 0xff, fb_manager->get_screen_size(fb_manager));
+
+    uint32_t fb_width = fb_manager->get_screen_width(fb_manager);
+    uint32_t fb_height = fb_manager->get_screen_height(fb_manager);
+
+    for (int i = 0; i < image_info.height; i++) {
+        if (i >= fb_height)
+            break;
+
+        for (int j = 0; j < image_info.width; j++) {
+            if (j >= fb_width)
+                break;
+
+            uint8_t red = g_mem[4 * (j + image_info.width * i)];
+            uint8_t green = g_mem[4 * (j + image_info.width * i) + 1];
+            uint8_t blue = g_mem[4 * (j + image_info.width * i) + 2];
+            uint8_t alpha = g_mem[4 * (j + image_info.width * i) + 3];
+
+            uint16_t pixel = make_pixel(red, green, blue);
+
+            buf[i * fb_width + j] = pixel;
+        }
     }
 }
 
@@ -80,10 +133,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0,
-            0);
-    png_infop info_ptr = NULL;
-    png_bytep row = NULL, display = NULL;
+    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
 
     if (png_ptr == NULL) {
         LOGI("Failed to create png structure\n");
@@ -102,68 +152,75 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    png_set_keep_unknown_chunks(png_ptr, PNG_HANDLE_CHUNK_ALWAYS, NULL, 0);
-
     png_set_sig_bytes(png_ptr, sizeof(header));
+
     png_read_info(png_ptr, info_ptr);
 
-    uint32_t width = png_get_image_width(png_ptr, info_ptr);
-    uint32_t height = png_get_image_height(png_ptr, info_ptr);
+    /*
+     * Format png to RGBA8888
+     */
+    int bit_depth = png_get_bit_depth (png_ptr, info_ptr);
+    int color_type = png_get_color_type (png_ptr, info_ptr);
 
-    uint8_t color_type = png_get_color_type(png_ptr, info_ptr);
-    uint32_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
-    uint32_t bit_depth = png_get_bit_depth(png_ptr, info_ptr);
-    uint32_t channels = png_get_channels(png_ptr, info_ptr);
+    if (color_type == PNG_COLOR_TYPE_PALETTE)
+        png_set_palette_to_rgb (png_ptr);
 
-    LOGI("width=%d\n", width);
-    LOGI("height=%d\n", height);
-    LOGI("color_type=0x%x\n", color_type);
-    LOGI("bit_depth=0x%x\n", bit_depth);
-    LOGI("channgel=%d\n", channels);
-#if 1
-    if (bit_depth == 8 && channels == 3 && color_type == PNG_COLOR_TYPE_RGB) {
+    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+        png_set_expand_gray_1_2_4_to_8 (png_ptr);
 
-    } else if (bit_depth <= 8 && channels == 1 && color_type == PNG_COLOR_TYPE_GRAY) {
-        png_set_expand_gray_1_2_4_to_8(png_ptr);
+    if (png_get_valid (png_ptr, info_ptr, PNG_INFO_tRNS))
+        png_set_tRNS_to_alpha (png_ptr);
 
-    } else if (bit_depth <= 8 && channels == 1 && color_type == PNG_COLOR_TYPE_PALETTE) {
-        png_set_palette_to_rgb(png_ptr);
-        channels = 3;
+    if(color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+        png_set_gray_to_rgb(png_ptr);
 
-    } else {
-        //LOGE("unsupport\n");
-        //return -1;
+    if(bit_depth == 16)
+        png_set_strip_16(png_ptr);
+    else if (bit_depth < 8)
+        png_set_packing (png_ptr);
+
+    png_read_update_info (png_ptr, info_ptr);
+
+    /*
+     * Now format is RGBA8888
+     */
+    png_get_IHDR(png_ptr, info_ptr, &image_info.width, &image_info.height,
+            &image_info.bit_depth, &image_info.color_type, NULL, NULL, NULL);
+
+    image_info.row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+    image_info.channels = png_get_channels(png_ptr, info_ptr);
+
+    dump_image_info();
+
+    g_mem = (uint8_t*) calloc(1, image_info.width * image_info.height * 4);
+
+    uint8_t * row = (uint8_t *) malloc(image_info.width * 4);
+
+    for (int i = 0; i < image_info.height; i++) {
+        png_read_row(png_ptr, row, NULL);
+
+        transform_rgb_to_draw(row, g_mem + i * image_info.width * 4,
+                image_info.channels, image_info.width);
     }
-#endif
+    free(row);
+
     fb_manager = _new(struct fb_manager, fb_manager);
 
     fb_manager->init(fb_manager);
+
     fb_manager->dump(fb_manager);
 
-    row = malloc(width * 4);
-    uint8_t *mem = malloc(width * height * 4);
+    transform_rgba8888_to_fb();
 
-    png_read_row(png_ptr, row, NULL);
-
-    for (int i = 0; i < fb_manager->get_screen_height(fb_manager); i++) {
-        LOGI("i = %d\n", i);
-        for (int j = 0; j < fb_manager->get_screen_width(fb_manager); j+=3) {
-            uint8_t red = row[j];
-            uint8_t green = row[j + 1];
-            uint8_t blue = row[j + 2];
-
-            uint16_t pixel = make_pixel(red, green, blue);
-
-            //LOGI("j = %d\n", j);
-
-            uint16_t *pbuf = (uint16_t *)fb_manager->fbmem;
-            pbuf[2 * j] = pixel;
-
-        }
-
-    }
+    free(g_mem);
 
     fb_manager->display(fb_manager);
+
+    fb_manager->deinit(fb_manager);
+
+    _delete(fb_manager);
+
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
     return 0;
 }
