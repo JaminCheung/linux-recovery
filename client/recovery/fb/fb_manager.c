@@ -39,17 +39,18 @@ static int vt_fd;
 static uint8_t fb_count;
 static uint8_t fb_index;
 static uint8_t *fbmem;
-static size_t screen_size;
+static uint32_t screen_size;
 
-struct fb_fix_screeninfo fb_fixinfo;
+static struct fb_fix_screeninfo fb_fixinfo;
+static struct fb_var_screeninfo fb_varinfo;
 
 static void dump(struct fb_manager* this) {
     LOGI("==========================\n");
     LOGI("Dump fb info\n");
-    LOGI("Frame count: %u\n", fb_count);
-    LOGI("Width:       %u\n", this->fb_varinfo.xres);
-    LOGI("Length:      %u\n", this->fb_varinfo.yres);
-    LOGI("Bpp:         %u\n", this->fb_varinfo.bits_per_pixel);
+    LOGI("Screen size: %u\n", screen_size);
+    LOGI("Width:       %u\n", fb_varinfo.xres);
+    LOGI("Length:      %u\n", fb_varinfo.yres);
+    LOGI("BPP: %u\n", fb_varinfo.bits_per_pixel);
     LOGI("==========================\n");
 }
 
@@ -65,7 +66,7 @@ static int init(struct fb_manager* this) {
         }
     }
 
-    if (ioctl(fd, FBIOGET_VSCREENINFO, &this->fb_varinfo) < 0) {
+    if (ioctl(fd, FBIOGET_VSCREENINFO, &fb_varinfo) < 0) {
         LOGE("Failed to get screen var info: %s\n", strerror(errno));
         close(fd);
         return -1;
@@ -87,13 +88,13 @@ static int init(struct fb_manager* this) {
 
     memset(fbmem, 0, fb_fixinfo.smem_len);
 
-    fb_count = fb_fixinfo.smem_len / (this->fb_varinfo.yres
+    fb_count = fb_fixinfo.smem_len / (fb_varinfo.yres
             * fb_fixinfo.line_length);
 
-    screen_size = fb_fixinfo.line_length * this->fb_varinfo.yres;
+    screen_size = fb_fixinfo.line_length * fb_varinfo.yres;
 
-    this->fbmem = (uint8_t *) malloc(sizeof(fb_fixinfo.line_length
-            * this->fb_varinfo.yres));
+    this->fbmem = (uint8_t *) calloc(1, sizeof(fb_fixinfo.line_length
+            * fb_varinfo.yres));
 
     vt_fd = open(prefix_vt_dev, O_RDWR | O_SYNC);
     if (vt_fd < 0) {
@@ -135,8 +136,8 @@ static int deinit(struct fb_manager* this) {
 static int set_displayed_fb(struct fb_manager* this, uint8_t index) {
     assert_die_if(index > fb_count, "Invalid frame buffer index\n");
 
-    this->fb_varinfo.yoffset = index * this->fb_varinfo.yres;
-    if (ioctl(fd, FBIOPAN_DISPLAY, &this->fb_varinfo) < 0) {
+    fb_varinfo.yoffset = index * fb_varinfo.yres;
+    if (ioctl(fd, FBIOPAN_DISPLAY, &fb_varinfo) < 0) {
         LOGE("Failed to set displayed frame buffer: %s\n", strerror(errno));
         return -1;
     }
@@ -146,22 +147,32 @@ static int set_displayed_fb(struct fb_manager* this, uint8_t index) {
     return 0;
 }
 
-static void fb_flip_display(struct fb_manager* this) {
+static void display(struct fb_manager* this) {
     if (fb_count > 1) {
-        uint8_t index = 0;
+        if (fb_index >= fb_count)
+            fb_index = 0;
 
-        index = fb_index + 1;
+        memcpy(fbmem + fb_index * screen_size, this->fbmem, screen_size);
 
-        if (index > fb_count)
-            index = 0;
+        set_displayed_fb(this, fb_index);
 
-        memcpy(fbmem + index * screen_size, this->fbmem, screen_size);
-
-        set_displayed_fb(this, index);
+        fb_index++;
 
     } else {
         memcpy(fbmem, this->fbmem, screen_size);
     }
+}
+
+static uint32_t get_screen_size(struct fb_manager* this) {
+    return screen_size;
+}
+
+static uint32_t get_screen_height(struct fb_manager* this) {
+    return fb_varinfo.yres;
+}
+
+static uint32_t get_screen_width(struct fb_manager* this) {
+    return fb_varinfo.xres;
 }
 
 void construct_fb_manager(struct fb_manager* this) {
@@ -170,7 +181,11 @@ void construct_fb_manager(struct fb_manager* this) {
 
     this->dump = dump;
 
-    this->fb_flip_display = fb_flip_display;
+    this->display = display;
+
+    this->get_screen_size = get_screen_size;
+    this->get_screen_height = get_screen_height;
+    this->get_screen_width = get_screen_width;
 
     fd = -1;
     vt_fd = -1;
@@ -183,7 +198,12 @@ void destruct_fb_manager(struct fb_manager* this) {
     this->deinit = NULL;
 
     this->dump = NULL;
-    this->fb_flip_display = NULL;
+
+    this->display = NULL;
+
+    this->get_screen_size = NULL;
+    this->get_screen_height = NULL;
+    this->get_screen_width = NULL;
 
     fd = -1;
     vt_fd = -1;

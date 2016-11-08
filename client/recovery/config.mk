@@ -71,8 +71,7 @@ endif
 #
 #CFLAGS += -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE
 
-LDLIBS += -pthread
-LDLIBS += -lm
+LDLIBS += -pthread -lm
 override CFLAGS := $(CHECKFLAGS) $(CFLAGS)
 
 #
