@@ -47,11 +47,20 @@ static struct fb_var_screeninfo fb_varinfo;
 static void dump(struct fb_manager* this) {
     LOGI("==========================\n");
     LOGI("Dump fb info\n");
-    LOGI("Screen count:%u\n", fb_count);
-    LOGI("Screen size: %u\n", screen_size);
-    LOGI("Width:       %u\n", fb_varinfo.xres);
-    LOGI("Length:      %u\n", fb_varinfo.yres);
-    LOGI("BPP:         %u\n", fb_varinfo.bits_per_pixel);
+    LOGI("Screen count:  %u\n", fb_count);
+    LOGI("Screen size:   %u\n", screen_size);
+    LOGI("Width:         %u\n", fb_varinfo.xres);
+    LOGI("Length:        %u\n", fb_varinfo.yres);
+    LOGI("BPP:           %u\n", fb_varinfo.bits_per_pixel);
+    LOGI("Row bytes:     %u\n", fb_fixinfo.line_length);
+    LOGI("Red offset:    %u\n", fb_varinfo.red.offset);
+    LOGI("Red length:    %u\n", fb_varinfo.red.length);
+    LOGI("Green offset:  %u\n", fb_varinfo.green.offset);
+    LOGI("Green length:  %u\n", fb_varinfo.green.length);
+    LOGI("Blue offset:   %u\n", fb_varinfo.blue.offset);
+    LOGI("Blue length:   %u\n", fb_varinfo.blue.length);
+    LOGI("Alpha offset:  %u\n", fb_varinfo.transp.offset);
+    LOGI("Alpha length:  %u\n", fb_varinfo.transp.length);
     LOGI("==========================\n");
 }
 
@@ -176,6 +185,46 @@ static uint32_t get_screen_width(struct fb_manager* this) {
     return fb_varinfo.xres;
 }
 
+static uint32_t get_redbit_offset(struct fb_manager* this) {
+    return fb_varinfo.red.offset;
+}
+
+static uint32_t get_redbit_length(struct fb_manager* this) {
+    return fb_varinfo.red.length;
+}
+
+static uint32_t get_greenbit_offset(struct fb_manager* this) {
+    return fb_varinfo.green.offset;
+}
+
+static uint32_t get_greenbit_length(struct fb_manager* this) {
+    return fb_varinfo.green.length;
+}
+
+static uint32_t get_bluebit_offset(struct fb_manager* this) {
+    return fb_varinfo.blue.offset;
+}
+
+static uint32_t get_bluebit_length(struct fb_manager* this) {
+    return fb_varinfo.blue.length;
+}
+
+static uint32_t get_alphabit_offset(struct fb_manager* this) {
+    return fb_varinfo.transp.offset;
+}
+
+static uint32_t get_alphabit_length(struct fb_manager* this) {
+    return fb_varinfo.transp.length;
+}
+
+static uint32_t get_bits_per_pixel(struct fb_manager* this) {
+    return fb_varinfo.bits_per_pixel;
+}
+
+static uint32_t get_row_bytes(struct fb_manager* this) {
+    return fb_fixinfo.line_length;
+}
+
 void construct_fb_manager(struct fb_manager* this) {
     this->init = init;
     this->deinit = deinit;
@@ -187,6 +236,21 @@ void construct_fb_manager(struct fb_manager* this) {
     this->get_screen_size = get_screen_size;
     this->get_screen_height = get_screen_height;
     this->get_screen_width = get_screen_width;
+
+    this->get_redbit_offset = get_redbit_offset;
+    this->get_redbit_length = get_redbit_length;
+
+    this->get_greenbit_offset = get_greenbit_offset;
+    this->get_greenbit_length = get_greenbit_length;
+
+    this->get_bluebit_offset = get_bluebit_offset;
+    this->get_bluebit_length = get_bluebit_length;
+
+    this->get_alphabit_offset = get_alphabit_offset;
+    this->get_alphabit_length = get_alphabit_length;
+
+    this->get_bits_per_pixel = get_bits_per_pixel;
+    this->get_row_bytes = get_row_bytes;
 
     fd = -1;
     vt_fd = -1;
@@ -205,6 +269,21 @@ void destruct_fb_manager(struct fb_manager* this) {
     this->get_screen_size = NULL;
     this->get_screen_height = NULL;
     this->get_screen_width = NULL;
+
+    this->get_redbit_offset = NULL;
+    this->get_redbit_length = NULL;
+
+    this->get_greenbit_offset = NULL;
+    this->get_greenbit_length = NULL;
+
+    this->get_bluebit_offset = NULL;
+    this->get_bluebit_length = NULL;
+
+    this->get_alphabit_offset = NULL;
+    this->get_alphabit_length = NULL;
+
+    this->get_bits_per_pixel = NULL;
+    this->get_row_bytes = NULL;
 
     fd = -1;
     vt_fd = -1;

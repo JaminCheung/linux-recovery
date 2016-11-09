@@ -35,6 +35,21 @@ struct fb_manager {
     uint32_t (*get_screen_width)(struct fb_manager* this);
     uint32_t (*get_screen_height)(struct fb_manager* this);
 
+    uint32_t (*get_redbit_offset)(struct fb_manager* this);
+    uint32_t (*get_redbit_length)(struct fb_manager* this);
+
+    uint32_t (*get_greenbit_offset)(struct fb_manager* this);
+    uint32_t (*get_greenbit_length)(struct fb_manager* this);
+
+    uint32_t (*get_bluebit_offset)(struct fb_manager* this);
+    uint32_t (*get_bluebit_length)(struct fb_manager* this);
+
+    uint32_t (*get_alphabit_offset)(struct fb_manager* this);
+    uint32_t (*get_alphabit_length)(struct fb_manager* this);
+
+    uint32_t (*get_bits_per_pixel)(struct fb_manager* this);
+    uint32_t (*get_row_bytes)(struct fb_manager* this);
+
     uint8_t* fbmem;
 };
 

@@ -39,8 +39,26 @@ static void dump_image_info() {
     LOGI("=========================\n");
 }
 
-static inline uint16_t  make_pixel(uint8_t r, uint8_t g, uint8_t b) {
-    return (uint16_t)(((r >> 3) << 11) | ((g >> 2) << 5 | (b >> 3)));
+static inline uint32_t  make_pixel(uint8_t red, uint8_t green, uint8_t blue,
+        uint8_t alpha) {
+    uint32_t redbit_len = fb_manager->get_redbit_length(fb_manager);
+    uint32_t redbit_off = fb_manager->get_redbit_offset(fb_manager);
+
+    uint32_t greenbit_len = fb_manager->get_greenbit_length(fb_manager);
+    uint32_t greenbit_off = fb_manager->get_greenbit_offset(fb_manager);
+
+    uint32_t bluebit_len = fb_manager->get_bluebit_length(fb_manager);
+    uint32_t bluebit_off = fb_manager->get_bluebit_offset(fb_manager);
+
+    uint32_t alphabit_len = fb_manager->get_alphabit_length(fb_manager);
+    uint32_t alphabit_off = fb_manager->get_alphabit_offset(fb_manager);
+
+    uint32_t pixel = (uint32_t)(((red >> (8 - redbit_len)) << redbit_off)
+            | ((green >> (8 - greenbit_len)) << greenbit_off)
+            | ((blue >> (8 - bluebit_len)) << bluebit_off)
+            | ((alpha >> (8 - alphabit_len)) << alphabit_off));
+
+    return pixel;
 }
 
 static void transform_rgb_to_draw(unsigned char* input_row,
@@ -80,12 +98,13 @@ static void transform_rgb_to_draw(unsigned char* input_row,
 }
 
 static void transform_rgba8888_to_fb() {
-    uint16_t *buf = (uint16_t *) fb_manager->fbmem;
-
-    memset(fb_manager->fbmem, 0xff, fb_manager->get_screen_size(fb_manager));
-
+    uint8_t *buf = (uint8_t *) fb_manager->fbmem;
     uint32_t fb_width = fb_manager->get_screen_width(fb_manager);
     uint32_t fb_height = fb_manager->get_screen_height(fb_manager);
+    uint32_t bits_per_pixel = fb_manager->get_bits_per_pixel(fb_manager);
+    uint32_t bytes_per_pixel = bits_per_pixel / 8;
+
+    memset(fb_manager->fbmem, 0xff, fb_manager->get_screen_size(fb_manager));
 
     for (int i = 0; i < image_info.height; i++) {
         if (i >= fb_height)
@@ -100,9 +119,12 @@ static void transform_rgba8888_to_fb() {
             uint8_t blue = g_mem[4 * (j + image_info.width * i) + 2];
             uint8_t alpha = g_mem[4 * (j + image_info.width * i) + 3];
 
-            uint16_t pixel = make_pixel(red, green, blue);
+            uint32_t pos = i * fb_width + j;
+            uint32_t pixel = make_pixel(red, green, blue, alpha);
 
-            buf[i * fb_width + j] = pixel;
+            for (int x = 0; x < bytes_per_pixel; x++)
+                buf[bytes_per_pixel * pos + x] = pixel >> (bits_per_pixel - 8);
+
         }
     }
 }

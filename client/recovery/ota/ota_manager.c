@@ -262,9 +262,9 @@ static void recovery_finish(int error) {
 static int verify_update_pkg(struct ota_manager* this, const char* path) {
     int nkeys = 0;
 
-    RSAPublicKey* keys = load_keys(public_key_path, &nkeys);
+    RSAPublicKey* keys = load_keys(g_data.public_key_path, &nkeys);
     if (keys == NULL) {
-        LOGE("Failed to load public keys from: %s\n", public_key_path);
+        LOGE("Failed to load public keys from: %s\n", g_data.public_key_path);
         return -1;
     }
 
