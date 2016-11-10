@@ -123,7 +123,8 @@ static void transform_rgba8888_to_fb() {
             uint32_t pixel = make_pixel(red, green, blue, alpha);
 
             for (int x = 0; x < bytes_per_pixel; x++)
-                buf[bytes_per_pixel * pos + x] = pixel >> (bits_per_pixel - 8);
+                buf[bytes_per_pixel * pos + x] = pixel >> (bits_per_pixel -
+                        (bytes_per_pixel -x) * 8);
 
         }
     }

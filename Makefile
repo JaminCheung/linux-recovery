@@ -61,6 +61,7 @@ server:
 	@echo -e "=================="
 	@echo -e "Server side is ready."
 	@echo -e "==================\n"
+
 #
 #
 # For tools
@@ -75,6 +76,7 @@ tools:
 	@echo -e "=================="
 	@echo -e "Host tools is ready."
 	@echo -e "==================\n"
+
 #
 # For document
 #

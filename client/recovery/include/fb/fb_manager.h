@@ -30,6 +30,7 @@ struct fb_manager {
     void (*dump)(struct fb_manager* this);
 
     void (*display)(struct fb_manager* this);
+    int (*blank)(struct fb_manager* this, uint8_t blank);
 
     uint32_t (*get_screen_size)(struct fb_manager* this);
     uint32_t (*get_screen_width)(struct fb_manager* this);

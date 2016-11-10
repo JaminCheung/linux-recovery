@@ -173,6 +173,18 @@ static void display(struct fb_manager* this) {
     }
 }
 
+static int blank(struct fb_manager* this, uint8_t blank) {
+    int error = 0;
+
+    error = ioctl(fd, FBIOBLANK, blank ? FB_BLANK_POWERDOWN : FB_BLANK_UNBLANK);
+    if (error < 0) {
+        LOGE("Failed to blank fb: %s\n", strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
 static uint32_t get_screen_size(struct fb_manager* this) {
     return screen_size;
 }
@@ -232,6 +244,7 @@ void construct_fb_manager(struct fb_manager* this) {
     this->dump = dump;
 
     this->display = display;
+    this->blank = blank;
 
     this->get_screen_size = get_screen_size;
     this->get_screen_height = get_screen_height;
@@ -265,6 +278,7 @@ void destruct_fb_manager(struct fb_manager* this) {
     this->dump = NULL;
 
     this->display = NULL;
+    this->blank = NULL;
 
     this->get_screen_size = NULL;
     this->get_screen_height = NULL;

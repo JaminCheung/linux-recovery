@@ -48,26 +48,22 @@ OBJS-y += utils/signal_handler.o                                               \
           utils/verifier.o                                                     \
           utils/minizip.o                                                      \
           utils/file_ops.o                                                     \
+          utils/png_decode.o                                                   \
           utils/common.o
 
 #
 # Block Manager
 #
-OBJS-y += block/block_manager.o
-OBJS-y += block/blocks/mtd/mtd.o
-OBJS-y += block/blocks/mtd/base.o
-OBJS-y += block/blocks/mmc.o
-OBJS-y += block/fs/fs_manager.o
-OBJS-y += block/fs/normal.o
-OBJS-y += block/fs/jffs2.o
-OBJS-y += block/fs/cramfs.o
-OBJS-y += block/fs/ubifs.o
-OBJS-y += block/fs/yaffs2.o
-
-#
-# Recovery Handler
-#
-OBJS-n += recovery/recovery_handler.o
+OBJS-y += block/block_manager.o                                                \
+          block/blocks/mtd/mtd.o                                               \
+          block/blocks/mtd/base.o                                              \
+          block/blocks/mmc.o                                                   \
+          block/fs/fs_manager.o                                                \
+          block/fs/normal.o                                                    \
+          block/fs/jffs2.o                                                     \
+          block/fs/cramfs.o                                                    \
+          block/fs/ubifs.o                                                     \
+          block/fs/yaffs2.o
 
 #
 # Net Interface
@@ -103,8 +99,7 @@ OBJS-y += fb/fb_manager.o
 #
 # Graphics
 #
-OBJS-y += graphics/gr_drawer.o                                                 \
-          graphics/png_decoder.o
+OBJS-y += graphics/gr_drawer.o
 
 OBJS := $(OBJS-y)
 
@@ -149,7 +144,6 @@ LIBS-y += lib/png/libpng-1.6.26/png.o                                          \
           lib/png/libpng-1.6.26/pngwtran.o                                     \
           lib/png/libpng-1.6.26/pngwutil.o
 
-
 #
 # MTD Lib
 #
@@ -193,13 +187,13 @@ LIBS-y += lib/mincrypt/rsa.o                                                   \
 #
 # Base64 Lib
 #
-LIBS-y += lib/b64/libb64-1.2/src/cencode.o                                     \
+LIBS-n += lib/b64/libb64-1.2/src/cencode.o                                     \
           lib/b64/libb64-1.2/src/cdecode.o
 
 #
 # INI Lib
 #
-LIBS-y += lib/ini/iniparser/src/dictionary.o                                   \
+LIBS-n += lib/ini/iniparser/src/dictionary.o                                   \
           lib/ini/iniparser/src/iniparser.o
 
 #
@@ -217,12 +211,12 @@ LIBS-y += lib/md5/libmd5.o
 #
 # I2C Lib
 #
-LIBS-y += lib/i2c/libsmbus.o
+LIBS-n += lib/i2c/libsmbus.o
 
 #
 # GPIO Lib
 #
-LIBS-y += lib/gpio/libgpio.o
+LIBS-n += lib/gpio/libgpio.o
 
 #
 # CRC Lib

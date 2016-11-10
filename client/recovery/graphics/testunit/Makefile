@@ -4,8 +4,9 @@ TOPDIR ?= ../..
 include ../../config.mk
 
 TESTUNIT := test_png_decoder
-TESTUNIT_OBJS := test_png_decoder.o                                            \
-          $(TOPDIR)/lib/png/libpng-1.6.26/png.o                                \
+TESTUNIT2 := test_gr_drawer
+
+TEST_COMMON_OBJS := $(TOPDIR)/lib/png/libpng-1.6.26/png.o                      \
           $(TOPDIR)/lib/png/libpng-1.6.26/pngerror.o                           \
           $(TOPDIR)/lib/png/libpng-1.6.26/pngget.o                             \
           $(TOPDIR)/lib/png/libpng-1.6.26/pngmem.o                             \
@@ -34,12 +35,20 @@ TESTUNIT_OBJS := test_png_decoder.o                                            \
           $(TOPDIR)/utils/assert.o                                             \
           $(TOPDIR)/fb/fb_manager.o
 
+TESTUNIT_OBJS := test_png_decoder.o
+TESTUNIT2_OBJS := test_gr_drawer.o                                             \
+          $(TOPDIR)/graphics/gr_drawer.o                                       \
+          $(TOPDIR)/utils/png_decode.o
+
 .PHONY : all clean
 
-all: $(TESTUNIT)
+all: $(TESTUNIT) $(TESTUNIT2)
 
-$(TESTUNIT): $(TESTUNIT_OBJS)
-	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(TESTUNIT_OBJS) $(LDFLAGS) $(LDLIBS)
+$(TESTUNIT): $(TESTUNIT_OBJS) $(TEST_COMMON_OBJS)
+	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(TESTUNIT_OBJS) $(TEST_COMMON_OBJS) $(LDFLAGS) $(LDLIBS)
+
+$(TESTUNIT2): $(TESTUNIT2_OBJS) $(TEST_COMMON_OBJS)
+	$(QUIET_LINK)$(LINK_OBJS) -o $(OUTDIR)/$@ $(TESTUNIT2_OBJS) $(TEST_COMMON_OBJS) $(LDFLAGS) $(LDLIBS)
 
 clean:
-	rm -rf $(TESTUNIT_OBJS)
+	rm -rf $(TESTUNIT_OBJS) $(TEST_COMMON_OBJS) $(TESTUNIT2_OBJS)

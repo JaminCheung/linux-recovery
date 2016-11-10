@@ -17,9 +17,33 @@
 #ifndef GR_DRAWER_H
 #define GR_DRAWER_H
 
+#include <types.h>
+
+struct gr_surface {
+    uint32_t width;
+    uint32_t height;
+    uint32_t row_bytes;
+    uint32_t pixel_bytes;
+    uint8_t *raw_data;
+};
+
 struct gr_drawer {
     void (*construct)(struct gr_drawer* this);
     void (*destruct)(struct gr_drawer* this);
+
+    int (*init)(struct gr_drawer* this);
+    int (*deinit)(struct gr_drawer* this);
+
+    void (*set_color)(struct gr_drawer* this, uint8_t red, uint8_t green,
+            uint8_t blue, uint8_t alpha);
+
+    int (*draw_png)(struct gr_drawer* this, struct gr_surface* surface,
+            uint32_t pos_x, uint32_t pos_y);
+    int (*draw_text)(struct gr_drawer* this, uint32_t pos_x, uint32_t pos_y,
+            const char* text, uint8_t bold);
+
+    int (*blank)(struct gr_drawer* this, uint8_t blank);
+    void (*fill_screen)(struct gr_drawer* this);
 };
 
 void construct_gr_drawer(struct gr_drawer* this);

@@ -14,10 +14,11 @@
  *
  */
 
-struct png_decoder {
-    void (*construct)(struct png_decoder* this);
-    void (*destruct)(struct png_decoder* this);
-};
+#ifndef PNG_DECODE_H
+#define PNG_DECODE_H
 
-void construct_png_decoder(struct png_decoder* this);
-void destruct_png_decoder(struct png_decoder* this);
+#include <graphics/gr_drawer.h>
+
+int png_decode(const char* path, struct gr_surface** surface);
+
+#endif /* PNG_DECODE_H */
