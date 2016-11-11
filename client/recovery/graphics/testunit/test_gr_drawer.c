@@ -32,6 +32,12 @@ int main(int argc, char *argv[]) {
     }
 
     for (;;) {
+        gr_drawer->set_color(gr_drawer, 0xff, 0x55, 0x00, 0xff);
+        gr_drawer->draw_text(gr_drawer, 0, 0, "12345", 0);
+        //gr_drawer->print_text(gr_drawer,"12345");
+
+        return 0;
+
         if (gr_drawer->draw_png(gr_drawer, surface, 0, 0) < 0) {
             LOGE("Failed to draw png image\n");
             return -1;

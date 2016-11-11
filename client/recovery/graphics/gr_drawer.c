@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include <utils/log.h>
 #include <utils/common.h>
@@ -32,17 +33,28 @@ struct gr_font {
     struct gr_surface* texture;
 };
 
+#define kMaxCols   96
+#define kMaxRows   96
+
 static struct gr_font* gr_font;
 static struct fb_manager* fb_manager;
 static uint32_t fb_width;
 static uint32_t fb_height;
-static uint32_t bits_per_pixel;
-static uint32_t bytes_per_pixel;
+static uint32_t fb_bits_per_pixel;
+static uint32_t fb_bytes_per_pixel;
+static uint32_t fb_row_bytes;
 
 static uint8_t gr_current_r = 255;
 static uint8_t gr_current_g = 255;
 static uint8_t gr_current_b = 255;
 static uint8_t gr_current_a = 255;
+
+static int text_rows;
+static int text_cols;
+static int text_top;
+static int text_row;
+static int text_col;
+static char text[kMaxRows][kMaxCols];
 
 static int outside(uint32_t pos_x, uint32_t pos_y) {
     if ((pos_y >= fb_height) || (pos_x >= fb_width))
@@ -98,9 +110,9 @@ static int draw_png(struct gr_drawer* this, struct gr_surface* surface,
             uint32_t pos = (i + pos_y ) * fb_width + j + pos_x;
             uint32_t pixel = make_pixel(red, green, blue, alpha);
 
-            for (int x = 0; x < bytes_per_pixel; x++)
-                buf[bytes_per_pixel * pos + x] = pixel >> (bits_per_pixel -
-                        (bytes_per_pixel -x) * 8);
+            for (int x = 0; x < fb_bytes_per_pixel; x++)
+                buf[fb_bytes_per_pixel * pos + x] = pixel >> (fb_bits_per_pixel -
+                        (fb_bytes_per_pixel -x) * 8);
 
         }
     }
@@ -132,9 +144,9 @@ static void fill_screen(struct gr_drawer* this) {
         for (int j = 0; j < fb_width; j++) {
             uint32_t pos = i * fb_width + j;
 
-            for (int x = 0; x < bytes_per_pixel; x++)
-                buf[bytes_per_pixel * pos + x] = pixel >> (bits_per_pixel -
-                        (bytes_per_pixel -x) * 8);
+            for (int x = 0; x < fb_bytes_per_pixel; x++)
+                buf[fb_bytes_per_pixel * pos + x] = pixel >> (fb_bits_per_pixel -
+                        (fb_bytes_per_pixel -x) * 8);
         }
     }
 
@@ -144,33 +156,24 @@ static void fill_screen(struct gr_drawer* this) {
 static void text_blend(uint8_t* src_p, int src_row_bytes, uint8_t* dst_p,
         int dst_row_bytes, int width, int height) {
 
-    for (int j = 0; j < height; ++j) {
+    uint32_t pixel;
+
+    for (int i = 0; i < height; i++) {
         uint8_t* sx = src_p;
         uint8_t* px = dst_p;
 
-        for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < width; j++) {
             uint8_t a = *sx++;
 
-            if (gr_current_a < 255)
-                a = ((int)a * gr_current_a) / 255;
-
             if (a == 255) {
-                *px++ = gr_current_r;
-                *px++ = gr_current_g;
-                *px++ = gr_current_b;
-                px++;
+                pixel = make_pixel(gr_current_r, gr_current_g, gr_current_b, 0);
 
-            } else if (a > 0) {
-                *px = (*px * (255-a) + gr_current_r * a) / 255;
-                ++px;
-                *px = (*px * (255-a) + gr_current_g * a) / 255;
-                ++px;
-                *px = (*px * (255-a) + gr_current_b * a) / 255;
-                ++px;
-                ++px;
+                for (int x = 0; x < fb_bytes_per_pixel; x++)
+                    px[x] = pixel >> (fb_bits_per_pixel
+                            - (fb_bytes_per_pixel -x) * 8);
 
             } else {
-                px += 4;
+                px += fb_bytes_per_pixel;
             }
         }
 
@@ -192,7 +195,7 @@ static int draw_text(struct gr_drawer* this, uint32_t pos_x, uint32_t pos_y,
     while((off = *text++)) {
         off -= 32;
         if (outside(pos_x, pos_y) ||
-                outside(pos_x + font->cwidth-1, pos_y + font->cheight - 1))
+                outside(pos_x + font->cwidth - 1, pos_y + font->cheight - 1))
             return -1;
 
         if (off < 96) {
@@ -200,12 +203,11 @@ static int draw_text(struct gr_drawer* this, uint32_t pos_x, uint32_t pos_y,
             uint8_t* src_p = font->texture->raw_data + (off * font->cwidth) +
                 (bold ? font->cheight * font->texture->row_bytes : 0);
 
-            uint8_t* dst_p = buf + pos_y * fb_manager->get_row_bytes(fb_manager)
-                    + pos_x * bytes_per_pixel;
+            uint8_t* dst_p = buf + pos_y * fb_row_bytes +
+                    pos_x * fb_bytes_per_pixel;
 
-            text_blend(src_p, font->texture->row_bytes,
-                       dst_p, fb_manager->get_row_bytes(fb_manager),
-                       font->cwidth, font->cheight);
+            text_blend(src_p, font->texture->row_bytes, dst_p, fb_row_bytes,
+                    font->cwidth, font->cheight);
 
         }
 
@@ -217,15 +219,54 @@ static int draw_text(struct gr_drawer* this, uint32_t pos_x, uint32_t pos_y,
     return 0;
 }
 
+static int print_text(struct gr_drawer* this, const char* fmt, ...) {
+    char buf[256];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, 256, fmt, ap);
+    va_end(ap);
+
+    if (text_rows > 0 && text_cols > 0) {
+        char *ptr;
+        for (ptr = buf; *ptr != '\0'; ++ptr) {
+            if (*ptr == '\n' || text_col >= text_cols) {
+                text[text_row][text_col] = '\0';
+                text_col = 0;
+                text_row = (text_row + 1) % text_rows;
+                if (text_row == text_top) text_top = (text_top + 1) % text_rows;
+            }
+            if (*ptr != '\n') text[text_row][text_col++] = *ptr;
+        }
+        text[text_row][text_col] = '\0';
+
+        int row = (text_top+text_rows-1) % text_rows;
+        for (int ty = fb_height - gr_font->cheight, count = 0;
+             ty > 2 && count < text_rows;
+             ty -= gr_font->cheight, ++count) {
+
+            draw_text(this, 4, ty, text[row], 0);
+
+            --row;
+
+            if (row < 0)
+                row = text_rows-1;
+        }
+
+        fb_manager->display(fb_manager);
+    }
+
+    return 0;
+}
+
 static int init(struct gr_drawer* this) {
     fb_manager = _new(struct fb_manager, fb_manager);
     fb_manager->init(fb_manager);
 
     fb_width = fb_manager->get_screen_width(fb_manager);
     fb_height = fb_manager->get_screen_height(fb_manager);
-    bits_per_pixel = fb_manager->get_bits_per_pixel(fb_manager);
-    bytes_per_pixel = bits_per_pixel / 8;
-
+    fb_bits_per_pixel = fb_manager->get_bits_per_pixel(fb_manager);
+    fb_row_bytes = fb_manager->get_row_bytes(fb_manager);
+    fb_bytes_per_pixel = fb_bits_per_pixel / 8;
 
     gr_font = calloc(1, sizeof(struct gr_font));
 
@@ -248,6 +289,17 @@ static int init(struct gr_drawer* this) {
     gr_font->cwidth = font.cwidth;
     gr_font->cheight = font.cheight;
 
+    text_col = text_row = 0;
+    text_rows = fb_height / gr_font->cheight;
+    if (text_rows > kMaxRows)
+        text_rows = kMaxRows;
+
+    text_top = 1;
+
+    text_cols = fb_width / gr_font->cwidth;
+    if (text_cols > kMaxCols - 1)
+        text_cols = kMaxCols - 1;
+
     return 0;
 }
 
@@ -267,6 +319,7 @@ static int deinit(struct gr_drawer* this) {
 void construct_gr_drawer(struct gr_drawer* this) {
     this->draw_png = draw_png;
     this->draw_text = draw_text;
+    this->print_text = print_text;
     this->blank = blank;
     this->fill_screen = fill_screen;
     this->init = init;
@@ -276,7 +329,8 @@ void construct_gr_drawer(struct gr_drawer* this) {
 
 void destruct_gr_drawer(struct gr_drawer* this) {
     this->draw_png = NULL;
-    this->draw_text = NULL;
+    this->draw_png = NULL;
+    this->print_text = NULL;
     this->blank = NULL;
     this->fill_screen = NULL;
     this->init = NULL;

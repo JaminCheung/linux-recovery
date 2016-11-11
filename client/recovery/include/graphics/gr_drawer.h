@@ -42,6 +42,8 @@ struct gr_drawer {
     int (*draw_text)(struct gr_drawer* this, uint32_t pos_x, uint32_t pos_y,
             const char* text, uint8_t bold);
 
+    int (*print_text)(struct gr_drawer* this, const char* fmt, ...);
+
     int (*blank)(struct gr_drawer* this, uint8_t blank);
     void (*fill_screen)(struct gr_drawer* this);
 };
