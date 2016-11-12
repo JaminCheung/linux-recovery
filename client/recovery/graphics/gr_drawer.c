@@ -21,6 +21,7 @@
 #include <utils/log.h>
 #include <utils/common.h>
 #include <utils/assert.h>
+#include <utils/png_decode.h>
 #include <graphics/gr_drawer.h>
 #include <graphics/font_10x18.h>
 #include <fb/fb_manager.h>
@@ -47,7 +48,6 @@ static uint32_t fb_row_bytes;
 static uint8_t gr_current_r = 255;
 static uint8_t gr_current_g = 255;
 static uint8_t gr_current_b = 255;
-static uint8_t gr_current_a = 255;
 
 static int text_rows;
 static int text_cols;
@@ -88,7 +88,7 @@ static uint32_t  make_pixel(uint8_t red, uint8_t green, uint8_t blue,
 static int draw_png(struct gr_drawer* this, struct gr_surface* surface,
             uint32_t pos_x, uint32_t pos_y) {
     if (outside(pos_x, pos_y)) {
-        LOGE("Position out bound of screen\n");
+        LOGE("Image position out bound of screen\n");
         return -1;
     }
 
@@ -127,12 +127,11 @@ static int blank(struct gr_drawer* this, uint8_t blank) {
 }
 
 static void set_pen_color(struct gr_drawer* this, uint8_t red,
-        uint8_t green, uint8_t blue, uint8_t alpha) {
+        uint8_t green, uint8_t blue) {
 
     gr_current_r = red;
     gr_current_g = green;
     gr_current_b = blue;
-    gr_current_a = alpha;
 }
 
 static void fill_screen(struct gr_drawer* this) {
@@ -188,11 +187,14 @@ static int draw_text(struct gr_drawer* this, uint32_t pos_x, uint32_t pos_y,
     uint32_t off;
 
     bold = bold && (font->texture->height != font->cheight);
+
     while((off = *text++)) {
         off -= 32;
         if (outside(pos_x, pos_y) ||
-                outside(pos_x + font->cwidth - 1, pos_y + font->cheight - 1))
+                outside(pos_x + font->cwidth - 1, pos_y + font->cheight - 1)) {
+            LOGE("Text position out bound of screen\n");
             return -1;
+        }
 
         if (off < 96) {
 
@@ -256,9 +258,23 @@ static void display(struct gr_drawer* this) {
     return fb_manager->display(fb_manager);
 }
 
+static uint32_t get_fb_width(struct gr_drawer* this) {
+    return fb_width;
+}
+
+static uint32_t get_fb_height(struct gr_drawer* this) {
+    return fb_height;
+}
+
 static int init(struct gr_drawer* this) {
+    int error = 0;
+
     fb_manager = _new(struct fb_manager, fb_manager);
-    fb_manager->init(fb_manager);
+    if (fb_manager->init(fb_manager) < 0) {
+        _delete(fb_manager);
+        fb_manager = NULL;
+        return -1;
+    }
 
     fb_width = fb_manager->get_screen_width(fb_manager);
     fb_height = fb_manager->get_screen_height(fb_manager);
@@ -268,24 +284,36 @@ static int init(struct gr_drawer* this) {
 
     gr_font = calloc(1, sizeof(struct gr_font));
 
-    gr_font->texture = calloc(1, sizeof(*gr_font->texture));
-    gr_font->texture->width = font.width;
-    gr_font->texture->height = font.height;
-    gr_font->texture->row_bytes = font.width;
-    gr_font->texture->pixel_bytes = 1;
+    error = png_decode_font(g_data.font_path, &(gr_font->texture));
+    if (!error) {
+        // The font image should be a 96x2 array of character images.  The
+        // columns are the printable ASCII characters 0x20 - 0x7f.  The
+        // top row is regular text; the bottom row is bold.
+        gr_font->cwidth = gr_font->texture->width / 96;
+        gr_font->cheight = gr_font->texture->height / 2;
 
-    uint8_t* bits = malloc(font.width * font.height);
-    gr_font->texture->raw_data = (void *) bits;
+    } else {
+        LOGW("Use default build-in font 10x18.\n");
 
-    uint8_t data;
-    uint8_t* in = font.rundata;
-    while ((data = *in++)) {
-        memset(bits, (data & 0x80) ? 0xff : 0, data & 0x7f);
-        bits += (data & 0x7f);
+        gr_font->texture = calloc(1, sizeof(*gr_font->texture));
+        gr_font->texture->width = font.width;
+        gr_font->texture->height = font.height;
+        gr_font->texture->row_bytes = font.width;
+        gr_font->texture->pixel_bytes = 1;
+
+        uint8_t* bits = (uint8_t*) calloc(1, font.width * font.height);
+        gr_font->texture->raw_data = (void *) bits;
+
+        uint8_t data;
+        uint8_t* in = font.rundata;
+        while ((data = *in++)) {
+            memset(bits, (data & 0x80) ? 0xff : 0, data & 0x7f);
+            bits += (data & 0x7f);
+        }
+
+        gr_font->cwidth = font.cwidth;
+        gr_font->cheight = font.cheight;
     }
-
-    gr_font->cwidth = font.cwidth;
-    gr_font->cheight = font.cheight;
 
     text_col = text_row = 0;
     text_rows = fb_height / gr_font->cheight;
@@ -302,11 +330,17 @@ static int init(struct gr_drawer* this) {
 }
 
 static int deinit(struct gr_drawer* this) {
-    fb_manager->deinit(fb_manager);
-    _delete(fb_manager);
+    if (fb_manager) {
+        fb_manager->deinit(fb_manager);
+        _delete(fb_manager);
+    }
 
-    free(gr_font->texture);
-    free(gr_font);
+    if (gr_font) {
+        if (gr_font->texture)
+            free(gr_font->texture);
+
+        free(gr_font);
+    }
 
     fb_manager = NULL;
     gr_font = NULL;
@@ -315,6 +349,8 @@ static int deinit(struct gr_drawer* this) {
 }
 
 void construct_gr_drawer(struct gr_drawer* this) {
+    this->get_fb_width = get_fb_width;
+    this->get_fb_height = get_fb_height;
     this->draw_png = draw_png;
     this->draw_text = draw_text;
     this->print_text = print_text;
@@ -327,6 +363,8 @@ void construct_gr_drawer(struct gr_drawer* this) {
 }
 
 void destruct_gr_drawer(struct gr_drawer* this) {
+    this->get_fb_width = NULL;
+    this->get_fb_height = NULL;
     this->draw_png = NULL;
     this->draw_png = NULL;
     this->print_text = NULL;

@@ -33,8 +33,15 @@
 #include <utils/log.h>
 #include <utils/assert.h>
 #include <utils/file_ops.h>
+#include <utils/common.h>
 
 #define LOG_TAG "common"
+
+struct global_data g_data = {
+    .public_key_path = "/res/key/key.pub",
+    .configure_file_path = "/etc/recovery.conf",
+    .font_path = "/res/image/font.png",
+};
 
 static const char* prefix_wget_path = "/usr/bin/wget";
 

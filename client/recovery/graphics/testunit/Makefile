@@ -32,7 +32,10 @@ TEST_COMMON_OBJS := $(TOPDIR)/lib/png/libpng-1.6.26/png.o                      \
           $(TOPDIR)/lib/zlib/zlib-1.2.8/zutil.o                                \
           $(TOPDIR)/lib/zlib/zlib-1.2.8/compress.o                             \
           $(TOPDIR)/lib/zlib/zlib-1.2.8/uncompr.o                              \
+          $(TOPDIR)/lib/md5/libmd5.o                                           \
           $(TOPDIR)/utils/assert.o                                             \
+          $(TOPDIR)/utils/file_ops.o                                           \
+          $(TOPDIR)/utils/common.o                                             \
           $(TOPDIR)/fb/fb_manager.o
 
 TESTUNIT_OBJS := test_png_decoder.o

@@ -19,6 +19,7 @@
 
 #include <graphics/gr_drawer.h>
 
-int png_decode(const char* path, struct gr_surface** surface);
+int png_decode_image(const char* path, struct gr_surface** surface);
+int png_decode_font(const char* path, struct gr_surface** surface);
 
 #endif /* PNG_DECODE_H */

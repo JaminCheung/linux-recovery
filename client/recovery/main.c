@@ -33,10 +33,8 @@
 
 #define LOG_TAG "main"
 
-struct global_data g_data;
-
 static const char* temporary_log_file = "/tmp/recovery.log";
-static const char* opt_string = "vhc:k:";
+static const char* opt_string = "vh";
 
 static void print_version() {
     fprintf(stderr, "Linux recovery updater. Version: %s. Build: %s %s\n", VERSION,
@@ -46,8 +44,6 @@ static void print_version() {
 static void print_help() {
     fprintf(stderr, "Usage: recovery [options] file\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "    -c <configure file>\tConfigure file\n");
-    fprintf(stderr, "    -k <RSA public key>\tRSA public key file\n");
     fprintf(stderr, "    -v\t\t\tDisplay version infomation\n");
     fprintf(stderr, "    -h\t\t\tDisplay this information\n");
 }
@@ -66,37 +62,27 @@ __attribute__((__unused__)) static void redirect_stdio() {
                 strerror(errno));
 }
 
-
-int main(int argc, char* argv[]) {
-    const char* configure_file_path = NULL;
-    int opt = 0;
-
-    if (argc < 2) {
-        print_help();
+static int init_gdata(void) {
+    if (file_exist(g_data.configure_file_path) < 0) {
+        LOGI("Failed to open: %s: %s\n", g_data.configure_file_path,
+                strerror(errno));
         return -1;
     }
 
+    if (file_exist(g_data.public_key_path) < 0) {
+        LOGI("Failed to open: %s: %s\n", g_data.public_key_path,
+                strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+int main(int argc, char* argv[]) {
+    int opt = 0;
+
     while ((opt = getopt(argc, argv, opt_string)) != -1) {
         switch (opt) {
-        case 'c':
-            if (file_exist(optarg) < 0) {
-                fprintf(stderr, "error: %s: %s\n", optarg, strerror(errno));
-                print_help();
-                return -1;
-            }
-
-            configure_file_path = optarg;
-            break;
-
-        case 'k':
-            if (file_exist(optarg) < 0) {
-                fprintf(stderr, "error: %s: %s\n", optarg, strerror(errno));
-                print_help();
-                return -1;
-            }
-            g_data.public_key_path = optarg;
-            break;
-
         case 'v':
             print_version();
             return 0;
@@ -108,22 +94,20 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (configure_file_path == NULL || g_data.public_key_path == NULL) {
-        print_help();
-        return -1;
-    }
-
 #ifndef LOCAL_DEBUG
     //TODO
     //redirect_stdio();
 #endif
 
+    if (init_gdata() < 0)
+        return -1;
+
     /*
      * Instance configure_file
      */
     struct configure_file* cf = _new(struct configure_file, configure_file);
-    if (cf->parse(cf, configure_file_path) < 0) {
-        LOGE("Failed to parse %s\n", configure_file_path);
+    if (cf->parse(cf, g_data.configure_file_path) < 0) {
+        LOGE("Failed to parse %s\n", g_data.configure_file_path);
         return -1;
     }
 
@@ -170,10 +154,11 @@ int main(int argc, char* argv[]) {
         goto error;
     }
 
-    while (true)
+    while (1)
         sleep(1000);
 
     return 0;
 
-    error: return -1;
+error:
+    return -1;
 }
