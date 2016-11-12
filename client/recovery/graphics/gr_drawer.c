@@ -126,7 +126,7 @@ static int blank(struct gr_drawer* this, uint8_t blank) {
     return fb_manager->blank(fb_manager, blank);
 }
 
-static void set_color(struct gr_drawer* this, uint8_t red,
+static void set_pen_color(struct gr_drawer* this, uint8_t red,
         uint8_t green, uint8_t blue, uint8_t alpha) {
 
     gr_current_r = red;
@@ -156,25 +156,21 @@ static void fill_screen(struct gr_drawer* this) {
 static void text_blend(uint8_t* src_p, int src_row_bytes, uint8_t* dst_p,
         int dst_row_bytes, int width, int height) {
 
-    uint32_t pixel;
+    uint32_t pixel = make_pixel(gr_current_r, gr_current_g, gr_current_b, 0);
 
     for (int i = 0; i < height; i++) {
         uint8_t* sx = src_p;
         uint8_t* px = dst_p;
 
         for (int j = 0; j < width; j++) {
-            uint8_t a = *sx++;
+            uint8_t alpha = *sx++;
 
-            if (a == 255) {
-                pixel = make_pixel(gr_current_r, gr_current_g, gr_current_b, 0);
-
+            if (alpha == 255)
                 for (int x = 0; x < fb_bytes_per_pixel; x++)
                     px[x] = pixel >> (fb_bits_per_pixel
                             - (fb_bytes_per_pixel -x) * 8);
 
-            } else {
                 px += fb_bytes_per_pixel;
-            }
         }
 
         src_p += src_row_bytes;
@@ -213,8 +209,6 @@ static int draw_text(struct gr_drawer* this, uint32_t pos_x, uint32_t pos_y,
 
         pos_x += font->cwidth;
     }
-
-    fb_manager->display(fb_manager);
 
     return 0;
 }
@@ -256,6 +250,10 @@ static int print_text(struct gr_drawer* this, const char* fmt, ...) {
     }
 
     return 0;
+}
+
+static void display(struct gr_drawer* this) {
+    return fb_manager->display(fb_manager);
 }
 
 static int init(struct gr_drawer* this) {
@@ -324,7 +322,8 @@ void construct_gr_drawer(struct gr_drawer* this) {
     this->fill_screen = fill_screen;
     this->init = init;
     this->deinit = deinit;
-    this->set_color = set_color;
+    this->set_pen_color = set_pen_color;
+    this->display = display;
 }
 
 void destruct_gr_drawer(struct gr_drawer* this) {
@@ -335,5 +334,6 @@ void destruct_gr_drawer(struct gr_drawer* this) {
     this->fill_screen = NULL;
     this->init = NULL;
     this->deinit = NULL;
-    this->set_color = NULL;
+    this->set_pen_color = NULL;
+    this->display = NULL;
 }

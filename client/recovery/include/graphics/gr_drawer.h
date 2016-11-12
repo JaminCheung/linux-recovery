@@ -34,7 +34,7 @@ struct gr_drawer {
     int (*init)(struct gr_drawer* this);
     int (*deinit)(struct gr_drawer* this);
 
-    void (*set_color)(struct gr_drawer* this, uint8_t red, uint8_t green,
+    void (*set_pen_color)(struct gr_drawer* this, uint8_t red, uint8_t green,
             uint8_t blue, uint8_t alpha);
 
     int (*draw_png)(struct gr_drawer* this, struct gr_surface* surface,
@@ -43,6 +43,8 @@ struct gr_drawer {
             const char* text, uint8_t bold);
 
     int (*print_text)(struct gr_drawer* this, const char* fmt, ...);
+
+    void (*display)(struct gr_drawer* this);
 
     int (*blank)(struct gr_drawer* this, uint8_t blank);
     void (*fill_screen)(struct gr_drawer* this);
