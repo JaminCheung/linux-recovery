@@ -12,7 +12,7 @@
 /configure
 /configure.lineno
 /libserialport-*.tar.*
-/libserialport.h
+!/libserialport.h
 /libserialport.pc
 /libtool
 stamp-h?
