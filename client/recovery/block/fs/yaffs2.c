@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <utils/log.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <types.h>
@@ -17,6 +16,7 @@
 #include <autoconf.h>
 #include <lib/crc/libcrc.h>
 #include <utils/list.h>
+#include <utils/assert.h>
 #include <block/fs/fs_manager.h>
 #include <block/fs/yaffs2.h>
 #include <block/block_manager.h>
@@ -37,7 +37,8 @@ static int64_t yaffs2_erase(struct filesystem *fs) {
 }
 
 static int64_t yaffs2_read(struct filesystem *fs) {
-    return mtd_basic_read(fs);
+    assert_die_if(1, "%s is not served temporarily\n", __func__);
+    return 0;
 }
 
 static int64_t yaffs2_write(struct filesystem *fs) {
@@ -61,11 +62,12 @@ struct filesystem fs_yaffs2 = {
     .init = yaffs2_init,
     .alloc_params = fs_alloc_params,
     .free_params = fs_free_params,
+    .set_params = fs_set_params,
     .erase = yaffs2_erase,
     .read = yaffs2_read,
     .write = yaffs2_write,
     .get_operate_start_address = yaffs2_get_operate_start_address,
     .get_leb_size = yaffs2_get_leb_size,
     .get_max_mapped_size_in_partition =
-            yaffs2_get_max_mapped_size_in_partition,
+    yaffs2_get_max_mapped_size_in_partition,
 };

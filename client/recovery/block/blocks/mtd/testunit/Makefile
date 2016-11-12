@@ -5,10 +5,15 @@ include ../../../../config.mk
 
 TESTUNIT := test_blockmtd
 TESTUNIT_OBJS := main.o                                                        \
+	  test_read.o							       \
+	  test_sysinfo.o						       \
+	  test_format.o							       \
+	  test_update.o							       \
           $(TOPDIR)/block/block_manager.o                                      \
           $(TOPDIR)/block/blocks/mtd/mtd.o                                     \
           $(TOPDIR)/block/blocks/mtd/base.o                                    \
           $(TOPDIR)/block/blocks/mmc.o                                         \
+          $(TOPDIR)/block/sysinfo/sysinfo_manager.o                            \
           $(TOPDIR)/block/fs/fs_manager.o                                      \
           $(TOPDIR)/block/fs/normal.o                                          \
           $(TOPDIR)/block/fs/jffs2.o                                           \

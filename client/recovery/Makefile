@@ -58,6 +58,7 @@ OBJS-y += block/block_manager.o                                                \
           block/blocks/mtd/mtd.o                                               \
           block/blocks/mtd/base.o                                              \
           block/blocks/mmc.o                                                   \
+	  block/sysinfo/sysinfo_manager.o				       \
           block/fs/fs_manager.o                                                \
           block/fs/normal.o                                                    \
           block/fs/jffs2.o                                                     \

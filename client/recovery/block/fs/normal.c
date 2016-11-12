@@ -5,7 +5,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <utils/log.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <types.h>
@@ -57,6 +56,7 @@ struct filesystem fs_normal = {
     .init = normal_init,
     .alloc_params = fs_alloc_params,
     .free_params = fs_free_params,
+    .set_params = fs_set_params,
     .chiperase_preset = mtd_basic_chiperase_preset,
     .erase = normal_erase,
     .read = normal_read,
@@ -64,7 +64,7 @@ struct filesystem fs_normal = {
     .get_operate_start_address = normal_get_operate_start_address,
     .get_leb_size = normal_get_leb_size,
     .get_max_mapped_size_in_partition =
-            normal_get_max_mapped_size_in_partition,
+    normal_get_max_mapped_size_in_partition,
 };
 
 

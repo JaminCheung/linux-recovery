@@ -17,6 +17,7 @@
 #include <lib/ubi/ubi.h>
 #include <lib/crc/libcrc.h>
 #include <utils/list.h>
+#include <block/sysinfo/sysinfo_manager.h>
 #include <block/block_manager.h>
 
 #define    LOG_TAG     "block_manager"
@@ -35,7 +36,7 @@ int register_block_manager(struct block_manager* this) {
     list_for_each(cell, &block_manager_list) {
         m = list_entry(cell, struct block_manager, list_cell);
         if (!strcmp(m->name,  this->name)) {
-            LOGE("Block manager \''%s\' is already registered\n", m->name);
+            LOGE("Block manager \'%s\' is already registered\n", m->name);
             return -1;
         }
     }
@@ -51,7 +52,7 @@ int unregister_block_manager(struct block_manager* this) {
     list_for_each_safe(cell, next, &block_manager_list) {
         m = list_entry(cell, struct block_manager, list_cell);
         if (!strcmp(m->name,  this->name)) {
-            LOGI("Block manager \''%s\' is removed successfully\n", m->name);
+            LOGI("Block manager \'%s\' is removed successfully\n", m->name);
             list_del(cell);
             return 0;
         }
@@ -74,7 +75,7 @@ static void get_supported_filetype(struct block_manager* this, char *buf) {
     BM_MTD_FILE_TYPE_INIT(supported_array);
     char list[128];
     int i;
-    for (i = 0; i < sizeof(supported_array)/sizeof(supported_array[0]); i++){
+    for (i = 0; i < sizeof(supported_array) / sizeof(supported_array[0]); i++) {
         if (i == 0)
             strcpy(list, "[");
         else
@@ -87,14 +88,18 @@ static void get_supported_filetype(struct block_manager* this, char *buf) {
     return;
 }
 
-static struct bm_operation_option* set_operation_option(struct block_manager* this,
-            int method, char *filetype) {
-    static struct bm_operation_option option;
+static int set_operation_option(struct block_manager* this, struct bm_operation_option* option,
+                                int method, char *filetype) {
 
-    memset(&option, 0, sizeof(option));
-    option.method = method;
-    strcpy(option.filetype, filetype);
-    return &option;
+    if (option == NULL) {
+        LOGE("Parameter \"option\" is null\n");
+        goto out;
+    }
+    option->method = method;
+    strcpy(option->filetype, filetype);
+    return 0;
+out:
+    return -1;
 }
 
 void construct_block_manager(struct block_manager* this, char *blockname,
@@ -105,13 +110,13 @@ void construct_block_manager(struct block_manager* this, char *blockname,
     // retval &= mmc_manager_init();
 
     if (retval < 0) {
-        LOGI("Failed to init mtd block manager\n");
+        LOGE("Failed to init mtd block manager\n");
         goto out;
     }
 
     struct block_manager* bm = get_block_manager(this, blockname);
     if (bm == NULL) {
-        LOGI("Block manager you request is not exist\n");
+        LOGE("Block manager you request is not exist\n");
         goto out;
     }
     bm->param = param;
@@ -121,6 +126,9 @@ void construct_block_manager(struct block_manager* this, char *blockname,
     this->destruct = destruct_block_manager;
     this->get_supported_filetype = get_supported_filetype;
     this->set_operation_option = set_operation_option;
+#ifdef BM_SYSINFO_SUPPORT
+    sysinfo_manager_bind(GET_SYSINFO_MANAGER(), this);
+#endif
     return;
 out:
     assert_die_if(1, "%s:%s:%d run crashed\n", __FILE__, __func__, __LINE__);
@@ -128,10 +136,17 @@ out:
 
 void destruct_block_manager(struct block_manager* this) {
     int retval;
+
+#ifdef BM_SYSINFO_SUPPORT
+    if (this->sysinfo->exit(this->sysinfo) < 0) {
+        LOGE("Failed to issue sysinfo exit\n");
+        goto out;
+    }
+#endif
     // mmc_manager_destroy();
     retval = mtd_manager_destroy();
     if (retval < 0) {
-        LOGI("Failed to destory mtd block manager\n");
+        LOGE("Failed to destory mtd block manager\n");
         goto out;
     }
     memset(this, 0, sizeof(* this));

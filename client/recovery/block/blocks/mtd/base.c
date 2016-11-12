@@ -19,28 +19,11 @@
 #include <utils/list.h>
 #include <block/fs/fs_manager.h>
 #include <block/fs/jffs2.h>
+#include <block/sysinfo/sysinfo_manager.h>
 #include <block/block_manager.h>
 #include <block/mtd/mtd.h>
 
 #define LOG_TAG "mtd_base"
-
-#if 0
-static char *mkpath(const char *path, const char *name)
-{
-    char *n;
-    size_t len1 = strlen(path);
-    size_t len2 = strlen(name);
-
-    n = malloc(len1 + len2 + 2);
-
-    memcpy(n, path, len1);
-    if (n[len1 - 1] != '/')
-        n[len1++] = '/';
-
-    memcpy(n + len1, name, len2 + 1);
-    return n;
-}
-#endif
 
 int mtd_type_is_nand(struct mtd_dev_info *mtd) {
     return mtd->type == MTD_NANDFLASH || mtd->type == MTD_MLCNANDFLASH;
@@ -54,6 +37,7 @@ int mtd_type_is_nor(struct mtd_dev_info *mtd) {
     return mtd->type == MTD_NORFLASH;
 }
 
+#if 0
 #ifdef MTD_OPEN_DEBUG
 static int mtd_bm_block_map_test(struct filesystem *fs) {
     struct block_manager *bm = FS_GET_BM(fs);
@@ -73,6 +57,7 @@ static int mtd_bm_block_map_test(struct filesystem *fs) {
     LOGI("map reading done\n");
     return 0;
 }
+#endif
 #endif
 
 static int mtd_bm_block_map_init(struct filesystem *fs) {
@@ -96,9 +81,11 @@ static int mtd_bm_block_map_init(struct filesystem *fs) {
         }
         (*mi)->eb_start = 0;
         (*mi)->eb_cnt = total_eb;
-        #ifdef MTD_OPEN_DEBUG
-        // mtd_bm_block_map_test(fs);
-        #endif
+#if 0
+#ifdef MTD_OPEN_DEBUG
+        mtd_bm_block_map_test(fs);
+#endif
+#endif
     }
     return 0;
 out:
@@ -114,6 +101,8 @@ out:
 void mtd_bm_block_map_destroy(struct block_manager *bm) {
     struct mtd_block_map **mi = BM_GET_MTD_BLOCK_MAP(bm, struct mtd_block_map);
 
+    if (!(*mi))
+        return;
     if ((*mi)->es)
         free((*mi)->es);
     if (*mi) {
@@ -133,7 +122,7 @@ int mtd_bm_block_map_is_valid(struct filesystem *fs) {
     return true;
 }
 
-int  mtd_bm_block_map_is_taged(struct filesystem *fs, int64_t eb){
+int  mtd_bm_block_map_is_taged(struct filesystem *fs, int64_t eb) {
     struct block_manager *bm = FS_GET_BM(fs);
     struct mtd_block_map *mi = *BM_GET_MTD_BLOCK_MAP(bm, struct mtd_block_map);
 
@@ -184,7 +173,7 @@ int mtd_boundary_is_valid(struct filesystem *fs, int64_t eb_start, int64_t eb_en
     int64_t right_limit = MTD_OFFSET_TO_EB_INDEX(mtd, mtd->size);
     if ((eb_start < left_limit) || (eb_end > right_limit)) {
         LOGE("start eb%lld to end eb%lld is invalid, valid boundary is from %lld to %lld\n",
-                eb_start, eb_end, left_limit, right_limit);
+             eb_start, eb_end, left_limit, right_limit);
         return false;
     }
     return true;
@@ -232,9 +221,9 @@ void mtd_scan_dump(struct filesystem *fs) {
             strcat(buf, tmpbuf);
         }
     }
-    LOGI("\ntotal ebs %d %s\n", scaned_cnt, s_scaned);
-    LOGI("\ntotal ebs %d %s\n", bad_cnt, s_bad);
-    LOGI("\ntotal ebs %d %s\n", erased_cnt, s_erased);
+    LOGI("total ebs %d \n%s\n", scaned_cnt, s_scaned);
+    LOGI("total ebs %d \n%s\n", bad_cnt, s_bad);
+    LOGI("total ebs %d \n%s\n", erased_cnt, s_erased);
     return;
 }
 #endif
@@ -258,8 +247,14 @@ int64_t mtd_block_scan(struct filesystem *fs) {
         goto out;
     }
 
-    if (!length) {
-        LOGE("Parameter length is zero\n");
+    if (length < 0) {
+        LOGE("Parameter length is negative\n");
+        goto out;
+    }
+
+    if ((op_method == BM_OPERATION_METHOD_RANDOM)
+            && !length) {
+        LOGE("Parameter length is zero at random mode\n");
         goto out;
     }
 
@@ -289,7 +284,7 @@ int64_t mtd_block_scan(struct filesystem *fs) {
     end_eb = MTD_EB_ABSOLUTE_TO_RELATIVE(mtd, end_eb);
     if (!mtd_boundary_is_valid(fs, start_eb, end_eb)) {
         LOGE("mtd boundary start eb %lld to end eb %lld is invalid\n",
-                 start_eb, end_eb);
+             start_eb, end_eb);
         goto out;
     }
 
@@ -298,22 +293,23 @@ int64_t mtd_block_scan(struct filesystem *fs) {
 
     if (!mtd_bm_block_map_is_valid(fs)) {
         LOGE("mtd block map on MTD \'%s\' is invalid\n",
-                 MTD_DEV_INFO_TO_PATH(mtd));
-            goto out;
+             MTD_DEV_INFO_TO_PATH(mtd));
+        goto out;
     }
 
     for (eb = start_eb; eb < mtd->eb_cnt; eb++) {
         if (mtd_bm_block_map_is_taged(fs, MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb))
-            && !mtd_bm_block_map_is_bad(fs, MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb))) {
+                && !mtd_bm_block_map_is_bad(fs, MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb))) {
             pass += mtd->eb_size;
             //exit1: The block has been scaned before.
             if (pass >= total_bytes) {
                 // printf("exit1: The block has been scaned before. Leaving eb %lld\n", eb);
                 break;
             }
+            continue;
         }
         mtd_bm_block_map_set(fs,
-                MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_SCAN);
+                             MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_SCAN);
         if (mtd_type_is_nor(mtd)) {
             pass += mtd->eb_size;
             //exit2: nor flash has no requirement for bad block detecting
@@ -335,7 +331,7 @@ int64_t mtd_block_scan(struct filesystem *fs) {
                 goto out;
             }
             mtd_bm_block_map_set(fs,
-                MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_BAD);
+                                 MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_BAD);
             LOGI("Block%lld is bad\n", eb);
             continue;
         }
@@ -347,7 +343,7 @@ int64_t mtd_block_scan(struct filesystem *fs) {
         }
     }
     if ((op_method != BM_OPERATION_METHOD_PARTITION)
-        &&(eb >= mtd->eb_cnt)) {
+            && (eb >= mtd->eb_cnt)) {
         LOGE("total bytes to be operated is too large to hold on MTD \"%s\"\n",
              MTD_DEV_INFO_TO_PATH(mtd));
         goto out;
@@ -360,7 +356,7 @@ out:
 }
 
 void set_process_info(struct filesystem *fs,
-                             int type, int64_t eboff, int64_t ebcnt) {
+                      int type, int64_t eboff, int64_t ebcnt) {
     struct block_manager *bm = FS_GET_BM(fs);
     struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
     int progress = (int)(eboff * 100 / ebcnt);
@@ -425,19 +421,19 @@ int64_t mtd_basic_erase(struct filesystem *fs) {
     offset = MTD_DEV_INFO_TO_START(mtd);
     start = MTD_OFFSET_TO_EB_INDEX(mtd, offset);
     end = MTD_OFFSET_TO_EB_INDEX(mtd,
-        MTD_BLOCK_ALIGN(mtd, offset + fs->params->length + mtd->eb_size - 1));
+                                 MTD_BLOCK_ALIGN(mtd, offset + fs->params->length + mtd->eb_size - 1));
 
     total_bytes = (end - start) * mtd->eb_size;
     start = MTD_EB_ABSOLUTE_TO_RELATIVE(mtd, start);
     end = MTD_EB_ABSOLUTE_TO_RELATIVE(mtd, end);
     if (!mtd_boundary_is_valid(fs, start, end)) {
         LOGE("mtd boundary start eb %lld to end eb %lld is invalid\n",
-                 start, end);
+             start, end);
         goto closeall;
     }
     if (!mtd_bm_block_map_is_valid(fs)) {
         LOGE("mtd block map on MTD \'%s\' is invalid\n",
-                 MTD_DEV_INFO_TO_PATH(mtd));
+             MTD_DEV_INFO_TO_PATH(mtd));
         goto closeall;
     }
     LOGI("MTD \"%s\" is going to erase from eb%lld to eb%lld, total length is %lld bytes\n",
@@ -445,16 +441,16 @@ int64_t mtd_basic_erase(struct filesystem *fs) {
 
     eb = start;
     erased_bytes = 0;
-    while((erased_bytes < total_bytes)
-        && (eb < mtd->eb_cnt)) {
+    while ((erased_bytes < total_bytes)
+            && (eb < mtd->eb_cnt)) {
         offset = eb * mtd->eb_size;
         set_process_info(fs, BM_OPERATION_ERASE, erased_bytes, total_bytes);
         if (is_nand && mtd_bm_block_map_is_bad(fs, MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb))) {
-                LOGI("MTD \"%s\" skip bad block at %lld\n",
-                        MTD_DEV_INFO_TO_PATH(mtd), eb);
-                eb++;
-                bad_unlock_nerase_ebs++;
-                continue;
+            LOGI("MTD \"%s\" skip bad block at %lld\n",
+                 MTD_DEV_INFO_TO_PATH(mtd), eb);
+            eb++;
+            bad_unlock_nerase_ebs++;
+            continue;
         }
         if (FS_FLAG_IS_SET(fs, UNLOCK)) {
             if (mtd_unlock(mtd, *fd, eb) != 0) {
@@ -465,34 +461,48 @@ int64_t mtd_basic_erase(struct filesystem *fs) {
             }
         }
         LOGI("MTD %s: erase at block%lld  with fd%d\n", MTD_DEV_INFO_TO_PATH(mtd), eb, *fd);
+
+#ifdef BM_SYSINFO_SUPPORT
+        if (bm->sysinfo == NULL) {
+            LOGE("bm sysinfo must be initialed before\n");
+            goto closeall;
+        }
+        err = bm->sysinfo->traversal_save(bm->sysinfo,
+                                          offset + MTD_DEV_INFO_TO_START(mtd), mtd->eb_size);
+        if (err < 0) {
+            LOGE("MTD \"%s\" failed to save system info\n", MTD_DEV_INFO_TO_PATH(mtd));
+            goto closeall;
+        }
+#endif
+
         err = mtd_erase(mtd_desc, mtd, *fd, eb);
         if (err) {
             LOGE("MTD \"%s\" failed to erase eraseblock %lld\n",
-                    MTD_DEV_INFO_TO_PATH(mtd), eb);
+                 MTD_DEV_INFO_TO_PATH(mtd), eb);
             if (errno != EIO) {
                 LOGE("MTD \"%s\" fatal error occured on %lld\n",
-                    MTD_DEV_INFO_TO_PATH(mtd), eb);
+                     MTD_DEV_INFO_TO_PATH(mtd), eb);
                 goto closeall;
             }
             if (mtd_mark_bad(mtd, *fd, eb)) {
                 LOGE("MTD \"%s\" mark bad block failed on %lld\n",
-                MTD_DEV_INFO_TO_PATH(mtd), eb);
+                     MTD_DEV_INFO_TO_PATH(mtd), eb);
                 goto closeall;
             }
             mtd_bm_block_map_set(fs,
-                MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_BAD);
+                                 MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_BAD);
             eb++;
             bad_unlock_nerase_ebs++;
             continue;
         }
         mtd_bm_block_map_set(fs,
-                MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_ERASED);
+                             MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_ERASED);
         /* format for JFFS2 ? */
         if (is_jffs2) {
             LOGI("Cleanmarker is writing at %x\n", (unsigned int)offset);
             if (jffs2_write_cleanmarker(fs, offset, &cleanmarker, clmpos, clmlen) < 0) {
                 LOGE("MTD \"%s\" cannot write cleanmarker at offset 0x%llx\n",
-                    MTD_DEV_INFO_TO_PATH(mtd), offset);
+                     MTD_DEV_INFO_TO_PATH(mtd), offset);
                 goto closeall;
             }
         }
@@ -502,10 +512,10 @@ int64_t mtd_basic_erase(struct filesystem *fs) {
 
     nerase_size = bad_unlock_nerase_ebs * mtd->eb_size;
     if ((eb >= mtd->eb_cnt)
-        && (erased_bytes + nerase_size < total_bytes)){
+            && (erased_bytes + nerase_size < total_bytes)) {
         LOGE("The erase length you have requested is too large to issuing\n");
         LOGE("Request length: %lld, erase length: %lld, non erase length: %lld\n",
-                total_bytes, erased_bytes, nerase_size);
+             total_bytes, erased_bytes, nerase_size);
         goto closeall;
     }
     set_process_info(fs, BM_OPERATION_ERASE, erased_bytes, total_bytes);
@@ -598,7 +608,7 @@ int64_t mtd_basic_write(struct filesystem *fs) {
 
     if (!mtd_bm_block_map_is_valid(fs)) {
         LOGE("mtd block map on MTD \'%s\' is invalid\n",
-                 MTD_DEV_INFO_TO_PATH(mtd));
+             MTD_DEV_INFO_TO_PATH(mtd));
         goto closeall;
     }
     if (noecc)
@@ -659,6 +669,14 @@ int64_t mtd_basic_write(struct filesystem *fs) {
         //         MTD_DEV_INFO_TO_PATH(mtd), *fd, write_mode, w_offset, w_buffer, oobbuf, writeoob);
         set_process_info(fs, BM_OPERATION_WRITE,
                          fs->params->length - w_length, fs->params->length);
+
+        ret = bm->sysinfo->traversal_merge(bm->sysinfo, w_buffer,
+                                           w_offset + MTD_DEV_INFO_TO_START(mtd),
+                                           mtd->min_io_size);
+        if (ret < 0) {
+            LOGE("MTD \"%s\" failed to merge system info\n", MTD_DEV_INFO_TO_PATH(mtd));
+            goto closeall;
+        }
         ret = mtd_write(mtd_desc, mtd, *fd, MTD_OFFSET_TO_EB_INDEX(mtd, w_offset),
                         w_offset % mtd->eb_size,
                         w_buffer,
@@ -686,7 +704,7 @@ int64_t mtd_basic_write(struct filesystem *fs) {
                 }
             }
             if (mtd_bm_block_map_set(fs,
-                    MTD_OFFSET_TO_EB_INDEX(mtd, w_offset), MTD_BLK_BAD) < 0) {
+                                     MTD_OFFSET_TO_EB_INDEX(mtd, w_offset), MTD_BLK_BAD) < 0) {
                 LOGE("MTD \"%s\" block map wrong at eb %lld\n", MTD_DEV_INFO_TO_PATH(mtd),
                      MTD_OFFSET_TO_EB_INDEX(mtd, w_offset));
                 goto closeall;
@@ -715,11 +733,72 @@ closeall:
     return -1;
 }
 
-
 int64_t mtd_basic_read(struct filesystem *fs) {
-//     int64_t ret = true;
-//     return ret;
-// closeall:
-//     LOGE("%s has crashed\n", __func__);
-    return 0;
+    struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
+    int *fd = &MTD_DEV_INFO_TO_FD(mtd);
+    long long mtd_start, length, offset, blockstart = -1, read_unit = 0;
+    char *buffer;
+    int is_nand = mtd_type_is_nand(mtd);
+    int ret;
+
+    length = fs->params->length;
+    buffer = fs->params->buf;
+    offset = fs->params->offset;
+    mtd_start = MTD_DEV_INFO_TO_START(mtd);
+    offset -= mtd_start;
+
+    if (!mtd_bm_block_map_is_valid(fs)) {
+        LOGE("mtd block map on MTD \'%s\' is invalid\n",
+             MTD_DEV_INFO_TO_PATH(mtd));
+        goto closeall;
+    }
+
+    LOGI("MTD \"%s\" read at 0x%llx, totally %lld bytes is starting\n",
+         MTD_DEV_INFO_TO_PATH(mtd), offset, length);
+    while (length > 0 && offset < mtd->size) {
+        while (blockstart != MTD_BLOCK_ALIGN(mtd, offset)) {
+            blockstart = MTD_BLOCK_ALIGN(mtd, offset);
+            // LOGI("Reading data from block %lld at offset 0x%llx\n",
+            //      blockstart / mtd->eb_size, offset);
+            if (!is_nand)
+                continue;
+            do {
+                if (mtd_bm_block_map_is_bad(fs, MTD_OFFSET_TO_EB_INDEX(mtd, offset))) {
+                    offset += mtd->eb_size;
+                    offset = MTD_BLOCK_ALIGN(mtd, offset);
+                    continue;
+                }
+                break;
+            } while (offset < mtd->size);
+
+            if (offset >= mtd->size) {
+                LOGE("read boundary is overlow\n");
+                goto closeall;
+            }
+            blockstart = MTD_BLOCK_ALIGN(mtd, offset);
+            continue;
+        }
+        read_unit = ((length > (mtd->eb_size - (offset % mtd->eb_size))) ?
+                     (mtd->eb_size - (offset % mtd->eb_size)) : length);
+        LOGI("Reading data at offset 0x%llx with size %lld\n", offset, read_unit);
+        ret = mtd_read(mtd, *fd, MTD_OFFSET_TO_EB_INDEX(mtd, offset),
+                       offset % mtd->eb_size, buffer, read_unit);
+        if (ret) {
+            LOGE("MTD \"%s\" read failure at address 0x%llx with length %lld\n",
+                 MTD_DEV_INFO_TO_PATH(mtd), offset, length);
+            goto closeall;
+        }
+        length -= read_unit;
+        buffer += read_unit;
+        offset += read_unit;
+    }
+
+    return offset + mtd_start;
+closeall:
+    LOGE("%s has crashed\n", __func__);
+    if (*fd) {
+        close(*fd);
+        *fd = 0;
+    }
+    return -1;
 }

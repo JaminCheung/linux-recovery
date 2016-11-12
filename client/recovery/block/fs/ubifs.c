@@ -21,6 +21,7 @@
 #include <lib/crc/libcrc.h>
 #include <utils/list.h>
 #include <utils/log.h>
+#include <utils/assert.h>
 #include <utils/common.h>
 #include <block/fs/fs_manager.h>
 #include <block/fs/ubifs.h>
@@ -131,7 +132,7 @@ static void print_bad_eraseblocks(const struct mtd_dev_info *mtd,
             sprintf(unitbuf, "%d", eb);
             strcat(buf, unitbuf);
             first = 0;
-        } else{
+        } else {
             sprintf(unitbuf, ", %d", eb);
             strcat(buf, unitbuf);
         }
@@ -189,14 +190,14 @@ static int consecutive_bad_check(int eb) {
 
     if (consecutive_bad_blocks >= MAX_CONSECUTIVE_BAD_BLOCKS) {
         LOGE("consecutive bad blocks exceed limit: %d, bad flash?",
-                MAX_CONSECUTIVE_BAD_BLOCKS);
+             MAX_CONSECUTIVE_BAD_BLOCKS);
         return -1;
     }
     return 0;
 }
 
 static int mark_bad(const struct mtd_dev_info *mtd, struct ubi_scan_info *si,
-        int eb) {
+                    int eb) {
     int mtd_fd = MTD_DEV_INFO_TO_FD(mtd);
     int err;
 
@@ -273,9 +274,14 @@ static int ubi_generate_vi_info(struct ubi_params *params, int64_t image_length)
     if (vi->type == UBI_VID_DYNAMIC)
         vi->used_ebs = (vi->bytes + vi->usable_leb_size - 1)
                        / vi->usable_leb_size;
-    else
+    else {
+        if (!image_length) {
+            LOGE("image length cannot be zero when volume type is static\n");
+            goto out;
+        }
         vi->used_ebs = (image_length + vi->usable_leb_size - 1)
                        / vi->usable_leb_size;
+    }
     vi->compat = 0;
 
     retval = ubigen_add_volume(ui, vi, params->vtbl);
@@ -539,7 +545,7 @@ static int ubi_bypass_layout_vol(struct filesystem *fs,
     }
 
     LOGI("Bypass start at eb %lld, bypass layout eb count is %d\n",
-            eb, volume_table_cnt);
+         eb, volume_table_cnt);
     while (eb < mtd->eb_cnt) {
         if (si->ec[eb] == EB_BAD) {
             eb++;
@@ -601,7 +607,7 @@ static int ubi_bypass_layout_vol(struct filesystem *fs,
     }
     ubi->layout_volume_start_eb = eb;
     LOGI("Volume will be writen start at eb %lld\n",
-                    ubi->layout_volume_start_eb);
+         ubi->layout_volume_start_eb);
 
     if (tmp_buf)
         free(tmp_buf);
@@ -681,11 +687,11 @@ int64_t ubi_write_one_peb(struct filesystem *fs,
             }
             eb++;
             mtd_bm_block_map_set(fs,
-                MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_BAD);
+                                 MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_BAD);
             continue;
         }
         mtd_bm_block_map_set(fs,
-                MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_ERASED);
+                             MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_ERASED);
         if (ubi->override_ec)
             ec = ubi->ec;
         else if (si->ec[eb] <= EC_MAX)
@@ -737,9 +743,9 @@ int64_t ubi_write_one_peb(struct filesystem *fs,
 }
 
 static int64_t ubi_write_volume(struct filesystem *fs,
-                                                   libmtd_t libmtd, struct mtd_dev_info *mtd,
-                                                   char *buf, int64_t eb_off, int64_t length,
-                                                   struct ubi_params *params) {
+                                libmtd_t libmtd, struct mtd_dev_info *mtd,
+                                char *buf, int64_t eb_off, int64_t length,
+                                struct ubi_params *params) {
     struct ubigen_info *ui = params->ui;
     struct ubi_scan_info *si = params->si;
     struct ubigen_vol_info *vi = params->vi;
@@ -765,9 +771,9 @@ static int64_t ubi_write_volume(struct filesystem *fs,
 
     LOGI("MTD:%s write volume chunk start eb at %lld, total eb count is %lld\n",
          MTD_DEV_INFO_TO_PATH(mtd),
-        eb, bytes / usable_leb_len);
+         eb, bytes / usable_leb_len);
     while (bytes > 0) {
-        set_process_info(fs, BM_OPERATION_ERASE_WRITE, (length-bytes), length);
+        set_process_info(fs, BM_OPERATION_ERASE_WRITE, (length - bytes), length);
         vid_hdr = (struct ubi_vid_hdr *)(&outbuf[ui->vid_hdr_offs]);
         ubigen_init_vid_hdr(ui, vi, vid_hdr, lnum, inbuf, usable_leb_len);
 
@@ -785,7 +791,7 @@ static int64_t ubi_write_volume(struct filesystem *fs,
         inbuf += usable_leb_len;
         lnum += 1;
     }
-    set_process_info(fs, BM_OPERATION_ERASE_WRITE, (length-bytes), length);
+    set_process_info(fs, BM_OPERATION_ERASE_WRITE, (length - bytes), length);
     params->vid_hdr_lnum = lnum;
     ubi->format_eb = eb;
     return  eb;
@@ -794,10 +800,10 @@ out:
 }
 
 int ubi_write_layout_vol(struct filesystem *fs,
-                            struct ubigen_info *ui, int64_t eb,
-                            int64_t ec1, int64_t ec2,
-                            struct ubi_vtbl_record *vtbl, libmtd_t *libmtd,
-                            struct mtd_dev_info *mtd, struct ubi_scan_info *si)
+                         struct ubigen_info *ui, int64_t eb,
+                         int64_t ec1, int64_t ec2,
+                         struct ubi_vtbl_record *vtbl, libmtd_t *libmtd,
+                         struct mtd_dev_info *mtd, struct ubi_scan_info *si)
 {
     int ret;
     struct ubigen_vol_info vi;
@@ -857,8 +863,8 @@ out_free:
 }
 
 static int64_t format(struct filesystem *fs, libmtd_t libmtd,
-                  struct mtd_dev_info *mtd, struct ubigen_info *ui,
-                  struct ubi_scan_info *si, int64_t start_eb, int novtbl) {
+                      struct mtd_dev_info *mtd, struct ubigen_info *ui,
+                      struct ubi_scan_info *si, int64_t start_eb, int novtbl) {
     int64_t eb, err, write_size;
     struct ubi_ec_hdr *hdr = NULL;
     struct ubi_vtbl_record *vtbl;
@@ -880,15 +886,15 @@ static int64_t format(struct filesystem *fs, libmtd_t libmtd,
     memset(hdr, 0xFF, write_size);
 
     LOGI("MTD \"%s\"  volume tailing format from eb %lld to eb %d\n",
-                MTD_DEV_INFO_TO_PATH(mtd), start_eb, mtd->eb_cnt);
+         MTD_DEV_INFO_TO_PATH(mtd), start_eb, mtd->eb_cnt);
     for (eb = start_eb; eb < mtd->eb_cnt; eb++) {
         int64_t ec;
 
         set_process_info(fs, BM_OPERATION_ERASE_WRITE,
-                eb - start_eb, mtd->eb_cnt - start_eb);
+                         eb - start_eb, mtd->eb_cnt - start_eb);
         if (si->ec[eb] == EB_BAD) {
             LOGI("MTD \"%s\"  volume format bypass bad eb %lld\n",
-                MTD_DEV_INFO_TO_PATH(mtd), eb);
+                 MTD_DEV_INFO_TO_PATH(mtd), eb);
             continue;
         }
         if (override_ec)
@@ -911,11 +917,11 @@ static int64_t format(struct filesystem *fs, libmtd_t libmtd,
                 goto out_free;
 
             mtd_bm_block_map_set(fs,
-                MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_BAD);
+                                 MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_BAD);
             continue;
         }
         mtd_bm_block_map_set(fs,
-                MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_ERASED);
+                             MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb), MTD_BLK_ERASED);
         if ((eb1 == -1 || eb2 == -1) && !novtbl) {
             if (eb1 == -1) {
                 eb1 = eb;
@@ -965,7 +971,7 @@ static int64_t format(struct filesystem *fs, libmtd_t libmtd,
         }
     }
     set_process_info(fs, BM_OPERATION_ERASE_WRITE,
-            eb - start_eb, mtd->eb_cnt - start_eb);
+                     eb - start_eb, mtd->eb_cnt - start_eb);
     free(hdr);
     return eb;
 
@@ -976,6 +982,17 @@ out_free: free(hdr);
 static int ubifs_init(struct filesystem *fs) {
     return 0;
 };
+
+static int ubi_format(struct filesystem *fs) {
+    if (ubi == NULL) {
+        LOGE("ubi parameter is null\n");
+        goto out;
+    }
+    ubi->format_eb = ubi->layout_volume_start_eb;
+    return 0;
+out:
+    return -1;
+}
 
 static int64_t ubifs_erase(struct filesystem *fs) {
     int64_t offset = fs->params->offset;
@@ -1021,6 +1038,7 @@ out:
 }
 
 static int64_t ubifs_read(struct filesystem *fs) {
+    assert_die_if(1, "%s is not served temporarily\n", __func__);
     return 0;
 }
 
@@ -1056,7 +1074,7 @@ static int64_t ubifs_done(struct filesystem *fs) {
     retval *= ui->peb_size;
 
     LOGI("Total lnum is %d, Next mtd partition write start at 0x%llx\n",
-        ubi->vid_hdr_lnum, retval);
+         ubi->vid_hdr_lnum, retval);
     ubi_params_free(&ubi);
     return retval;
 out:
@@ -1089,9 +1107,9 @@ static int64_t ubifs_get_operate_start_address(struct filesystem *fs) {
     ubi->start_eb = eb;
     ubi->layout_volume_start_eb = err;
     LOGI("ubifs start at eb %lld, bypassed layout eb count is %lld"
-            " volume layout will start at eb %lld\n",
+         " volume layout will start at eb %lld\n",
          ubi->start_eb, err - eb,
-        ubi->layout_volume_start_eb);
+         ubi->layout_volume_start_eb);
 
     return (MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, err)) * ubi->ui->peb_size;
 out:
@@ -1133,14 +1151,14 @@ static int64_t ubifs_get_max_mapped_size_in_partition(struct filesystem *fs) {
     }
 
     bypassed_bytes =  ubi->ui->peb_size *
-        (ubi->layout_volume_start_eb -  ubi->start_eb);
+                      (ubi->layout_volume_start_eb -  ubi->start_eb);
 
     fs->params->length += bypassed_bytes;
     max_mapped_size = mtd_block_scan(fs);
     fs->params->length = length;
     if (!max_mapped_size) {
         LOGE("Failed to scan mtd block at mtd '%s'\n",
-                MTD_DEV_INFO_TO_PATH(mtd));
+             MTD_DEV_INFO_TO_PATH(mtd));
         goto out;
     }
 #ifdef UBI_OPEN_DEBUG
@@ -1157,6 +1175,7 @@ struct filesystem fs_ubifs = {
     .init = ubifs_init,
     .alloc_params = fs_alloc_params,
     .free_params = fs_free_params,
+    .format = ubi_format,
     .erase = ubifs_erase,
     .read = ubifs_read,
     .write = ubifs_write,
@@ -1164,5 +1183,5 @@ struct filesystem fs_ubifs = {
     .get_operate_start_address = ubifs_get_operate_start_address,
     .get_leb_size = ubifs_get_leb_size,
     .get_max_mapped_size_in_partition =
-        ubifs_get_max_mapped_size_in_partition,
+    ubifs_get_max_mapped_size_in_partition,
 };

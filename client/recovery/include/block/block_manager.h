@@ -35,6 +35,8 @@
 #define BM_FILE_TYPE_YAFFS2  "yaffs2"
 #define BM_FILE_TYPE_CRAMFS  "cramfs"
 
+#define BM_SYSINFO_SUPPORT
+
 #define BM_MTD_FILE_TYPE_INIT(name)      \
     char *name[] = {\
         BM_FILE_TYPE_NORMAL,  \
@@ -114,18 +116,18 @@ struct block_manager {
     void (*get_supported)(struct block_manager* this, char *buf);
     void (*get_supported_filetype)(struct block_manager* this, char *buf);
 
-    struct bm_operation_option* (*set_operation_option) (struct block_manager* this,
-            int method, char *filetype);
-
+    int (*set_operation_option)(struct block_manager* this, struct bm_operation_option* opion,
+                                int method, char *filetype);
     struct bm_operate_prepare_info* (*prepare)(struct block_manager* this,
             int64_t offset, int64_t length, struct bm_operation_option *option);
     int (*chip_erase)(struct block_manager* this);
     int64_t (*erase)(struct block_manager* this, int64_t offset,
-                       int64_t length);
+                     int64_t length);
     int64_t (*write)(struct block_manager* this, int64_t offset,
-                       char* buf, int64_t length);
+                     char* buf, int64_t length);
     int64_t (*read)(struct block_manager* this, int64_t offset, char* buf,
-                      int64_t length);
+                    int64_t length);
+    int (*flush)(struct block_manager* this);
     // void (*switch_prepare_context)(struct block_manager* this,
     //                                struct bm_operate_prepare_info* prepared);
     uint32_t (*get_prepare_io_size)(struct block_manager* this);
@@ -135,13 +137,13 @@ struct block_manager {
     int64_t (*finish)(struct block_manager* this);
 
     int64_t (*get_partition_size_by_offset)(struct block_manager* this,
-            int64_t offset);
+                                            int64_t offset);
     int64_t (*get_partition_size_by_name)(struct block_manager* this,
-                                            char *name);
+                                          char *name);
     int64_t (*get_partition_start_by_offset)(struct block_manager* this,
             int64_t offset);
     int64_t (*get_partition_start_by_name)(struct block_manager* this,
-                                            char *name);
+                                           char *name);
     int (*get_partition_count)(struct block_manager* this);
     int64_t (*get_capacity)(struct block_manager* this);
     int (*get_blocksize)(struct block_manager* this, int64_t offset);
@@ -150,6 +152,9 @@ struct block_manager {
     struct bm_operate_prepare_info *prepared;
     union bm_info desc;
     struct bm_part_info *part_info;
+#ifdef BM_SYSINFO_SUPPORT
+    struct sysinfo_manager *sysinfo;
+#endif
     char *name;
     struct list_head  list_cell;
     struct list_head  list_fs_head;

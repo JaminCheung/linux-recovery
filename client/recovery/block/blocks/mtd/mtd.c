@@ -17,13 +17,16 @@
 #include <autoconf.h>
 #include <lib/crc/libcrc.h>
 #include <utils/list.h>
+#include <block/sysinfo/sysinfo_manager.h>
 #include <block/fs/fs_manager.h>
 #include <block/block_manager.h>
 #include <block/mtd/mtd.h>
 
 #define LOG_TAG BM_BLOCK_TYPE_MTD
 
-static inline struct mtd_dev_info* mtd_get_dev_info_by_offset(
+static pthread_mutex_t mtd_block_lock = PTHREAD_MUTEX_INITIALIZER;
+
+struct mtd_dev_info* mtd_get_dev_info_by_offset(
     struct block_manager* this,
     int64_t offset) {
     int64_t size = 0;
@@ -52,7 +55,7 @@ static inline struct mtd_dev_info* mtd_get_dev_info_by_node(
 }
 
 static inline struct mtd_dev_info* mtd_get_dev_info_by_mtdstr(
-        struct block_manager* this, char *name)
+    struct block_manager* this, char *name)
 {
     struct mtd_info *mtd_info;
     int len =  strlen(BM_BLOCK_TYPE_MTD);
@@ -60,7 +63,7 @@ static inline struct mtd_dev_info* mtd_get_dev_info_by_mtdstr(
 
     mtd_info = BM_GET_MTD_INFO(this);
     if ((name == NULL) || strncmp(name,
-            BM_BLOCK_TYPE_MTD, len)){
+                                  BM_BLOCK_TYPE_MTD, len)) {
         LOGE("Parameter %s is wrong\n", name);
         return NULL;
     }
@@ -84,7 +87,7 @@ static int64_t mtd_get_partition_size_by_offset(struct block_manager* this,
 }
 
 static int mtd_get_partition_count(struct block_manager* this) {
-     struct mtd_info *mtd_info;
+    struct mtd_info *mtd_info;
     if (this == NULL) {
         LOGE("Parameter block_manager is null\n");
         return -1;
@@ -171,7 +174,6 @@ static int mtd_install_filesystem(struct block_manager* this) {
             return -1;
         }
         LOGI("filesystem \"%s\" is installed\n", user_list[i]);
-        FS_SET_PRIVATE(fs, this);
     }
     return 0;
 }
@@ -200,10 +202,10 @@ static void dump_mtd_dev_info(struct block_manager* this) {
     LOGI("Partinfo dumped:\n");
     for (i = 0; i < mtd_info->mtd_dev_cnt + 1; i++) {
         LOGI("id: %d, path: %s, fd: %d, start: 0x%llx\n",
-                BM_GET_PARTINFO_ID(this, i),
-                BM_GET_PARTINFO_PATH(this, i),
-                *BM_GET_PARTINFO_FD(this, i),
-                BM_GET_PARTINFO_START(this, i));
+             BM_GET_PARTINFO_ID(this, i),
+             BM_GET_PARTINFO_PATH(this, i),
+             *BM_GET_PARTINFO_FD(this, i),
+             BM_GET_PARTINFO_START(this, i));
     }
 }
 #endif
@@ -216,24 +218,25 @@ static int mtd_block_init(struct block_manager* this) {
     int retval = 0;
     int64_t size = 0;
 
+    pthread_mutex_lock(&mtd_block_lock);
     *mtd_desc = libmtd_open();
     if (!*mtd_desc) {
         LOGE("Failed to open libmtd\n");
-        return -1;
+        goto out;
     }
     retval = mtd_get_info(*mtd_desc, mtd_info);
     if (retval < 0) {
         LOGE("Failed to get mtd info\n");
-        return -1;
+        goto out;
     }
     *part_info = (struct bm_part_info *)calloc(mtd_info->mtd_dev_cnt + 1,
-                        sizeof(struct bm_part_info));
+                 sizeof(struct bm_part_info));
     for (i = 0; i < mtd_info->mtd_dev_cnt; i++) {
         struct mtd_dev_info *mtd_dev_info = BM_GET_PARTINFO_MTD_DEV(this, i);
         retval = mtd_get_dev_info1(*mtd_desc, i, mtd_dev_info);
         if (retval < 0) {
             LOGE("Cannot get dev info at \"mtd%d\"\n", i);
-            return -1;
+            goto out;
         }
         int *fd = BM_GET_PARTINFO_FD(this, i);
         char *path = BM_GET_PARTINFO_PATH(this, i);
@@ -241,7 +244,7 @@ static int mtd_block_init(struct block_manager* this) {
         *fd = open(path, O_RDWR);
         if (*fd < 0) {
             LOGE("Cannot open mtd device %s: %s\n", path, strerror(errno));
-            return -1;
+            goto out;
         }
         BM_GET_PARTINFO_ID(this, i) = i;
         BM_GET_PARTINFO_START(this, i) = size;
@@ -252,7 +255,11 @@ static int mtd_block_init(struct block_manager* this) {
 #ifdef MTD_OPEN_DEBUG
     dump_mtd_dev_info(this);
 #endif
+    LOGI("mtd block init successfully\n");
     return 0;
+out:
+    pthread_mutex_unlock(&mtd_block_lock);
+    return -1;
 }
 
 static int mtd_block_exit(struct block_manager* this) {
@@ -261,28 +268,30 @@ static int mtd_block_exit(struct block_manager* this) {
     struct mtd_info *mtd_info = BM_GET_MTD_INFO(this);
     int i;
 
-    mtd_bm_block_map_destroy(this);
     if (*part_info) {
-        for (i = 0; i < mtd_info->mtd_dev_cnt; i++) {
-            int *fd = BM_GET_PARTINFO_FD(this, i);
-            if (*fd) {
-                LOGI("Close file descriptor %d\n", *fd);
-                close(*fd);
-                *fd = 0;
+        if (mtd_info) {
+            for (i = 0; i < mtd_info->mtd_dev_cnt; i++) {
+                int *fd = BM_GET_PARTINFO_FD(this, i);
+                if (*fd) {
+                    LOGI("Close file descriptor %d\n", *fd);
+                    close(*fd);
+                    *fd = 0;
+                }
             }
         }
         free(*part_info);
         *part_info = NULL;
     }
-
     if (*mtd_desc) {
         libmtd_close(*mtd_desc);
         *mtd_desc = NULL;
     }
-
+    pthread_mutex_unlock(&mtd_block_lock);
+    LOGI("mtd block exit successfully\n");
     return 0;
 }
 
+#if 0
 #ifdef MTD_OPEN_DEBUG
 static void dump_convert_params(struct block_manager* this,
                                 struct fs_operation_params  *params) {
@@ -293,10 +302,12 @@ static void dump_convert_params(struct block_manager* this,
     LOGI("mtd = 0x%x\n", (unsigned int)params->priv);
 }
 #endif
+#endif
 
 static struct filesystem * prepare_convert_params(struct block_manager* this, struct filesystem *fs,
         int64_t offset, int64_t length, struct bm_operation_option *option) {
     struct mtd_dev_info* mtd = mtd_get_dev_info_by_offset(this, offset);
+    int op_method = BM_OPERATION_METHOD_RANDOM;
 
     if (mtd == NULL) {
         LOGE("Cannot get mtd devinfo at 0x%llx", offset);
@@ -305,15 +316,14 @@ static struct filesystem * prepare_convert_params(struct block_manager* this, st
 
     if (fs->params == NULL) {
         LOGE("filesystem %s parameter has not been allocated yet\n",
-                fs->name);
+             fs->name);
         return NULL;
     }
-    fs->params->offset = offset;
-    fs->params->length = length;
-    if (option) {
-        fs->params->operation_method = option->method;
+    if (option && (option->method != op_method)) {
+        op_method = option->method;
     }
-    fs->params->priv = mtd;
+
+    fs->set_params(fs, NULL, offset, length, op_method, mtd, this);
     return fs;
 }
 
@@ -321,13 +331,12 @@ static int mtd_chip_erase(struct block_manager *this) {
     struct filesystem *fs  = NULL;
     char *fs_get_name = "normal";
     int64_t offset, length;
-    struct bm_operation_option *option;
+    struct bm_operation_option option;
     struct mtd_info *mtd_info = BM_GET_MTD_INFO(this);
     int i;
 
-    option = this->set_operation_option(this,
-                                        BM_OPERATION_METHOD_PARTITION, fs_get_name);
-    if (option == NULL) {
+    if (this->set_operation_option(this, &option,
+                                   BM_OPERATION_METHOD_PARTITION, fs_get_name) < 0) {
         LOGE("Cannot set block option\n");
         goto out;
     }
@@ -342,11 +351,11 @@ static int mtd_chip_erase(struct block_manager *this) {
         struct mtd_dev_info *mtd = BM_GET_PARTINFO_MTD_DEV(this, i);
         length = mtd->size;
         offset = BM_GET_PARTINFO_START(this, i);
-        if (prepare_convert_params(this, fs, offset, length, option) == NULL)
+        if (prepare_convert_params(this, fs, offset, length, &option) == NULL)
             goto out;
 
         if (!fs->chiperase_preset
-            || !fs->chiperase_preset(fs)) {
+                || !fs->chiperase_preset(fs)) {
             LOGE("fs \'%s\' preset failed\n", fs->name);
             goto out;
         }
@@ -427,6 +436,25 @@ out:
     return -1;
 }
 
+int mtd_block_flush(struct block_manager* this) {
+    struct filesystem *fs = NULL;
+
+    fs = BM_GET_PREPARE_INFO_CONTEXT(this);
+    if (fs == NULL) {
+        LOGE("Prepare info context_handle is lost\n");
+        goto out;
+    }
+    if (fs->format == NULL) {
+        LOGE("\'%s\' not support method \'format\' yet\n",
+                fs->name);
+        goto out;
+    }
+    return fs->format(fs);
+out:
+    // assert_die_if(1, "%s:%s:%d run crashed\n", __FILE__, __func__, __LINE__);
+    return -1;
+}
+
 #ifdef MTD_OPEN_DEBUG
 static void dump_prepared_info(struct bm_operate_prepare_info *prepare) {
     LOGI("write_start = 0x%llx\n", prepare->write_start);
@@ -452,7 +480,7 @@ static struct bm_operate_prepare_info* mtd_get_prepare_info(
     prepare_info.logical_unit_size = va_arg(args, uint32_t);
     prepare_info.max_size_mapped_in_partition = va_arg(args, int64_t);
     if ((prepare_info.write_start < 0)
-            ||!prepare_info.physical_unit_size
+            || !prepare_info.physical_unit_size
             || !prepare_info.logical_unit_size
             || (prepare_info.max_size_mapped_in_partition < 0))
         goto out;
@@ -565,6 +593,7 @@ static struct block_manager mtd_manager =  {
     .erase = mtd_block_erase,
     .read = mtd_block_read,
     .write = mtd_block_write,
+    .flush = mtd_block_flush,
     .prepare = mtd_block_prepare,
     // .switch_prepare_context = mtd_switch_prepare_context,
     .get_prepare_leb_size = mtd_get_prepare_leb_size,

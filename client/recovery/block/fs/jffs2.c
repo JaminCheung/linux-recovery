@@ -17,6 +17,7 @@
 #include <autoconf.h>
 #include <lib/crc/libcrc.h>
 #include <utils/list.h>
+#include <utils/assert.h>
 #include <block/fs/fs_manager.h>
 #include <block/fs/jffs2.h>
 #include <block/block_manager.h>
@@ -25,7 +26,7 @@
 #define LOG_TAG  "fs_jffs2"
 
 static void jffs2_dump_cleanmarker(struct jffs2_unknown_node *marker,
-        int *pos, int *len) {
+                                   int *pos, int *len) {
     unsigned int magic;
     unsigned int nodetype;
     unsigned int totlen;
@@ -45,8 +46,8 @@ static void jffs2_dump_cleanmarker(struct jffs2_unknown_node *marker,
 }
 
 int jffs2_init_cleanmarker(struct filesystem *fs,
-                         struct jffs2_unknown_node *marker,
-                         int *pos, int *len) {
+                           struct jffs2_unknown_node *marker,
+                           int *pos, int *len) {
     struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
     int fd = MTD_DEV_INFO_TO_FD(mtd);
     int clmpos = 0, clmlen = 8;
@@ -62,7 +63,7 @@ int jffs2_init_cleanmarker(struct filesystem *fs,
         else {
             struct nand_oobinfo oobinfo;
 
-            if (ioctl(fd, MEMGETOOBSEL, &oobinfo) != 0){
+            if (ioctl(fd, MEMGETOOBSEL, &oobinfo) != 0) {
                 LOGE("Unable to get NAND oobinfo");
                 return -1;
             }
@@ -70,7 +71,7 @@ int jffs2_init_cleanmarker(struct filesystem *fs,
             /* Check for autoplacement */
             if (oobinfo.useecc == MTD_NANDECC_AUTOPLACE) {
                 /* Get the position of the free bytes */
-                if (!oobinfo.oobfree[0][1]){
+                if (!oobinfo.oobfree[0][1]) {
                     LOGE("Eeep. Autoplacement selected and no empty space in oob");
                     return -1;
                 }
@@ -81,18 +82,18 @@ int jffs2_init_cleanmarker(struct filesystem *fs,
             } else {
                 /* Legacy mode */
                 switch (mtd->oob_size) {
-                    case 8:
-                        clmpos = 6;
-                        clmlen = 2;
-                        break;
-                    case 16:
-                        clmpos = 8;
-                        clmlen = 8;
-                        break;
-                    case 64:
-                        clmpos = 16;
-                        clmlen = 8;
-                        break;
+                case 8:
+                    clmpos = 6;
+                    clmlen = 2;
+                    break;
+                case 16:
+                    clmpos = 8;
+                    clmlen = 8;
+                    break;
+                case 64:
+                    clmpos = 16;
+                    clmlen = 8;
+                    break;
                 }
             }
             cleanmarker.totlen = cpu_to_je32(8);
@@ -108,9 +109,9 @@ int jffs2_init_cleanmarker(struct filesystem *fs,
 }
 
 int jffs2_write_cleanmarker(struct filesystem *fs,
-                           int64_t offset,
-                           struct jffs2_unknown_node *cleanmarker,
-                           int clmpos, int clmlen) {
+                            int64_t offset,
+                            struct jffs2_unknown_node *cleanmarker,
+                            int clmpos, int clmlen) {
     struct block_manager *bm = FS_GET_BM(fs);
     struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
     int fd = MTD_DEV_INFO_TO_FD(mtd);
@@ -137,12 +138,24 @@ static int jffs2_init(struct filesystem *fs) {
     return 0;
 };
 
+static int jffs2_format(struct filesystem *fs) {
+    struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
+    fs->params->length = mtd->size;
+    if (mtd_basic_erase(fs) < 0) {
+        LOGE("Cannot format on fs\'%s\'\n", fs->name);
+        goto out;
+    }
+    return 0;
+out:
+    return -1;
+}
 static int64_t jffs2_erase(struct filesystem *fs) {
     return mtd_basic_erase(fs);
 }
 
 static int64_t jffs2_read(struct filesystem *fs) {
-    return mtd_basic_read(fs);
+    assert_die_if(1, "%s is not served temporarily\n", __func__);
+    return 0;
 }
 
 static int64_t jffs2_write(struct filesystem *fs) {
@@ -166,11 +179,13 @@ struct filesystem fs_jffs2 = {
     .init = jffs2_init,
     .alloc_params = fs_alloc_params,
     .free_params = fs_free_params,
+    .set_params = fs_set_params,
     .erase = jffs2_erase,
     .read = jffs2_read,
     .write = jffs2_write,
     .get_operate_start_address = jffs2_get_operate_start_address,
     .get_leb_size = jffs2_get_leb_size,
     .get_max_mapped_size_in_partition =
-            jffs2_get_max_mapped_size_in_partition,
+    jffs2_get_max_mapped_size_in_partition,
+    .format = jffs2_format,
 };

@@ -37,8 +37,8 @@ static struct filesystem* fs_supported_list[] = {
 };
 
 void fs_write_flags_get(struct filesystem *fs,
-                                int *noecc, int *autoplace, int *writeoob,
-                                int *oobsize, int *pad, int *markbad) {
+                        int *noecc, int *autoplace, int *writeoob,
+                        int *oobsize, int *pad, int *markbad) {
     struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
     *noecc = FS_FLAG_IS_SET(fs, NOECC);
     *autoplace = FS_FLAG_IS_SET(fs, AUTOPLACE);
@@ -62,7 +62,7 @@ int fs_alloc_params(struct filesystem *this) {
     this->params = calloc(1, sizeof(*this->params));
     if (this->params == NULL) {
         LOGE("Cannot get memory space, request size is %d\n",
-            sizeof(*this->params));
+             sizeof(*this->params));
         return -1;
     }
     return 0;
@@ -74,6 +74,16 @@ int fs_free_params(struct filesystem *this) {
         this->params = NULL;
     }
     return 0;
+}
+
+void fs_set_params(struct filesystem* fs, char *buf, int64_t offset,
+                   int64_t length, int op_method, void *p,  void *fs_priv) {
+    FS_GET_PARAM(fs)->buf  = buf;
+    FS_GET_PARAM(fs)->offset  = offset;
+    FS_GET_PARAM(fs)->length  = length;
+    FS_GET_PARAM(fs)->operation_method  = op_method;
+    FS_GET_PARAM(fs)->priv  = p;
+    FS_SET_PRIVATE(fs, fs_priv);
 }
 
 int fs_register(struct list_head *head, struct filesystem* this) {
@@ -116,7 +126,7 @@ int fs_unregister(struct list_head *head, struct filesystem* this) {
     list_for_each_safe(cell, next, head) {
         m = list_entry(cell, struct filesystem, list_cell);
         if (!strcmp(m->name,  this->name)) {
-            LOGI("Filesystem \''%s\' is removed successfully", m->name);
+            LOGI("Filesystem \'%s\' is removed successfully", m->name);
             this->free_params(this);
             list_del(cell);
             return 0;
@@ -145,4 +155,43 @@ struct filesystem* fs_get_suppoted_by_name(char *filetype) {
         }
     }
     return NULL;
+}
+
+struct filesystem* fs_new(char *filetype) {
+    struct filesystem* fs = fs_get_suppoted_by_name(filetype);
+    struct filesystem* duplicated = NULL;
+    if (fs == NULL) {
+        LOGE("Filesystem \'%s\' is not supported yet\n", filetype);
+        goto out;
+    }
+    duplicated = calloc(sizeof(*duplicated), 1);
+    if (duplicated == NULL) {
+        LOGE("Cannot allocate any space to filesystem\n");
+        goto out;
+    }
+
+    memcpy(duplicated, fs, sizeof(*fs));
+    duplicated->params = NULL;
+    if (fs_alloc_params(duplicated) < 0)
+        goto out;
+
+    return duplicated;
+out:
+    return NULL;
+}
+
+int fs_destroy(struct filesystem** fs) {
+    struct filesystem **tmp = fs;
+
+    if ((tmp == NULL) || (*tmp == NULL))
+        goto out;
+
+    if ((*tmp)->params)
+        free((*tmp)->params);
+
+    free(*tmp);
+    *tmp = NULL;
+    return 0;
+out:
+    return -1;
 }
