@@ -144,6 +144,7 @@ int download_file(const char* file, const char* path) {
     return 0;
 }
 
+#if 0
 /**
  * get_multiplier - convert size specifier to an integer multiplier.
  * @str: the size specifier string
@@ -234,4 +235,4 @@ void print_bytes(long long bytes, int bracket) {
     if (bracket)
         LOGI(")");
 }
-
+#endif

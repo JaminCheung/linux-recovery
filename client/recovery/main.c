@@ -137,7 +137,6 @@ int main(int argc, char* argv[]) {
 
     nm->register_handler(nm, om->nh);
 
-
     /*
      * Start ota manager
      */

@@ -33,9 +33,9 @@ all: clean $(TARGET)
 
 $(TARGET): client server tools document resource
 	@cd $(OUTDIR) &&  tar -cvJf ../$(TARGET) .
-	@echo -e "\n=========================="
+	@echo -e "\n============================"
 	@echo -e "$(TARGET) is ready."
-	@echo -e "==========================\n"
+	@echo -e "============================\n"
 
 #
 # For client side
@@ -47,9 +47,9 @@ client:
 	@cp -av client/root.cpio $(CLIENT_DIR)
 	@cp -av client/recovery/out/recovery $(CLIENT_DIR)
 
-	@echo -e "=================="
+	@echo -e "======================"
 	@echo -e "Client side is ready."
-	@echo -e "==================\n"
+	@echo -e "======================\n"
 
 #
 # For server side
@@ -58,9 +58,9 @@ server:
 	@mkdir -p $(SERVER_DIR)
 	@cp -arv server/* $(SERVER_DIR)
 	@mkdir -p $(SERVER_DIR)/image
-	@echo -e "=================="
+	@echo -e "======================"
 	@echo -e "Server side is ready."
-	@echo -e "==================\n"
+	@echo -e "======================\n"
 
 #
 #
@@ -73,18 +73,18 @@ tools:
 	@cp -av tools/dump_publickey/out/dumpkey.jar $(TOOLS_DIR)
 	@cp -arv server/otapackage/depmod/signature/makekey/* $(TOOLS_DIR)/
 
-	@echo -e "=================="
+	@echo -e "======================"
 	@echo -e "Host tools is ready."
-	@echo -e "==================\n"
+	@echo -e "======================\n"
 
 #
 # For document
 #
 document:
 	@mkdir -p $(DOC_DIR)
-	@echo -e "=================="
+	@echo -e "======================"
 	@echo -e "Document is ready."
-	@echo -e "==================\n"
+	@echo -e "======================\n"
 
 #
 # For resource
@@ -92,9 +92,9 @@ document:
 resource:
 	@mkdir -p $(RES_DIR)
 	@cp -av resource/* $(RES_DIR)
-	@echo -e "=================="
+	@echo -e "======================"
 	@echo -e "Resource is ready."
-	@echo -e "==================\n"
+	@echo -e "======================\n"
 
 clean:
 	@rm -rf $(OUTDIR) $(TARGET)
