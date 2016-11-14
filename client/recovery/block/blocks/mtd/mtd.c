@@ -311,20 +311,27 @@ static struct filesystem * prepare_convert_params(struct block_manager* this, st
 
     if (mtd == NULL) {
         LOGE("Cannot get mtd devinfo at 0x%llx", offset);
-        return NULL;
+        goto out;
     }
 
     if (fs->params == NULL) {
         LOGE("filesystem %s parameter has not been allocated yet\n",
              fs->name);
-        return NULL;
+        goto out;
+    }
+
+    if (fs->set_params == NULL) {
+        LOGE("filesystem %s set_params is not initialed\n",
+             fs->name);
+        goto out;
     }
     if (option && (option->method != op_method)) {
         op_method = option->method;
     }
-
     fs->set_params(fs, NULL, offset, length, op_method, mtd, this);
     return fs;
+out:
+    return NULL;
 }
 
 static int mtd_chip_erase(struct block_manager *this) {
@@ -446,7 +453,7 @@ int mtd_block_flush(struct block_manager* this) {
     }
     if (fs->format == NULL) {
         LOGE("\'%s\' not support method \'format\' yet\n",
-                fs->name);
+             fs->name);
         goto out;
     }
     return fs->format(fs);
@@ -533,7 +540,6 @@ static struct bm_operate_prepare_info* mtd_block_prepare(
              default_filetype);
         goto out;
     }
-
     prepare_convert_params(this, fs, offset, length, option);
     return mtd_get_prepare_info(this,
                                 fs,

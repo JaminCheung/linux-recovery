@@ -96,6 +96,8 @@ static int set_operation_option(struct block_manager* this, struct bm_operation_
         goto out;
     }
     option->method = method;
+    if (strlen(filetype) > sizeof(option->filetype) - 1)
+        return -1;
     strcpy(option->filetype, filetype);
     return 0;
 out:

@@ -933,6 +933,7 @@ static int64_t format(struct filesystem *fs, libmtd_t libmtd,
             continue;
         }
 
+        LOGI("write eb %lld with ec %lld\n", eb, ec);
         err = mtd_write(libmtd, mtd, mtd_fd, eb, 0, hdr,
                         write_size, NULL, 0, 0);
         if (err) {
@@ -1175,6 +1176,7 @@ struct filesystem fs_ubifs = {
     .init = ubifs_init,
     .alloc_params = fs_alloc_params,
     .free_params = fs_free_params,
+    .set_params = fs_set_params,
     .format = ubi_format,
     .erase = ubifs_erase,
     .read = ubifs_read,

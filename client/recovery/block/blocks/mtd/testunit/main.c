@@ -36,5 +36,6 @@ int main(int argc, char **argv) {
 #elif defined TEST_UPDATE
     test_update();
 #endif
+
     return 0;
 }

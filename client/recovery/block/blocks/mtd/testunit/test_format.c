@@ -27,7 +27,7 @@
 #define JFFS2     0
 #define CRAMFS    1
 #define UBIFS     2
-#define FS_TYPE   JFFS2
+#define FS_TYPE   UBIFS
 
 static void bm_mtd_event_listener(struct block_manager *bm,
                                   struct bm_event* event) {
@@ -42,16 +42,16 @@ static int format(struct block_manager *bm) {
     int64_t start;
     int64_t ret;
 
-    #if FS_TYPE == JFFS2
-        fs_type = BM_FILE_TYPE_JFFS2;
-        start = 0xe00000;    //Partition 'data' with offset 0xe00000
-    #elif FS_TYPE == CRAMFS
-        fs_type = BM_FILE_TYPE_CRAMFS;
-    #elif FS_TYPE == UBIFS
-        fs_type = BM_FILE_TYPE_UBIFS;
-    #endif
+#if FS_TYPE == JFFS2
+    fs_type = BM_FILE_TYPE_JFFS2;
+    start = 0xe00000;    //Partition 'data' with offset 0xe00000
+#elif FS_TYPE == UBIFS
+    fs_type = BM_FILE_TYPE_UBIFS;
+    start = 0x3780000;
+#endif
 
-    bm->set_operation_option(bm, &bm_option, BM_OPERATION_METHOD_PARTITION, fs_type);
+    ret = bm->set_operation_option(bm, &bm_option, BM_OPERATION_METHOD_PARTITION, fs_type);
+    LOGI("set option ret = 0x%llx\n", ret);
     prepared = bm->prepare(bm, start, 0, &bm_option);
     if (prepared == NULL) {
         LOGE("Block manager prepare failed\n");

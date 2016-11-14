@@ -111,8 +111,8 @@ static int sysinfo_get_value(struct sysinfo_manager *this,
             goto out;
         }
 
-        fs->set_params(fs, *data, offset, 
-            len, BM_OPERATION_METHOD_RANDOM, mtd, bm);
+        fs->set_params(fs, *data, offset,
+                       len, BM_OPERATION_METHOD_RANDOM, mtd, bm);
         if (!strcmp(bm->name, BM_BLOCK_TYPE_MTD)) {
 
             if (fs->get_max_mapped_size_in_partition(fs) <= 0) {
@@ -166,8 +166,8 @@ out:
     return -1;
 }
 
-static int sysinfo_traversal_save(struct sysinfo_manager *this, 
-    int64_t offset, int64_t length) {
+static int sysinfo_traversal_save(struct sysinfo_manager *this,
+                                  int64_t offset, int64_t length) {
     int64_t start = offset;
     int64_t end = start + length;
 
@@ -192,8 +192,8 @@ out:
     return -1;
 }
 
-static int sysinfo_traversal_merge(struct sysinfo_manager *this, 
-    char *buf, int64_t offset, int64_t length) {
+static int sysinfo_traversal_merge(struct sysinfo_manager *this,
+                                   char *buf, int64_t offset, int64_t length) {
     int64_t start = offset;
     int64_t end = start + length;
 
