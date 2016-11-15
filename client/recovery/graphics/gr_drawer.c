@@ -16,7 +16,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
 
 #include <utils/log.h>
 #include <utils/common.h>
@@ -34,9 +33,6 @@ struct gr_font {
     struct gr_surface* texture;
 };
 
-#define kMaxCols   96
-#define kMaxRows   96
-
 static struct gr_font* gr_font;
 static struct fb_manager* fb_manager;
 static uint32_t fb_width;
@@ -48,13 +44,6 @@ static uint32_t fb_row_bytes;
 static uint8_t gr_current_r = 255;
 static uint8_t gr_current_g = 255;
 static uint8_t gr_current_b = 255;
-
-static int text_rows;
-static int text_cols;
-static int text_top;
-static int text_row;
-static int text_col;
-static char text[kMaxRows][kMaxCols];
 
 static int outside(uint32_t pos_x, uint32_t pos_y) {
     if ((pos_y >= fb_height) || (pos_x >= fb_width))
@@ -215,45 +204,6 @@ static int draw_text(struct gr_drawer* this, uint32_t pos_x, uint32_t pos_y,
     return 0;
 }
 
-static int print_text(struct gr_drawer* this, const char* fmt, ...) {
-    char buf[256];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, 256, fmt, ap);
-    va_end(ap);
-
-    if (text_rows > 0 && text_cols > 0) {
-        char *ptr;
-        for (ptr = buf; *ptr != '\0'; ++ptr) {
-            if (*ptr == '\n' || text_col >= text_cols) {
-                text[text_row][text_col] = '\0';
-                text_col = 0;
-                text_row = (text_row + 1) % text_rows;
-                if (text_row == text_top) text_top = (text_top + 1) % text_rows;
-            }
-            if (*ptr != '\n') text[text_row][text_col++] = *ptr;
-        }
-        text[text_row][text_col] = '\0';
-
-        int row = (text_top+text_rows-1) % text_rows;
-        for (int ty = fb_height - gr_font->cheight, count = 0;
-             ty > 2 && count < text_rows;
-             ty -= gr_font->cheight, ++count) {
-
-            draw_text(this, 4, ty, text[row], 0);
-
-            --row;
-
-            if (row < 0)
-                row = text_rows-1;
-        }
-
-        fb_manager->display(fb_manager);
-    }
-
-    return 0;
-}
-
 static void display(struct gr_drawer* this) {
     return fb_manager->display(fb_manager);
 }
@@ -264,6 +214,11 @@ static uint32_t get_fb_width(struct gr_drawer* this) {
 
 static uint32_t get_fb_height(struct gr_drawer* this) {
     return fb_height;
+}
+
+static void get_font_size(uint32_t* width, uint32_t* height) {
+    *width = gr_font->cwidth;
+    *height = gr_font->cheight;
 }
 
 static int init(struct gr_drawer* this) {
@@ -315,17 +270,6 @@ static int init(struct gr_drawer* this) {
         gr_font->cheight = font.cheight;
     }
 
-    text_col = text_row = 0;
-    text_rows = fb_height / gr_font->cheight;
-    if (text_rows > kMaxRows)
-        text_rows = kMaxRows;
-
-    text_top = 1;
-
-    text_cols = fb_width / gr_font->cwidth;
-    if (text_cols > kMaxCols - 1)
-        text_cols = kMaxCols - 1;
-
     return 0;
 }
 
@@ -353,13 +297,13 @@ void construct_gr_drawer(struct gr_drawer* this) {
     this->get_fb_height = get_fb_height;
     this->draw_png = draw_png;
     this->draw_text = draw_text;
-    this->print_text = print_text;
     this->blank = blank;
     this->fill_screen = fill_screen;
     this->init = init;
     this->deinit = deinit;
     this->set_pen_color = set_pen_color;
     this->display = display;
+    this->get_font_size = get_font_size;
 }
 
 void destruct_gr_drawer(struct gr_drawer* this) {
@@ -367,11 +311,11 @@ void destruct_gr_drawer(struct gr_drawer* this) {
     this->get_fb_height = NULL;
     this->draw_png = NULL;
     this->draw_png = NULL;
-    this->print_text = NULL;
     this->blank = NULL;
     this->fill_screen = NULL;
     this->init = NULL;
     this->deinit = NULL;
     this->set_pen_color = NULL;
     this->display = NULL;
+    this->get_font_size = NULL;
 }

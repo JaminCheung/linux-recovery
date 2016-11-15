@@ -37,6 +37,8 @@ struct gr_drawer {
     uint32_t (*get_fb_width)(struct gr_drawer* this);
     uint32_t (*get_fb_height)(struct gr_drawer* this);
 
+    void (*get_font_size)(uint32_t *width, uint32_t* height);
+
     void (*set_pen_color)(struct gr_drawer* this, uint8_t red, uint8_t green,
             uint8_t blue);
 
@@ -44,8 +46,6 @@ struct gr_drawer {
             uint32_t pos_x, uint32_t pos_y);
     int (*draw_text)(struct gr_drawer* this, uint32_t pos_x, uint32_t pos_y,
             const char* text, uint8_t bold);
-
-    int (*print_text)(struct gr_drawer* this, const char* fmt, ...);
 
     void (*display)(struct gr_drawer* this);
 

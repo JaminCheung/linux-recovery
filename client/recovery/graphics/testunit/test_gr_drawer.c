@@ -61,9 +61,6 @@ int main(int argc, char *argv[]) {
 
     gr_drawer->display(gr_drawer);
 
-    gr_drawer->set_pen_color(gr_drawer, 0x55, 0x55, 0xff);
-    gr_drawer->print_text(gr_drawer,"       Waiting...\n");
-
     for (;;) {
         for (int i = 0; i < spinner_frames; i++) {
             if (gr_drawer->draw_png(gr_drawer, *(g_surface + i), pos_x,
