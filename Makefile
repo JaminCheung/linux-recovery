@@ -44,7 +44,8 @@ client:
 	@mkdir -p $(CLIENT_DIR)
 	@make clean -C client/recovery
 	@make -C client/recovery -j4
-	@cp -av client/root.cpio $(CLIENT_DIR)
+	@cp -av client/root-nand.cpio $(CLIENT_DIR)
+	@cp -av client/root-addition.tar.xz $(CLIENT_DIR)
 	@cp -av client/recovery/out/recovery $(CLIENT_DIR)
 
 	@echo -e "======================"
