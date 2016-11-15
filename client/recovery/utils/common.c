@@ -44,6 +44,7 @@ struct global_data g_data = {
 };
 
 static const char* prefix_wget_path = "/usr/bin/wget";
+static const char* prefix_platform_xburst = "Ingenic Xburst";
 
 static void do_cold_boot(DIR *d, int lvl) {
     struct dirent *de;
@@ -142,6 +143,25 @@ int download_file(const char* file, const char* path) {
         return -1;
 
     return 0;
+}
+
+enum system_platform_t get_system_platform(void) {
+    FILE* fp = NULL;
+    char line[256] = {0};
+
+    fp = fopen("/proc/cpuinfo", "r");
+    if (fp == NULL) {
+        LOGE("Failed to open /proc/cpuinfo: %s\n", strerror(errno));
+        return UNKNOWN;
+    }
+
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, prefix_platform_xburst)) {
+            return XBURST;
+        }
+    }
+
+    return UNKNOWN;
 }
 
 #if 0

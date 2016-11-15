@@ -31,6 +31,11 @@ struct global_data {
 
 extern struct global_data g_data;
 
+enum system_platform_t {
+    XBURST,
+    UNKNOWN,
+};
+
 #define _new(T, P)                          \
 ({                                          \
     T * obj = (T *)calloc(1, sizeof(T));    \
@@ -55,8 +60,12 @@ void msleep(uint64_t msec);
 int download_file(const char* file, const char* path);
 void msleep(uint64_t msec);
 void cold_boot(const char *path);
+enum system_platform_t get_system_platform(void);
+
+#if 0
 int get_multiplier(const char *str);
 long long get_bytes(const char *str);
 void print_bytes(long long bytes, int bracket);
+#endif
 
 #endif /* COMMON_H */
