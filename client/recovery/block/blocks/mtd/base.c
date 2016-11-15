@@ -463,15 +463,13 @@ int64_t mtd_basic_erase(struct filesystem *fs) {
         LOGI("MTD %s: erase at block%lld  with fd%d\n", MTD_DEV_INFO_TO_PATH(mtd), eb, *fd);
 
 #ifdef BM_SYSINFO_SUPPORT
-        if (bm->sysinfo == NULL) {
-            LOGE("bm sysinfo must be initialed before\n");
-            goto closeall;
-        }
-        err = bm->sysinfo->traversal_save(bm->sysinfo,
-                                          offset + MTD_DEV_INFO_TO_START(mtd), mtd->eb_size);
-        if (err < 0) {
-            LOGE("MTD \"%s\" failed to save system info\n", MTD_DEV_INFO_TO_PATH(mtd));
-            goto closeall;
+        if (bm->sysinfo) {
+            err = bm->sysinfo->traversal_save(bm->sysinfo,
+                                              offset + MTD_DEV_INFO_TO_START(mtd), mtd->eb_size);
+            if (err < 0) {
+                LOGE("MTD \"%s\" failed to save system info\n", MTD_DEV_INFO_TO_PATH(mtd));
+                goto closeall;
+            }
         }
 #endif
 
@@ -670,13 +668,17 @@ int64_t mtd_basic_write(struct filesystem *fs) {
         set_process_info(fs, BM_OPERATION_WRITE,
                          fs->params->length - w_length, fs->params->length);
 
-        ret = bm->sysinfo->traversal_merge(bm->sysinfo, w_buffer,
-                                           w_offset + MTD_DEV_INFO_TO_START(mtd),
-                                           mtd->min_io_size);
-        if (ret < 0) {
-            LOGE("MTD \"%s\" failed to merge system info\n", MTD_DEV_INFO_TO_PATH(mtd));
-            goto closeall;
+#ifdef BM_SYSINFO_SUPPORT
+        if (bm->sysinfo) {
+            ret = bm->sysinfo->traversal_merge(bm->sysinfo, w_buffer,
+                                               w_offset + MTD_DEV_INFO_TO_START(mtd),
+                                               mtd->min_io_size);
+            if (ret < 0) {
+                LOGE("MTD \"%s\" failed to merge system info\n", MTD_DEV_INFO_TO_PATH(mtd));
+                goto closeall;
+            }
         }
+#endif
         ret = mtd_write(mtd_desc, mtd, *fd, MTD_OFFSET_TO_EB_INDEX(mtd, w_offset),
                         w_offset % mtd->eb_size,
                         w_buffer,

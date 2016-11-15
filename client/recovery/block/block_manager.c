@@ -10,8 +10,8 @@
 #include <unistd.h>
 #include <types.h>
 #include <utils/assert.h>
+#include <utils/common.h>
 #include <lib/mtd/jffs2-user.h>
-#include <lib/libcommon.h>
 #include <lib/mtd/mtd-user.h>
 #include <autoconf.h>
 #include <lib/ubi/ubi.h>
@@ -129,7 +129,10 @@ void construct_block_manager(struct block_manager* this, char *blockname,
     this->get_supported_filetype = get_supported_filetype;
     this->set_operation_option = set_operation_option;
 #ifdef BM_SYSINFO_SUPPORT
-    sysinfo_manager_bind(GET_SYSINFO_MANAGER(), this);
+    if (get_system_platform() == XBURST)
+        sysinfo_manager_bind(GET_SYSINFO_MANAGER(), this);
+    else
+        bm->sysinfo = NULL;
 #endif
     return;
 out:
