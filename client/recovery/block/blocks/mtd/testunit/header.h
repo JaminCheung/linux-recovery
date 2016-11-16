@@ -3,7 +3,7 @@
 
 // #define TEST_READ
 // #define TEST_SYSINFO
-#define TEST_FORMAT
-// #define TEST_UPDATE
+// #define TEST_FORMAT
+#define TEST_UPDATE
 
 #endif

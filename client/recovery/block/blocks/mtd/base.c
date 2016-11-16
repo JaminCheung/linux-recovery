@@ -158,12 +158,15 @@ int mtd_bm_block_map_set(struct filesystem *fs, int64_t eb, int status) {
     struct mtd_block_map *mi = *BM_GET_MTD_BLOCK_MAP(bm, struct mtd_block_map);
 
     if (mi->es[eb] != status) {
-        mi->es[eb] = status;
         if (status == MTD_BLK_BAD)
             mi->bad_cnt++;
         // else if (status == MTD_BLK_WRITEN_EIO)
         //     mi->write_eio++;
+        if (mi->es[eb] == MTD_BLK_BAD)
+            goto out;
+        mi->es[eb] = status;
     }
+out:
     return 0;
 }
 
@@ -240,7 +243,7 @@ int64_t mtd_block_scan(struct filesystem *fs) {
     // int64_t partition_size = mtd->size;
     int64_t eb, start_eb, end_eb, total_bytes;
     int64_t pass = 0;
-    int retval;
+    int noskipbad = 0, retval;
 
     if (mtd == NULL) {
         LOGE("Cannot get mtd devinfo at 0x%llx\n", offset);
@@ -257,7 +260,7 @@ int64_t mtd_block_scan(struct filesystem *fs) {
         LOGE("Parameter length is zero at random mode\n");
         goto out;
     }
-
+    fs_flags_get(fs, &noskipbad);
 #if 0   //shadow boundary aligned judgement
     if (!MTD_IS_BLOCK_ALIGNED(mtd, offset)
             || !MTD_IS_BLOCK_ALIGNED(mtd, offset + length)) {
@@ -315,6 +318,15 @@ int64_t mtd_block_scan(struct filesystem *fs) {
             //exit2: nor flash has no requirement for bad block detecting
             if (pass >= total_bytes) {
                 // printf("exit2: nor flash has no requirement for bad block detecting. Leaving eb %lld\n", eb);
+                break;
+            }
+            continue;
+        }
+
+        if (noskipbad) {
+            pass += mtd->eb_size;
+            if (pass >= total_bytes) {
+                // printf("exit3: explicitly for nand flash. Leaving eb %lld\n", eb);
                 break;
             }
             continue;
@@ -382,21 +394,13 @@ void set_process_info(struct filesystem *fs,
         BM_GET_LISTENER(bm)(bm, &info);
 }
 
-int mtd_basic_chiperase_preset(struct filesystem *fs) {
-    struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
-    if (mtd_type_is_nand(mtd)) {
-        FS_FLAG_SET(fs, NOSKIPBAD);
-    }
-    return 0;
-}
-
 int64_t mtd_basic_erase(struct filesystem *fs) {
     struct block_manager *bm = FS_GET_BM(fs);
     libmtd_t mtd_desc = BM_GET_MTD_DESC(bm);
     struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
 
     int is_nand = mtd_type_is_nand(mtd);
-
+    int noskipbad = 0;
     // int op_method = FS_GET_PARAM(fs)->operation_method;
     int *fd = &MTD_DEV_INFO_TO_FD(mtd);
 
@@ -409,6 +413,8 @@ int64_t mtd_basic_erase(struct filesystem *fs) {
 
     int64_t bad_unlock_nerase_ebs = 0, nerase_size = 0;
     int err;
+
+    fs_flags_get(fs, &noskipbad);
 
     if (is_jffs2 && mtd_type_is_mlc_nand(mtd)) {
         LOGE("JFFS2 cannot support MLC NAND\n");
@@ -445,7 +451,8 @@ int64_t mtd_basic_erase(struct filesystem *fs) {
             && (eb < mtd->eb_cnt)) {
         offset = eb * mtd->eb_size;
         set_process_info(fs, BM_OPERATION_ERASE, erased_bytes, total_bytes);
-        if (is_nand && mtd_bm_block_map_is_bad(fs, MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb))) {
+        if ((is_nand && !noskipbad)
+                && mtd_bm_block_map_is_bad(fs, MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb))) {
             LOGI("MTD \"%s\" skip bad block at %lld\n",
                  MTD_DEV_INFO_TO_PATH(mtd), eb);
             eb++;

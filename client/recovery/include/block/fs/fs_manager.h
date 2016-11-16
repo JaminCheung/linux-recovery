@@ -24,6 +24,7 @@ enum {
 #define FS_FLAG_BITS(N) (1<<FS_FLAG_##N)
 #define FS_FLAG_IS_SET(fs, N) ((fs->flag & FS_FLAG_BITS(N)) != 0)
 #define FS_FLAG_SET(fs, N) (fs->flag |= FS_FLAG_BITS(N))
+#define FS_FLAG_CLEAR(fs, N) (fs->flag &= ~FS_FLAG_BITS(N))
 
 struct fs_operation_params {
     pid_t tid;
@@ -43,8 +44,7 @@ struct filesystem {
     int (*alloc_params)(struct filesystem *fs);
     int (*free_params)(struct filesystem *fs);
     void (*set_params)(struct filesystem* fs, char *buf, int64_t offset,
-                   int64_t length, int op_method, void *p,  void *fs_priv);
-    int (*chiperase_preset)(struct filesystem *fs);
+                       int64_t length, int op_method, void *p,  void *fs_priv);
     int (*format)(struct filesystem *fs);
     int64_t (*erase)(struct filesystem *fs);
     int64_t (*read)(struct filesystem *fs);
@@ -63,6 +63,8 @@ extern int target_endian;
 void fs_write_flags_get(struct filesystem *fs,
                         int *noecc, int *autoplace, int *writeoob,
                         int *oobsize, int *pad, int *markbad);
+void fs_flags_get(struct filesystem *fs,
+                  int *noskipbad);
 int fs_alloc_params(struct filesystem *this);
 int fs_free_params(struct filesystem *this);
 int fs_register(struct list_head *head, struct filesystem* this);
@@ -74,6 +76,7 @@ void fs_set_content_boundary(struct filesystem *this, int64_t max_mapped_size,
                              int64_t content_start);
 void fs_set_private_data(struct filesystem* this, void *data);
 struct filesystem* fs_new(char *filetype);
+struct filesystem* fs_derive(struct filesystem *origin);
 int fs_destroy(struct filesystem** fs);
 void fs_set_params(struct filesystem* fs, char *buf, int64_t offset,
                    int64_t length, int op_method, void *fs_priv, void *p);

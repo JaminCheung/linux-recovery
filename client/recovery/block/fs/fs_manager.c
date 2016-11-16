@@ -56,6 +56,15 @@ void fs_write_flags_get(struct filesystem *fs,
 #endif
 }
 
+void fs_flags_get(struct filesystem *fs,
+                  int *noskipbad) {
+    *noskipbad = FS_FLAG_IS_SET(fs, NOSKIPBAD);
+#ifdef FS_OPEN_DEBUG
+    LOGI("noskipbad = %d\n", *noskipbad);
+#endif
+}
+
+
 int fs_alloc_params(struct filesystem *this) {
     if (this->params)
         return 0;
@@ -159,23 +168,45 @@ struct filesystem* fs_get_suppoted_by_name(char *filetype) {
 
 struct filesystem* fs_new(char *filetype) {
     struct filesystem* fs = fs_get_suppoted_by_name(filetype);
-    struct filesystem* duplicated = NULL;
+    struct filesystem* newer = NULL;
     if (fs == NULL) {
         LOGE("Filesystem \'%s\' is not supported yet\n", filetype);
         goto out;
     }
-    duplicated = calloc(sizeof(*duplicated), 1);
-    if (duplicated == NULL) {
+    newer = calloc(sizeof(*newer), 1);
+    if (newer == NULL) {
         LOGE("Cannot allocate any space to filesystem\n");
         goto out;
     }
 
-    memcpy(duplicated, fs, sizeof(*fs));
-    duplicated->params = NULL;
-    if (fs_alloc_params(duplicated) < 0)
+    memcpy(newer, fs, sizeof(*fs));
+    newer->params = NULL;
+    if (fs_alloc_params(newer) < 0)
         goto out;
 
-    return duplicated;
+    return newer;
+out:
+    return NULL;
+}
+
+struct filesystem* fs_derive(struct filesystem *origin) {
+    struct filesystem* fs;
+    if (origin == NULL) {
+        LOGE("Parameter filesystem \'origin\' is null\n");
+        goto out;
+    }
+    fs = calloc(sizeof(*fs), 1);
+    if (fs == NULL) {
+        LOGE("Cannot allocate any space to filesystem\n");
+        goto out;
+    }
+    memcpy(fs, origin, sizeof(*fs));
+    fs->params = NULL;
+    if (fs_alloc_params(fs) < 0)
+        goto out;
+    memcpy(fs->params, origin->params, sizeof(*(fs->params)));
+
+    return fs;
 out:
     return NULL;
 }

@@ -21,9 +21,12 @@
 #include <utils/assert.h>
 #include <utils/common.h>
 
+
 #define DEVNOR          0
 #define DEVNAND        1
-#define DEVTYPE         DEVNOR
+#define DEVTYPE         DEVNAND
+#define CHIP_ERASE     1     // 0: disable   1: enable
+#define FORMAT          0      //0: no format  1: format
 #define LOG_TAG         "testcase-bm_update"
 #define MOUNT_POINT     "/mnt/recovery_test/"
 #define PACKAGE_PREFIX  "updateXXX/"
@@ -36,9 +39,9 @@ struct offset_tlb {
 };
 
 #if DEVTYPE == DEVNOR
-#define MAX_WRITE_OFFSET 0x341000
+#define MAC_WRITE_OFFSET 0x341000
 #elif DEVTYPE == DEVNAND
-#define MAX_WRITE_OFFSET 0xf01000
+#define MAC_WRITE_OFFSET 0xf01000
 #endif
 struct offset_tlb global_offset_tlb[] = {
 #if DEVTYPE == DEVNOR
@@ -52,7 +55,7 @@ struct offset_tlb global_offset_tlb[] = {
     {0x100000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_NORMAL, "xImage_001"},
     {0xf00000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_NORMAL, "sn.txt"},
     {0xf80000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_UBIFS, "system.ubi_001"},
-#if 0
+#if FORMAT == 0
     {0x3780000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_UBIFS, "data.ubi_001"},
 #else
     {0x3780000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_UBIFS, "formator.ubi_001"},
@@ -95,7 +98,7 @@ char *mtd_files [] = {
     "update019/system.ubi_012",
     "update020/system.ubi_013",
     "update021/system.ubi_014",
-#if 0
+#if FORMAT == 0
     "update022/data.ubi_001",
     "update023/data.ubi_002",
     "update024/data.ubi_003",
@@ -194,7 +197,7 @@ int test_update(void) {
     char tmp[256];
     struct bm_operate_prepare_info* prepared = NULL;
     char *buf = NULL;
-    int64_t next_erase_offset = 0, next_write_offset = 0, mac_write_offset = MAX_WRITE_OFFSET;
+    int64_t next_erase_offset = 0, next_write_offset = 0, mac_write_offset = MAC_WRITE_OFFSET;
     struct bm_operation_option bm_option;
     struct offset_tlb *cur, *save;
     int readsize;
@@ -213,6 +216,11 @@ int test_update(void) {
     bm->get_supported_filetype(bm, tmp);
     LOGI("suported filesystem type: %s\n", tmp);
 
+#if CHIP_ERASE == 1
+    LOGI("chip erase is going on\n");
+    ret = bm->chip_erase(bm);
+    LOGI("ret = %d\n", ret);
+#endif
     buf = malloc(CHUNKSIZE);
     if (buf == NULL) {
         LOGE("malloc failed\n");
@@ -261,8 +269,8 @@ int test_update(void) {
             LOGI("image is %s\n", cur->image);
             save = cur;
 
-            bm->set_operation_option(bm, &bm_option, 
-                    save->operation_method, save->imgtype);
+            bm->set_operation_option(bm, &bm_option,
+                                     save->operation_method, save->imgtype);
             LOGI("set_operation_option: method = %d, filetype = %s\n",
                  bm_option.method, bm_option.filetype);
 
@@ -278,11 +286,12 @@ int test_update(void) {
             LOGI("prepared get: max map size = %lld\n",
                  bm->get_prepare_max_mapped_size(bm));
 
+#if CHIP_ERASE == 0
             LOGI("%d: Erasing at 0x%llx\n", i , save->part_off);
             next_erase_offset = bm->erase(bm, save->part_off,
                                           bm->get_prepare_max_mapped_size(bm));
             LOGI("----> next erase offset is 0x%llx\n", next_erase_offset);
-
+#endif
             LOGI("%d: Writing at 0x%llx, write length is %d\n",
                  i, bm->get_prepare_write_start(bm), readsize);
             next_write_offset = bm->write(bm,
@@ -294,8 +303,8 @@ int test_update(void) {
         }
 
         if (!strcmp(&mtd_files[i][strlen(PACKAGE_PREFIX)], "/mac.txt")) {
-            next_write_offset = (mac_write_offset > next_write_offset) 
-                ? mac_write_offset : next_write_offset;
+            next_write_offset = (mac_write_offset > next_write_offset)
+                                ? mac_write_offset : next_write_offset;
             LOGI("mac %d: Writing at 0x%llx\n", i, next_write_offset);
             next_write_offset = bm->write(bm, next_write_offset, buf, readsize);
             LOGI("----> next write offset is 0x%llx\n", next_write_offset);

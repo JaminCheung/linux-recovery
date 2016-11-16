@@ -336,44 +336,57 @@ out:
 
 static int mtd_chip_erase(struct block_manager *this) {
     struct filesystem *fs  = NULL;
-    char *fs_get_name = "normal";
-    int64_t offset, length;
-    struct bm_operation_option option;
+    int64_t offset, length, max_mapped;
     struct mtd_info *mtd_info = BM_GET_MTD_INFO(this);
     int i;
+    struct block_manager *bm = this;
+    struct mtd_dev_info *mtd = NULL;
 
-    if (this->set_operation_option(this, &option,
-                                   BM_OPERATION_METHOD_PARTITION, fs_get_name) < 0) {
-        LOGE("Cannot set block option\n");
+    fs = fs_new(BM_FILE_TYPE_NORMAL);
+    if (fs == NULL) {
+        LOGE("Cannot instance filesystem %s\n", BM_FILE_TYPE_NORMAL);
         goto out;
     }
-    fs = fs_get_registered_by_name(&this->list_fs_head , fs_get_name);
-    if (fs == NULL) {
-        LOGE("Filetype:\"%s\" is not supported yet\n",
-             fs_get_name);
+    if (bm == NULL) {
+        LOGE("Cannot get binder bm\n");
+        goto  out;
+    }
+    if (mtd_info == NULL) {
+        LOGE("Cannot get mtd info by block manager %p\n", this);
         goto out;
     }
 
     for (i = 0; i < mtd_info->mtd_dev_cnt; i++) {
-        struct mtd_dev_info *mtd = BM_GET_PARTINFO_MTD_DEV(this, i);
-        length = mtd->size;
+        mtd = BM_GET_PARTINFO_MTD_DEV(this, i);
         offset = BM_GET_PARTINFO_START(this, i);
-        if (prepare_convert_params(this, fs, offset, length, &option) == NULL)
-            goto out;
-
-        if (!fs->chiperase_preset
-                || !fs->chiperase_preset(fs)) {
-            LOGE("fs \'%s\' preset failed\n", fs->name);
+        if (mtd == NULL) {
+            LOGE("Cannot get mtd devinfo by index%d\n", i);
             goto out;
         }
+        length = mtd->size;
+        fs->set_params(fs, NULL, offset,
+                       length, BM_OPERATION_METHOD_PARTITION, mtd, bm);
 
-        if (fs->erase(fs) <= 0) {
-            LOGE("Cannot erase block with starting at 0x%llx, size 0x%llx \n", offset, length);
-            goto out;
+        if (!strcmp(bm->name, BM_BLOCK_TYPE_MTD)) {
+            FS_FLAG_CLEAR(fs, NOSKIPBAD);
+            if ((max_mapped = fs->get_max_mapped_size_in_partition(fs)) <= 0) {
+                LOGE("Cannot get max mapped size by fs \'%s\'\n", fs->name);
+                goto out;
+            }
+            FS_FLAG_SET(fs, NOSKIPBAD);
+            if (fs->erase(fs) < 0) {
+                LOGE("Cannot erase at offset 0x%llx by length %lld\n", offset, length);
+                goto out;
+            }
         }
     }
+    if (fs)
+        fs_destroy(&fs);
+
     return 0;
 out:
+    if (fs)
+        fs_destroy(&fs);
     // assert_die_if(1, "%s:%s:%d run crashed\n", __FILE__, __func__, __LINE__);
     return -1;
 }

@@ -57,7 +57,6 @@ struct filesystem fs_normal = {
     .alloc_params = fs_alloc_params,
     .free_params = fs_free_params,
     .set_params = fs_set_params,
-    .chiperase_preset = mtd_basic_chiperase_preset,
     .erase = normal_erase,
     .read = normal_read,
     .write = normal_write,

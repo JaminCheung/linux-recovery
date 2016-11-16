@@ -119,7 +119,7 @@ static int sysinfo_get_value(struct sysinfo_manager *this,
                 LOGE("Cannot get max mapped size by fs \'%s\'\n", fs->name);
                 goto out;
             }
-            if (mtd_basic_read(fs) < 0) {
+            if (fs->read(fs) < 0) {
                 LOGE("Cannot read at offset 0x%llx by length %lld\n", offset, len);
                 goto out;
             }
