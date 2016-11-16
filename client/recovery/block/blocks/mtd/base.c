@@ -391,7 +391,7 @@ void set_process_info(struct filesystem *fs,
     // LOGI("Partition[%s] %s procent is %d%%\n",
     //      mtd->name, op_name, progress);
     if (BM_GET_LISTENER(bm))
-        BM_GET_LISTENER(bm)(bm, &info);
+        BM_GET_LISTENER(bm)(bm, &info, bm->param);
 }
 
 int64_t mtd_basic_erase(struct filesystem *fs) {

@@ -84,7 +84,8 @@ struct bm_event {
     int progress;
 };
 struct block_manager;
-typedef void (*bm_event_listener_t)(struct block_manager *bm, struct bm_event* event);
+typedef void (*bm_event_listener_t)(struct block_manager *bm,
+                                    struct bm_event* event, void* param);
 
 union bm_dev_info {
     struct mtd_dev_info mtd_dev_info;
