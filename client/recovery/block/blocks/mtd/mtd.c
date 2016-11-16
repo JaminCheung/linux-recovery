@@ -443,7 +443,7 @@ out:
     return -1;
 }
 
-int mtd_block_flush(struct block_manager* this) {
+int mtd_block_format(struct block_manager* this) {
     struct filesystem *fs = NULL;
 
     fs = BM_GET_PREPARE_INFO_CONTEXT(this);
@@ -599,7 +599,7 @@ static struct block_manager mtd_manager =  {
     .erase = mtd_block_erase,
     .read = mtd_block_read,
     .write = mtd_block_write,
-    .flush = mtd_block_flush,
+    .format = mtd_block_format,
     .prepare = mtd_block_prepare,
     // .switch_prepare_context = mtd_switch_prepare_context,
     .get_prepare_leb_size = mtd_get_prepare_leb_size,

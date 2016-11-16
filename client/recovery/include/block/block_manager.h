@@ -127,7 +127,7 @@ struct block_manager {
                      char* buf, int64_t length);
     int64_t (*read)(struct block_manager* this, int64_t offset, char* buf,
                     int64_t length);
-    int (*flush)(struct block_manager* this);
+    int (*format)(struct block_manager* this);
     // void (*switch_prepare_context)(struct block_manager* this,
     //                                struct bm_operate_prepare_info* prepared);
     uint32_t (*get_prepare_io_size)(struct block_manager* this);

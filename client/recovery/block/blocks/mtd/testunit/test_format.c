@@ -57,7 +57,7 @@ static int format(struct block_manager *bm) {
         LOGE("Block manager prepare failed\n");
         goto out;
     }
-    ret = bm->flush(bm);
+    ret = bm->format(bm);
     LOGI("format ret = 0x%llx\n", ret);
     ret = bm->finish(bm);
     LOGI("finish ret = 0x%llx\n", ret);
