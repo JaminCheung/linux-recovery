@@ -79,7 +79,7 @@ struct bm_operation_option {
 };
 
 struct bm_event {
-    char *mtdchar;
+    char *part_name;
     int operation;
     int progress;
 };

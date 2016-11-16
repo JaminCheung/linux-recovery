@@ -375,7 +375,7 @@ void set_process_info(struct filesystem *fs,
     struct bm_event info;
     // char *op_name = NULL;
 
-    info.mtdchar = (char*)mtd->name;
+    info.part_name = (char*)mtd->name;
     info.operation = type;
     info.progress = progress;
 
