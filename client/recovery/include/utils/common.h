@@ -27,6 +27,7 @@ struct global_data {
     const char* public_key_path;
     const char* configure_file_path;
     const char* font_path;
+    uint8_t has_fb;
 };
 
 extern struct global_data g_data;

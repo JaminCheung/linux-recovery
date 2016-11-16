@@ -41,6 +41,8 @@ static const char* prefix_volume_device_path = "/dev";
 static const char* prefix_storage_update_path = "recovery-update";
 static const char* prefix_update_pkg = "update";
 static const char* prefix_local_update_path = "/tmp/update";
+static const char* prefix_image_logo_path = "/res/image/logo.png";
+static const char* prefix_image_progress_path = "/res/image/progress_";
 
 static void *main_task(void *param);
 
@@ -178,6 +180,13 @@ static void handle_event(struct netlink_handler* nh,
     }
 }
 
+static void bm_event_listener(struct block_manager* bm,
+        struct bm_event* event, void* param) {
+    struct ota_manager* this = (struct ota_manager *)param;
+
+    (void)this;
+}
+
 static int start(struct ota_manager* this) {
     int error = 0;
 
@@ -239,19 +248,10 @@ static void recovery_finish(int error) {
 
     sync();
 
-    if (error) {
-#ifdef LOCAL_DEBUG
-        //reboot(RB_POWER_OFF);
-#else
+    if (error)
         exit(-1);
-#endif
-    } else {
-#ifdef LOCAL_DEBUG
-        //reboot(RB_AUTOBOOT);
-#else
+     else
         exit(0);
-#endif
-    }
 
     for (;;) {
         LOGE("Should not come here...\n");
@@ -780,6 +780,8 @@ static void *main_task(void* param) {
 
     int error = 0;
 
+    this->gui->show_image(this->gui, prefix_image_logo_path);
+
     cold_boot("/sys/block");
     cold_boot("/sys/class/net");
 
@@ -843,6 +845,12 @@ void construct_ota_manager(struct ota_manager* this) {
     this->mm = _new(struct mount_manager, mount_manager);
 
     /*
+     * Instance gui
+     */
+    this->gui = _new(struct gui, gui);
+    this->gui->init(this->gui);
+
+    /*
      * Instance net interface
      */
     this->ni = (struct net_interface*) calloc(1, sizeof(struct net_interface));
@@ -850,6 +858,15 @@ void construct_ota_manager(struct ota_manager* this) {
     this->ni->destruct = destruct_net_interface;
     this->ni->construct(this->ni, NULL);
     this->ni->init_socket(this->ni);
+
+    /*
+     * Instance block manager
+     */
+    this->mtd_bm = (struct block_manager*) calloc(1, sizeof(struct block_manager));
+    this->mtd_bm->construct = construct_block_manager;
+    this->mtd_bm->destruct = destruct_block_manager;
+    this->mtd_bm->construct(this->mtd_bm, "mtdblock", bm_event_listener,
+            (void *)this);
 }
 
 void destruct_ota_manager(struct ota_manager* this) {
@@ -875,11 +892,27 @@ void destruct_ota_manager(struct ota_manager* this) {
      * Destruct netlink_handler
      */
     this->nh->deconstruct(this->nh);
+    free(this->nh);
     this->nh = NULL;
 
     /*
      * Destruct net_interface
      */
     this->ni->destruct(this->ni);
+    free(this->ni);
     this->ni = NULL;
+
+    /*
+     * Destruct graphics drawer
+     */
+    this->gui->deinit(this->gui);
+    _delete(this->gui);
+    this->gui = NULL;
+
+    /*
+     * Destruct block manager
+     */
+    this->mtd_bm->destruct(this->mtd_bm);
+    free(this->mtd_bm);
+    this->mtd_bm = NULL;
 }

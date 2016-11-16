@@ -41,6 +41,7 @@ struct global_data g_data = {
     .public_key_path = "/res/key/key.pub",
     .configure_file_path = "/etc/recovery.conf",
     .font_path = "/res/image/font.png",
+    .has_fb = 1,
 };
 
 static const char* prefix_wget_path = "/usr/bin/wget";

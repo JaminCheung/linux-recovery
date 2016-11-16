@@ -75,6 +75,13 @@ static int init_gdata(void) {
         return -1;
     }
 
+    if (file_exist("/dev/fb0") < 0) {
+        if (file_exist("/dev/graphics/fb0") < 0) {
+            LOGW("System do not has framebuffer\n");
+            g_data.has_fb = 0;
+        }
+    }
+
     return 0;
 }
 
@@ -95,8 +102,7 @@ int main(int argc, char* argv[]) {
     }
 
 #ifndef LOCAL_DEBUG
-    //TODO
-    //redirect_stdio();
+    redirect_stdio();
 #endif
 
     if (init_gdata() < 0)

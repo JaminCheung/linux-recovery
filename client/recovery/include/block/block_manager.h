@@ -20,14 +20,11 @@
 #include <lib/libmtd.h>
 #include <types.h>
 
-
 #define BM_BLOCK_TYPE_MTD   "mtd"
-#define BM_BLOCK_TYPE_MTD_NAND  BM_BLOCK_TYPE_MTD"_nand"
-#define BM_BLOCK_TYPE_MTD_NOR  BM_BLOCK_TYPE_MTD"_nor"
-#define BM_BLOCK_TYPE_MMC  "mmc"
+#define BM_BLOCK_TYPE_MMC   "mmc"
 
-#define BM_BLOCK_MTD_ERRONO_START    0xffffff00
-#define BM_BLOCK_MTD_ERRONO_LIMIT      256
+#define BM_BLOCK_MTD_ERRONO_START   0xffffff00
+#define BM_BLOCK_MTD_ERRONO_LIMIT   256
 
 #define BM_FILE_TYPE_NORMAL  "normal"
 #define BM_FILE_TYPE_JFFS2   "jffs2"
@@ -110,7 +107,7 @@ union bm_info {
 };
 
 struct block_manager {
-    void (*construct)(struct block_manager* this, char *blockname,
+    void (*construct)(struct block_manager* this, const char *blockname,
                       bm_event_listener_t listener, void* param);
     void (*destruct)(struct block_manager* this);
 
@@ -129,8 +126,7 @@ struct block_manager {
     int64_t (*read)(struct block_manager* this, int64_t offset, char* buf,
                     int64_t length);
     int (*format)(struct block_manager* this);
-    // void (*switch_prepare_context)(struct block_manager* this,
-    //                                struct bm_operate_prepare_info* prepared);
+
     uint32_t (*get_prepare_io_size)(struct block_manager* this);
     uint32_t (*get_prepare_leb_size)(struct block_manager* this);
     int64_t (*get_prepare_write_start)(struct block_manager* this);
@@ -176,7 +172,7 @@ struct block_manager {
 #define BM_GET_PREPARE_INFO_CONTEXT(bm) (bm->prepared->context_handle)
 
 extern unsigned long recovery_errorno;
-void construct_block_manager(struct block_manager* this, char *blockname,
+void construct_block_manager(struct block_manager* this, const char *blockname,
                              bm_event_listener_t listener, void* param);
 void destruct_block_manager(struct block_manager* this);
 

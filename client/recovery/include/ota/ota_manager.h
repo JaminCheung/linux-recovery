@@ -21,8 +21,10 @@
 #include <configure/configure_file.h>
 #include <configure/update_file.h>
 #include <mount/mount_manager.h>
+#include <block/block_manager.h>
 #include <netlink/netlink_handler.h>
 #include <net/net_interface.h>
+#include <graphics/gui.h>
 
 struct storage_dev {
     char name[64];
@@ -38,10 +40,12 @@ struct ota_manager {
     int (*stop)(struct ota_manager* this);
     void (*load_configure)(struct ota_manager* this, struct configure_file* cf);
     struct netlink_handler* nh;
+    struct block_manager* mtd_bm;
     struct mount_manager* mm;
     struct configure_file* cf;
     struct update_file* uf;
     struct net_interface* ni;
+    struct gui* gui;
     struct list_head storage_dev_list;
 };
 

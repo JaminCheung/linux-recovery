@@ -42,6 +42,9 @@ static char text[kMaxRows][kMaxCols];
 static struct gr_drawer* gr_drawer;
 
 static int show_log(struct gui* this, const char* fmt, ...) {
+    if (!g_data.has_fb)
+        return 0;
+
     char buf[256];
     va_list ap;
     va_start(ap, fmt);
@@ -81,10 +84,16 @@ static int show_log(struct gui* this, const char* fmt, ...) {
 }
 
 static int show_progress(struct gui* this, uint8_t progress) {
+    if (!g_data.has_fb)
+        return 0;
+
     return -1;
 }
 
 static int show_image(struct gui* this, const char* path) {
+    if (!g_data.has_fb)
+        return 0;
+
     assert_die_if(path == NULL, "path is NULL\n");
 
     struct gr_surface* surface = NULL;
@@ -112,8 +121,15 @@ static int show_image(struct gui* this, const char* path) {
 }
 
 static int init(struct gui* this) {
+    if (!g_data.has_fb)
+        return 0;
+
     gr_drawer = _new(struct gr_drawer, gr_drawer);
-    gr_drawer->init(gr_drawer);
+    if (gr_drawer->init(gr_drawer) < 0) {
+        _delete(gr_drawer);
+        gr_drawer = NULL;
+        return -1;
+    }
 
     gr_drawer->get_font_size(&char_width, &char_height);
 
@@ -132,8 +148,13 @@ static int init(struct gui* this) {
 }
 
 static int deinit(struct gui* this) {
-    gr_drawer->deinit(gr_drawer);
-    _delete(gr_drawer);
+    if (!g_data.has_fb)
+        return 0;
+
+    if (gr_drawer) {
+        gr_drawer->deinit(gr_drawer);
+        _delete(gr_drawer);
+    }
 
     gr_drawer = NULL;
 
