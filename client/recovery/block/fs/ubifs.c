@@ -271,6 +271,11 @@ static int ubi_generate_vi_info(struct ubi_params *params, int64_t image_length)
 
     vi->data_pad = ui->leb_size % vi->alignment;
     vi->usable_leb_size = ui->leb_size - vi->data_pad;
+    if (image_length % vi->usable_leb_size) {
+        LOGE("image length must be leb size alignment,  pass length is %lld, leb size is %d\n",
+             image_length, vi->usable_leb_size);
+        goto out;
+    }
     if (vi->type == UBI_VID_DYNAMIC)
         vi->used_ebs = (vi->bytes + vi->usable_leb_size - 1)
                        / vi->usable_leb_size;
@@ -518,6 +523,7 @@ static int ubi_params_init(struct filesystem* fs,
     *ubi_params = params;
     return 0;
 out:
+    ubi_params_free(&params);
     return -1;
 }
 

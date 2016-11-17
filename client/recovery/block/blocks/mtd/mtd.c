@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-
+#include <ctype.h>
 #include <types.h>
 #include <utils/assert.h>
 #include <utils/log.h>
@@ -57,7 +57,7 @@ static inline struct mtd_dev_info* mtd_get_dev_info_by_node(
 }
 
 static inline struct mtd_dev_info* mtd_get_dev_info_by_mtdstr(
-        struct block_manager* this, char *name) {
+    struct block_manager* this, char *name) {
     struct mtd_info *mtd_info;
     int len =  strlen(BM_BLOCK_TYPE_MTD);
     int i;
@@ -65,6 +65,15 @@ static inline struct mtd_dev_info* mtd_get_dev_info_by_mtdstr(
     mtd_info = BM_GET_MTD_INFO(this);
     if ((name == NULL) || strncmp(name,
                                   BM_BLOCK_TYPE_MTD, len)) {
+        LOGE("Parameter %s is wrong\n", name);
+        return NULL;
+    }
+
+    if (strlen(name) != (len + 1)) {
+        LOGE("Parameter length must be %d\n", (len + 1));
+        return NULL;
+    }
+    if (!isdigit(&name[len])) {
         LOGE("Parameter %s is wrong\n", name);
         return NULL;
     }
@@ -449,7 +458,7 @@ static struct filesystem* data_transfer_params_set(struct block_manager* this,
 }
 
 static int64_t mtd_block_erase(struct block_manager* this, int64_t offset,
-        int64_t length) {
+                               int64_t length) {
 
     struct filesystem *fs = NULL;
     char *buf = NULL;
@@ -469,7 +478,7 @@ out:
 }
 
 static int64_t mtd_block_write(struct block_manager* this, int64_t offset,
-        char* buf, int64_t length) {
+                               char* buf, int64_t length) {
     struct filesystem *fs = NULL;
     int retval;
 
@@ -487,7 +496,7 @@ out:
 }
 
 static int64_t mtd_block_read(struct block_manager* this, int64_t offset,
-        char* buf, int64_t length) {
+                              char* buf, int64_t length) {
 
     struct filesystem *fs = NULL;
     int retval;
@@ -537,7 +546,7 @@ static void dump_prepared_info(struct bm_operate_prepare_info *prepare) {
 #endif
 
 static struct bm_operate_prepare_info* mtd_get_prepare_info(
-        struct block_manager* this, ...) {
+    struct block_manager* this, ...) {
 
     static struct bm_operate_prepare_info prepare_info;
     struct filesystem *fs = NULL;
@@ -592,8 +601,8 @@ static int mtd_put_prepare_info(struct block_manager* this) {
 }
 
 static struct bm_operate_prepare_info* mtd_block_prepare(
-        struct block_manager* this, int64_t offset, int64_t length,
-        struct bm_operation_option *option) {
+    struct block_manager* this, int64_t offset, int64_t length,
+    struct bm_operation_option *option) {
 
     char *default_filetype = BM_FILE_TYPE_NORMAL;
 
