@@ -34,13 +34,13 @@
 
 #define BM_SYSINFO_SUPPORT
 
-#define BM_MTD_FILE_TYPE_INIT(name)      \
-    char *name[] = {\
-        BM_FILE_TYPE_NORMAL,  \
-        BM_FILE_TYPE_CRAMFS,\
-        BM_FILE_TYPE_JFFS2, \
-        BM_FILE_TYPE_UBIFS,\
-        BM_FILE_TYPE_YAFFS2,\
+#define BM_MTD_FILE_TYPE_INIT(name)     \
+    char *name[] = {                    \
+        BM_FILE_TYPE_NORMAL,            \
+        BM_FILE_TYPE_CRAMFS,            \
+        BM_FILE_TYPE_JFFS2,             \
+        BM_FILE_TYPE_UBIFS,             \
+        BM_FILE_TYPE_YAFFS2,            \
     }
 
 enum bm_operation {
@@ -55,10 +55,10 @@ enum bm_operation_method {
     BM_OPERATION_METHOD_RANDOM,
 };
 
-#define BM_OPERATE_METHOD_INIT(name)      \
-    char *name[] = {\
+#define BM_OPERATE_METHOD_INIT(name)    \
+    uint32_t method[] = {               \
         BM_OPERATION_METHOD_PARTITION,  \
-        BM_OPERATION_METHOD_RANDOM,\
+        BM_OPERATION_METHOD_RANDOM,     \
     }
 
 struct bm_operate_prepare_info {
@@ -71,8 +71,8 @@ struct bm_operate_prepare_info {
 };
 
 struct bm_operation_option {
-    int method;     /* one in block_operation_method*/
-    char filetype[20];     /* one in BM_FILE_TYPE_INIT*/
+    int method;         /* one in block_operation_method*/
+    char filetype[20];  /* one in BM_FILE_TYPE_INIT*/
 };
 
 struct bm_event {
@@ -80,9 +80,11 @@ struct bm_event {
     int operation;
     int progress;
 };
+
 struct block_manager;
+
 typedef void (*bm_event_listener_t)(struct block_manager *bm,
-                                    struct bm_event* event, void* param);
+        struct bm_event* event, void* param);
 
 union bm_dev_info {
     struct mtd_dev_info mtd_dev_info;

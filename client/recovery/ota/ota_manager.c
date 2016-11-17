@@ -278,11 +278,93 @@ static int verify_update_pkg(struct ota_manager* this, const char* path) {
 
 static int check_device_info(struct ota_manager* this,
         struct device_info* device_info) {
+
+    if (!strcmp(device_info->type, "nand")
+            || !strcmp(device_info->type, "nor")) {
+
+        if (device_info->part_count !=
+                this->mtd_bm->get_partition_count(this->mtd_bm)) {
+            LOGE("Partition count error\n");
+            return -1;
+        }
+
+        struct list_head* pos;
+        list_for_each(pos, &device_info->list) {
+            struct part_info *info = list_entry(pos, struct part_info, head);
+
+            char blkname[8] = {0};
+            int blknum = 0;
+            sscanf(info->block_name, "mtdblock%d", &blknum);
+            sprintf(blkname, "mtd%d", blknum);
+
+            int64_t offset = this->mtd_bm->get_partition_start_by_name(this->mtd_bm,
+                    blkname);
+            int64_t size = this->mtd_bm->get_partition_size_by_name(this->mtd_bm,
+                    blkname);
+
+            if ((offset != info->offset) || (size != info->size)) {
+                LOGE("Failed to check partition: %s\n", info->name);
+                return -1;
+            }
+        }
+
+    } else if (!strcmp(device_info->type, "mmc")) {
+        assert_die_if(1, "Unsupport device type: %s\n", device_info->type);
+
+    } else
+        assert_die_if(1, "Unsupport device type: %s\n", device_info->type);
+
     return 0;
 }
 
-static int write_update_pkg(struct ota_manager* this, const char* path,
-        struct image_info* info) {
+static int write_update_pkg(struct ota_manager* this,
+        struct update_info* update_info, struct image_info* image_info,
+        const char* path, uint32_t chunk_index) {
+    int error = 0;
+
+    if (!strcmp(update_info->devtype, "nand")
+            || !strcmp(update_info->devtype, "nor")) {
+
+        if (chunk_index == 1) {
+            struct bm_operation_option option;
+
+            error = this->mtd_bm->set_operation_option(this->mtd_bm, &option,
+                    BM_OPERATION_METHOD_PARTITION, image_info->fs_type);
+            if (error < 0) {
+                LOGE("Failed to get operation option\n");
+                return -1;
+            }
+
+            struct bm_operate_prepare_info* prepare_info =
+                    this->mtd_bm->prepare(this->mtd_bm, image_info->offset,
+                            image_info->size, &option);
+            if (prepare_info == NULL) {
+                LOGE("Failed to perpare, offset=0x%x\n",
+                        (uint32_t)image_info->offset);
+                return -1;
+            }
+
+            error = this->mtd_bm->erase(this->mtd_bm, image_info->offset,
+                    image_info->size);
+            if (error < 0) {
+                LOGE("Failed to erase, offset=0x%x, lenght=0x%x\n",
+                        (uint32_t)image_info->offset,
+                        (uint32_t)image_info->size);
+                return -1;
+            }
+
+        } else {
+
+        }
+
+
+    } else if (!strcmp(update_info->devtype, "mmc")) {
+        assert_die_if(1, "Unsupport device type: %s\n", update_info->devtype);
+
+    } else
+        assert_die_if(1, "Unsupport device type: %s\n", update_info->devtype);
+
+
     return 0;
 }
 
@@ -486,7 +568,6 @@ static int update_from_storage(struct ota_manager* this) {
 
         LOGI("Updating device: \"%s\"\n", devtype);
 
-        int index = 1;
         struct list_head* pos;
         list_for_each(pos, &update_info->list) {
             struct image_info* info = list_entry(pos, struct image_info, head);
@@ -505,7 +586,8 @@ static int update_from_storage(struct ota_manager* this) {
 
                 memset(path, 0, sizeof(path));
                 sprintf(path, "%s/%s/%s/%s%03d.zip", volume->mount_point,
-                        prefix_storage_update_path, devtype, prefix_update_pkg, index);
+                        prefix_storage_update_path, devtype, prefix_update_pkg,
+                        i);
 
                 LOGI("Verifying %s\n", path);
                 if (file_exist(path) < 0 || verify_update_pkg(this, path) < 0)
@@ -530,10 +612,8 @@ static int update_from_storage(struct ota_manager* this) {
                     goto error;
                 }
 
-                index++;
-
                 LOGI("Updating \"%s\"\n", path);
-                if (write_update_pkg(this, path, info) < 0) {
+                if (write_update_pkg(this, update_info, info, path, i) < 0) {
                     LOGE("Failed to write %s\n", path);
                     goto error;
                 }
@@ -757,7 +837,7 @@ static int update_from_network(struct ota_manager* this) {
                 index++;
 
                 LOGI("Updating \"%s\"\n", path);
-                if (write_update_pkg(this, path, info) < 0) {
+                if (write_update_pkg(this, update_info, info, path, i) < 0) {
                     LOGE("Failed to write %s\n", path);
                     goto error;
                 }
@@ -865,7 +945,7 @@ void construct_ota_manager(struct ota_manager* this) {
     this->mtd_bm = (struct block_manager*) calloc(1, sizeof(struct block_manager));
     this->mtd_bm->construct = construct_block_manager;
     this->mtd_bm->destruct = destruct_block_manager;
-    this->mtd_bm->construct(this->mtd_bm, "mtdblock", bm_event_listener,
+    this->mtd_bm->construct(this->mtd_bm, BM_BLOCK_TYPE_MTD, bm_event_listener,
             (void *)this);
 }
 

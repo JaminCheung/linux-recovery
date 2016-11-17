@@ -79,7 +79,7 @@ OBJS-y += mount/mount_manager.o
 #
 # Input Manager
 #
-OBJS-y += input/input_manager.o
+OBJS-n += input/input_manager.o
 
 #
 # EEPROM Manager
