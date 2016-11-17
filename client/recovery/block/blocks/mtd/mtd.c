@@ -73,7 +73,7 @@ static inline struct mtd_dev_info* mtd_get_dev_info_by_mtdstr(
         LOGE("Parameter length must be %d\n", (len + 1));
         return NULL;
     }
-    if (!isdigit(&name[len])) {
+    if (!isdigit(name[len])) {
         LOGE("Parameter %s is wrong\n", name);
         return NULL;
     }
