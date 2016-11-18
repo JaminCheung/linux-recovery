@@ -18,6 +18,7 @@
 #define COMMON_H
 
 #include <types.h>
+#include <lib/libcommon.h>
 
 #ifndef ARRAY_SIZE
     #define ARRAY_SIZE(a) ((sizeof(a)) / (sizeof(a[0])))
@@ -51,9 +52,6 @@ enum system_platform_t {
     P->destruct(P);                         \
     free((void *)(P));                      \
 })
-
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
-#define MIX(a,b) ((a) < (b) ? (a) : (b))
 
 extern const char* public_key_path;
 

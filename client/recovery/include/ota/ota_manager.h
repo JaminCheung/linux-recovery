@@ -26,6 +26,11 @@
 #include <net/net_interface.h>
 #include <graphics/gui.h>
 
+enum update_wbuffer_alloc_size_method{
+    UPDATE_WBUFFER_ALLOWABLE_MINIMUM_SIZE,
+    UPDATE_WBUFFER_FIXED_WITH_CHUCK_SIZE,
+};
+
 struct storage_dev {
     char name[64];
     char dev_name[64];

@@ -23,6 +23,7 @@
 #define UPDATE_MODE_FULL    0x200
 #define UPDATE_MODE_CHUNK   0x201
 
+
 struct image_info {
     char name[NAME_MAX];
     char fs_type[NAME_MAX];
@@ -32,6 +33,7 @@ struct image_info {
     uint32_t chunksize;
     uint32_t chunkcount;
     struct list_head head;
+    struct list_head head_part;
 };
 
 struct update_info {
@@ -48,6 +50,9 @@ struct part_info {
     uint64_t size;
     char block_name[NAME_MAX];
     struct list_head head;
+    uint32_t image_count;
+    uint32_t total_chunks;
+    struct list_head list;
 };
 
 struct device_info {
@@ -57,6 +62,7 @@ struct device_info {
     struct list_head list;
     struct list_head head;
 };
+
 
 struct update_file {
     void (*construct)(struct update_file* this);

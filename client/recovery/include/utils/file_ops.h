@@ -19,7 +19,8 @@
 
 int file_exist(const char *path);
 int file_executable(const char *path);
-
+unsigned int get_file_size(const char *path);
+char* load_file(const char *path);
 int dir_exist(const char* path);
 int dir_delete(const char *path);
 int dir_create(const char* path);

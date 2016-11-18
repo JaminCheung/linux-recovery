@@ -17,9 +17,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/reboot.h>
 #include <dirent.h>
-
 #include <utils/log.h>
 #include <utils/assert.h>
 #include <utils/linux.h>
@@ -43,6 +45,7 @@ static const char* prefix_update_pkg = "update";
 static const char* prefix_local_update_path = "/tmp/update";
 static const char* prefix_image_logo_path = "/res/image/logo.png";
 static const char* prefix_image_progress_path = "/res/image/progress_";
+static const int update_wbuffer_method = UPDATE_WBUFFER_ALLOWABLE_MINIMUM_SIZE;
 
 static void *main_task(void *param);
 
@@ -317,55 +320,206 @@ static int check_device_info(struct ota_manager* this,
     return 0;
 }
 
-static int write_update_pkg(struct ota_manager* this,
-        struct update_info* update_info, struct image_info* image_info,
-        const char* path, uint32_t chunk_index) {
-    int error = 0;
+static int merge_imginfo_into_partinfo(struct ota_manager* this,
+        struct device_info* device_info,  struct update_info* update_info) {
 
+    struct list_head* pos_devinfo;
+    list_for_each(pos_devinfo, &device_info->list){
+        struct part_info *part_info = list_entry(pos_devinfo, struct part_info, head);
+
+        INIT_LIST_HEAD(&part_info->list);
+        uint64_t part_info_left_boundary = part_info->offset;
+        uint64_t part_info_right_boundary = part_info_left_boundary + part_info->size;
+
+        static struct list_head* pos_continue;
+        struct list_head* update_info_cur = (pos_continue == NULL)
+                                ? (&update_info->list)->next: pos_continue;
+        struct list_head* pos_update = NULL;
+        for (pos_update = update_info_cur; pos_update != (&update_info->list); pos_update = pos_update->next) {
+            struct image_info* image_info = list_entry(pos_update, struct image_info, head);
+            if (image_info->offset < part_info_left_boundary) {
+                LOGE("Image offset 0x%llx is lower then part info left boundary\n", image_info->offset);
+                goto out;
+            }
+            if (image_info->offset >= part_info_right_boundary) {
+                pos_continue = pos_update;
+                break;
+            }
+            if ((image_info->offset + image_info->size) > part_info_right_boundary) {
+                LOGE("Image offset 0x%llx, length %lld is overlap with current part\n",
+                        image_info->offset,  image_info->size);
+                goto out;
+            }
+            list_add_tail(&image_info->head_part, &part_info->list);
+            part_info->image_count++;
+            part_info->total_chunks += image_info->chunkcount;
+        }
+    }
+
+    return 0;
+out:
+    return -1;
+}
+
+static int write_update_pkg(struct ota_manager* this,
+        struct update_info* update_info, struct part_info* part_info,
+        struct image_info* image_info, const char* path,
+        uint32_t chunk_index) {
+    int error = 0;
+    int fd = 0;
+    static uint32_t write_buffer_size, write_media_leap;
+    static char *write_buffer = NULL;
+    struct image_info* first_image, *last_image;
+    uint32_t readsize, filesize;
+
+    fd = open(path, O_RDWR);
+    if (fd < 0) {
+        LOGE("Cannot open file at %s\n", path);
+        goto out;
+    }
+    filesize = get_file_size(path);
+    first_image = list_entry(part_info->list.next, struct image_info, head_part);
+    last_image = list_entry(part_info->list.prev, struct image_info, head_part);
+    if ((first_image == NULL) || (last_image == NULL)) {
+        LOGE("Cannot get first or last image from part\n");
+        goto out;
+    }
     if (!strcmp(update_info->devtype, "nand")
             || !strcmp(update_info->devtype, "nor")) {
+        struct block_manager* bm = this->mtd_bm;
+        static int64_t next_write_offset;
+        int64_t cur_write_offset = 0;
 
-        if (chunk_index == 1) {
+        if (!strcmp(first_image->name, image_info->name)
+            && (chunk_index == 1)) {
             struct bm_operation_option option;
-
-            error = this->mtd_bm->set_operation_option(this->mtd_bm, &option,
+            error = bm->set_operation_option(bm, &option,
                     BM_OPERATION_METHOD_PARTITION, image_info->fs_type);
             if (error < 0) {
                 LOGE("Failed to get operation option\n");
-                return -1;
+                goto out;
             }
 
             struct bm_operate_prepare_info* prepare_info =
-                    this->mtd_bm->prepare(this->mtd_bm, image_info->offset,
-                            image_info->size, &option);
+                    bm->prepare(bm, image_info->offset, 0, &option);
             if (prepare_info == NULL) {
-                LOGE("Failed to perpare, offset=0x%x\n",
-                        (uint32_t)image_info->offset);
-                return -1;
+                LOGE("Failed to perpare, offset=0x%llx\n",
+                        image_info->offset);
+                goto out;
             }
 
-            error = this->mtd_bm->erase(this->mtd_bm, image_info->offset,
-                    image_info->size);
+            if (bm->get_prepare_leb_size(bm) < 0) {
+                LOGE("Failed to get leb size, image write offset at %lld\n",
+                        image_info->offset);
+                goto out;
+            }
+
+            if (write_buffer == NULL) {
+                if (update_wbuffer_method == UPDATE_WBUFFER_ALLOWABLE_MINIMUM_SIZE) {
+                    write_buffer_size = bm->get_prepare_leb_size(bm);
+                    write_media_leap = bm->get_blocksize(bm, image_info->offset);
+                }
+                else if (update_wbuffer_method == UPDATE_WBUFFER_FIXED_WITH_CHUCK_SIZE) {
+                    write_buffer_size = image_info->chunksize;
+                    write_media_leap = (image_info->chunksize / bm->get_prepare_leb_size(bm))
+                                                     * bm->get_blocksize(bm, image_info->offset);
+                }
+
+                write_buffer = malloc(write_buffer_size);
+                if (write_buffer == NULL) {
+                    LOGE("Failed to alloc any more memory, requested size %d",
+                        write_buffer_size);
+                    goto out;
+                }
+            }
+
+            if ((option.method != BM_OPERATION_METHOD_PARTITION)
+                && ((bm->get_prepare_max_mapped_size(bm) + image_info->offset)
+                > (part_info->offset + part_info->size))) {
+                LOGE("Overstep the boundary at 0x%llx, image write offset 0x%llx, size %lld\n",
+                        part_info->offset + part_info->size, image_info->offset,
+                        bm->get_prepare_max_mapped_size(bm));
+                goto out;
+            }
+            error = bm->erase(bm, image_info->offset,
+                    bm->get_partition_size_by_offset(bm, image_info->offset));
             if (error < 0) {
-                LOGE("Failed to erase, offset=0x%x, lenght=0x%x\n",
-                        (uint32_t)image_info->offset,
-                        (uint32_t)image_info->size);
-                return -1;
+                LOGE("Failed to erase, offset=0x%llx, length=0x%llx\n",
+                        image_info->offset,
+                        bm->get_partition_size_by_offset(bm, image_info->offset));
+                goto out;
             }
 
-        } else {
-
+            cur_write_offset = bm->get_prepare_write_start(bm);
+            if (cur_write_offset < 0) {
+                LOGE("Failed to get write offset, gotten 0x%llx\n", cur_write_offset);
+                goto out;
+            }
+        }
+        if (next_write_offset > (part_info->offset + part_info->size)) {
+            LOGE("Bad write offset at %lld\n",  next_write_offset);
+            goto out;
+        }
+        if (next_write_offset && !cur_write_offset) {
+            cur_write_offset = MAX(next_write_offset, image_info->offset);
         }
 
+        char *buffer = write_buffer;
+        while(filesize) {
+            readsize = MIN(filesize, write_buffer_size);
+            uint32_t already_read = 0;
+            while(already_read != readsize) {
+                error = read(fd, buffer + already_read, readsize - already_read);
+                if (error < 0) {
+                    LOGE("Failed to read %d size\n", readsize - already_read);
+                    goto out;
+                }
+                already_read += error;
+            }
 
+            next_write_offset = bm->write(bm, cur_write_offset, write_buffer, readsize);
+            if (next_write_offset < 0) {
+                LOGE("Failed to write, offset=0x%llx, lenght=0x%llx\n",
+                        cur_write_offset, image_info->size);
+                goto out;
+            }
+            filesize -= readsize;
+            cur_write_offset += write_media_leap;
+        }
+
+        if (!strcmp(last_image->name, image_info->name)
+                && (chunk_index == image_info->chunkcount)) {
+            error = bm->finish(bm);
+            if (error < 0) {
+                LOGE("Failed to issue bm finish, chunk index is %d\n", chunk_index);
+                goto out;
+            }
+            if (write_buffer) {
+                free(write_buffer);
+                write_buffer = NULL;
+            }
+        }
     } else if (!strcmp(update_info->devtype, "mmc")) {
         assert_die_if(1, "Unsupport device type: %s\n", update_info->devtype);
 
     } else
         assert_die_if(1, "Unsupport device type: %s\n", update_info->devtype);
 
-
+    if (fd > 0) {
+        close(fd);
+        fd = 0;
+    }
     return 0;
+out:
+    if (write_buffer) {
+        free(write_buffer);
+        write_buffer = NULL;
+    }
+    if (fd > 0) {
+        close(fd);
+        fd = 0;
+    }
+    return -1;
 }
 
 static struct mounted_volume* find_valid_update_volume(struct ota_manager* this) {
@@ -499,6 +653,18 @@ static struct mounted_volume* find_valid_update_volume(struct ota_manager* this)
             }
             this->uf->dump_update_info(this->uf, update_info);
 
+            /*
+             * Check relation between device info and image info
+             */
+            LOGI("Merge imageinfo into partinfo: %s\n", devtype);
+            if (merge_imginfo_into_partinfo(this, device_info, update_info) < 0) {
+                LOGE("Failed to merge imageinfo into partinfo %s\n", devtype);
+                break;
+            }
+            this->uf->dump_device_info(this->uf, device_info);
+            /*
+             *  Check package count
+             */
             uint32_t chunk_count = 0;
             struct list_head* sub_pos;
             list_for_each(sub_pos, &update_info->list) {
@@ -559,63 +725,78 @@ static int update_from_storage(struct ota_manager* this) {
         return -1;
     }
 
-    int i;
     const char** device_type_list = this->uf->get_device_type_list(this->uf);
-    for (i = 0; device_type_list[i]; i++) {
+    for (int i = 0; device_type_list[i]; i++) {
         const char* devtype = device_type_list[i];
-        struct update_info* update_info =
-                this->uf->get_update_info_by_devtype(this->uf, devtype);
-
         LOGI("Updating device: \"%s\"\n", devtype);
 
-        struct list_head* pos;
-        list_for_each(pos, &update_info->list) {
-            struct image_info* info = list_entry(pos, struct image_info, head);
+        struct device_info* device_info =
+                this->uf->get_device_info_by_devtype(this->uf, devtype);
+        struct update_info* update_info =
+                this->uf->get_update_info_by_devtype(this->uf, devtype);
+        int index = 1;
+        struct list_head* pos_devinfo;
+        list_for_each(pos_devinfo, &device_info->list){
+            struct part_info *part_info = list_entry(pos_devinfo, struct part_info, head);
 
-            LOGI("Updating image: \"%s\"\n", info->name);
+            struct list_head *pos_imageinfo;
+            if (part_info->image_count) {
+                list_for_each(pos_imageinfo, &part_info->list) {
+                    struct image_info *image_info = list_entry(pos_imageinfo,
+                                            struct image_info, head_part);
+                    for (int j = 1; j <= image_info->chunkcount; j++) {
+                        /*
+                         * Create unzip dir
+                         */
+                        dir_delete(prefix_local_update_path);
+                        if (dir_create(prefix_local_update_path) < 0) {
+                            LOGE("Failed to create %s\n", prefix_local_update_path);
+                            return -1;
+                        }
 
-            for (int i = 1; i <= info->chunkcount; i++) {
-                /*
-                 * Create unzip dir
-                 */
-                dir_delete(prefix_local_update_path);
-                if (dir_create(prefix_local_update_path) < 0) {
-                    LOGE("Failed to create %s\n", prefix_local_update_path);
-                    return -1;
-                }
+                        memset(path, 0, sizeof(path));
+                        sprintf(path, "%s/%s/%s/%s%03d.zip", volume->mount_point,
+                                prefix_storage_update_path, devtype, prefix_update_pkg,
+                                index);
 
-                memset(path, 0, sizeof(path));
-                sprintf(path, "%s/%s/%s/%s%03d.zip", volume->mount_point,
-                        prefix_storage_update_path, devtype, prefix_update_pkg,
-                        i);
+                        LOGI("Verifying %s\n", path);
+                        if (file_exist(path) < 0 || verify_update_pkg(this, path) < 0)
+                            goto error;
 
-                LOGI("Verifying %s\n", path);
-                if (file_exist(path) < 0 || verify_update_pkg(this, path) < 0)
-                    goto error;
+                        LOGI( "Unziping %s\n", path);
+                        if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
+                            LOGE("Failed to unzip %s to %s\n", path,
+                                    prefix_local_update_path);
+                            goto error;
+                        }
 
-                LOGI("Unziping %s\n", path);
-                if (unzip(path, prefix_local_update_path, NULL, 1) < 0) {
-                    LOGE("Failed to unzip %s to %s\n", path,
-                            prefix_local_update_path);
-                    goto error;
-                }
+                        memset(path, 0, sizeof(path));
+                        if (image_info->chunkcount == 1)
+                            sprintf(path, "%s/%s", prefix_local_update_path, image_info->name);
+                        else
+                            sprintf(path, "%s/%s_%03d", prefix_local_update_path,
+                                    image_info->name, j);
 
-                memset(path, 0, sizeof(path));
-                if (info->chunkcount == 1)
-                    sprintf(path, "%s/%s", prefix_local_update_path, info->name);
-                else
-                    sprintf(path, "%s/%s_%03d", prefix_local_update_path,
-                            info->name, i);
+                        if (file_exist(path) < 0) {
+                            LOGE("Failed to access %s: %s\n", path, strerror(errno));
+                            goto error;
+                        }
 
-                if (file_exist(path) < 0) {
-                    LOGE("Failed to access %s: %s\n", path, strerror(errno));
-                    goto error;
-                }
+                        if ((j != image_info->chunkcount)
+                            && (get_file_size(path) != image_info->chunksize)) {
+                            LOGE("Failed to access %s: %s\n", path, strerror(errno));
+                            goto error;
+                        }
 
-                LOGI("Updating \"%s\"\n", path);
-                if (write_update_pkg(this, update_info, info, path, i) < 0) {
-                    LOGE("Failed to write %s\n", path);
-                    goto error;
+                        LOGI("Updating \"%s\"\n", path);
+                        if (write_update_pkg(this, update_info,
+                                part_info, image_info, path,
+                                j) < 0) {
+                            LOGE("Failed to write %s\n", path);
+                            goto error;
+                        }
+                        index++;
+                    }
                 }
             }
         }
@@ -632,6 +813,7 @@ error:
 }
 
 static int update_from_network(struct ota_manager* this) {
+    #if 0
     int error = 0;
     char path[PATH_MAX] = {0};
 
@@ -853,6 +1035,8 @@ error:
     dir_delete(prefix_local_update_path);
 
     return -1;
+#endif
+    return 0;
 }
 
 static void *main_task(void* param) {

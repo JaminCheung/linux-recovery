@@ -610,6 +610,13 @@ static void dump_device_info(struct update_file* this,
         LOGI("part offset:     0x%x\n", (uint32_t) partition->offset);
         LOGI("part size:       0x%x\n", (uint32_t) partition->size);
         LOGI("part block name: %s\n", partition->block_name);
+        if (partition->image_count) {
+            struct list_head* pos_imageinfo;
+            list_for_each(pos_imageinfo, &partition->list) {
+                struct image_info *image = list_entry(pos_imageinfo, struct image_info, head_part);
+                LOGI("image name:  %s\n", image->name);
+            }
+        }
     }
     LOGI("===================================\n");
 }
