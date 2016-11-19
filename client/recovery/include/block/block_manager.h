@@ -113,6 +113,7 @@ struct block_manager {
                       bm_event_listener_t listener, void* param);
     void (*destruct)(struct block_manager* this);
 
+    void (*dump_event)(struct block_manager* this, struct bm_event* event);
     void (*get_supported)(struct block_manager* this, char *buf);
     void (*get_supported_filetype)(struct block_manager* this, char *buf);
 

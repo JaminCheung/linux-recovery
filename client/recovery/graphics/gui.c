@@ -90,17 +90,14 @@ static int show_progress(struct gui* this, uint8_t progress) {
     return -1;
 }
 
-static int show_image(struct gui* this, const char* path) {
+static int show_image(struct gui* this, const char* path,
+        uint32_t pos_x, uint32_t pos_y) {
     if (!g_data.has_fb)
         return 0;
 
     assert_die_if(path == NULL, "path is NULL\n");
 
     struct gr_surface* surface = NULL;
-    uint32_t image_width;
-    uint32_t image_height;
-    uint32_t pos_x;
-    uint32_t pos_y;
 
     if (file_exist(path) < 0) {
         LOGE("File not exist: %s\n", strerror(errno));
@@ -111,11 +108,6 @@ static int show_image(struct gui* this, const char* path) {
         LOGE("Failed to decode image: %s\n", path);
         return -1;
     }
-
-    image_width = surface->width;
-    image_height = surface->height;
-    pos_x = (gr_drawer->get_fb_width(gr_drawer) - image_width) / 2;
-    pos_y = (gr_drawer->get_fb_height(gr_drawer) - image_height) / 2;
 
     return gr_drawer->draw_png(gr_drawer, surface, pos_x, pos_y);
 }

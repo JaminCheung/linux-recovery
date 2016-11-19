@@ -29,7 +29,8 @@ struct gui {
 
     int (*show_log)(struct gui* this, const char* fmt, ...);
     int (*show_progress)(struct gui* this, uint8_t progress);
-    int (*show_image)(struct gui* this, const char* path);
+    int (*show_image)(struct gui* this, const char* path, uint32_t pos_x,
+            uint32_t pos_y);
 };
 
 void construct_gui(struct gui* this);

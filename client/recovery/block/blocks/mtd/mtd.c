@@ -226,9 +226,9 @@ static void dump_mtd_dev_info(struct block_manager* this) {
     struct mtd_info *mtd_info = BM_GET_MTD_INFO(this);
     int i;
 
-    LOGI("Partinfo dumped:\n");
+    LOGD("Partinfo dumped:\n");
     for (i = 0; i < mtd_info->mtd_dev_cnt + 1; i++) {
-        LOGI("id: %d, path: %s, fd: %d, start: 0x%llx\n",
+        LOGD("id: %d, path: %s, fd: %d, start: 0x%llx\n",
              BM_GET_PARTINFO_ID(this, i),
              BM_GET_PARTINFO_PATH(this, i),
              *BM_GET_PARTINFO_FD(this, i),
@@ -691,7 +691,7 @@ static struct block_manager mtd_manager =  {
     .get_partition_start_by_offset =  mtd_get_partition_start_by_offset,
     .get_capacity = mtd_get_capacity,
     .get_blocksize = mtd_get_blocksize_by_offset,
-    .get_iosize = mtd_get_pagesize_by_offset
+    .get_iosize = mtd_get_pagesize_by_offset,
 };
 
 int mtd_manager_init(void) {

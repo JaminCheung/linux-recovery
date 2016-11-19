@@ -120,6 +120,34 @@ out:
     return -1;
 }
 
+static const char* operation_to_string(enum bm_operation op) {
+    switch(op) {
+    case BM_OPERATION_ERASE:
+        return "Earsing";
+
+    case BM_OPERATION_WRITE:
+        return "Writing";
+
+    case BM_OPERATION_READ:
+        return "Reading";
+
+    case BM_OPERATION_ERASE_WRITE:
+        return "Earse writing";
+
+    default:
+        return "Unknown";
+    }
+}
+
+static void dump_event(struct block_manager* this, struct bm_event* event) {
+    LOGD("=============================\n");
+    LOGD("Dump bm event\n");
+    LOGD("part name: %s\n", event->part_name);
+    LOGD("operation: %s\n", operation_to_string(event->operation));
+    LOGD("progress:  %d\n", event->progress);
+    LOGD("=============================\n");
+}
+
 void construct_block_manager(struct block_manager* this, const char *blockname,
         bm_event_listener_t listener, void* param) {
 
@@ -146,6 +174,7 @@ void construct_block_manager(struct block_manager* this, const char *blockname,
     this->destruct = destruct_block_manager;
     this->get_supported_filetype = get_supported_filetype;
     this->set_operation_option = set_operation_option;
+    this->dump_event = dump_event;
 
 #ifdef BM_SYSINFO_SUPPORT
     if (get_system_platform() == XBURST)

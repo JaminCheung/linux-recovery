@@ -373,23 +373,11 @@ void set_process_info(struct filesystem *fs,
     struct mtd_dev_info *mtd = FS_GET_MTD_DEV(fs);
     int progress = (int)(eboff * 100 / ebcnt);
     struct bm_event info;
-    // char *op_name = NULL;
 
     info.part_name = (char*)mtd->name;
     info.operation = type;
     info.progress = progress;
 
-    // if (type == BM_OPERATION_ERASE) {
-    //     op_name = "Erasing";
-    // } else if (type == BM_OPERATION_WRITE) {
-    //     op_name = "Writing";
-    // } else if (type == BM_OPERATION_READ) {
-    //     op_name = "Reading";
-    // }  else if (type == BM_OPERATION_ERASE_WRITE) {
-    //     op_name = "upgrade";
-    // }
-    // LOGI("Partition[%s] %s procent is %d%%\n",
-    //      mtd->name, op_name, progress);
     if (BM_GET_LISTENER(bm))
         BM_GET_LISTENER(bm)(bm, &info, bm->param);
 }
@@ -670,8 +658,7 @@ int64_t mtd_basic_write(struct filesystem *fs) {
             oobbuf = NULL;
             writeoob = 0;
         }
-        // printf("mtd_write %s: fd = %d, write_mode = %d, w_offset = 0x%llx, w_buffer= %p, oobbuf = %p, writeoob = %d\n",
-        //         MTD_DEV_INFO_TO_PATH(mtd), *fd, write_mode, w_offset, w_buffer, oobbuf, writeoob);
+
         set_process_info(fs, BM_OPERATION_WRITE,
                          fs->params->length - w_length, fs->params->length);
 

@@ -398,27 +398,27 @@ error:
 
 static void dump_update_info(struct update_file* this,
         struct update_info* update_info) {
-    LOGI("===================================\n");
-    LOGI("Dump update info\n");
-    LOGI("devtype:     %s\n", update_info->devtype);
-    LOGI("devctl:      %d\n", update_info->devctl);
-    LOGI("image count: %d\n", update_info->image_count);
+    LOGD("===================================\n");
+    LOGD("Dump update info\n");
+    LOGD("devtype:     %s\n", update_info->devtype);
+    LOGD("devctl:      %d\n", update_info->devctl);
+    LOGD("image count: %d\n", update_info->image_count);
 
     struct list_head* pos;
     struct image_info* image;
     list_for_each(pos, &update_info->list) {
         image = list_entry(pos, struct image_info, head);
-        LOGI("-----------------------------------\n");
-        LOGI("image name:        %s\n", image->name);
-        LOGI("image fs type:     %s\n", image->fs_type);
-        LOGI("image offset:      0x%x\n", (uint32_t) image->offset);
-        LOGI("image size:        %llu\n", image->size);
-        LOGI("image update mode: 0x%x\n", image->update_mode);
-        LOGI("image chunksize:   %u\n", image->chunksize);
-        LOGI("image chunkcount:  %u\n", image->chunkcount);
+        LOGD("-----------------------------------\n");
+        LOGD("image name:        %s\n", image->name);
+        LOGD("image fs type:     %s\n", image->fs_type);
+        LOGD("image offset:      0x%x\n", (uint32_t) image->offset);
+        LOGD("image size:        %llu\n", image->size);
+        LOGD("image update mode: 0x%x\n", image->update_mode);
+        LOGD("image chunksize:   %u\n", image->chunksize);
+        LOGD("image chunkcount:  %u\n", image->chunkcount);
     }
 
-    LOGI("===================================\n");
+    LOGD("===================================\n");
 }
 
 static int parse_device_xml(struct update_file* this, const char *path,
@@ -595,30 +595,30 @@ error:
 
 static void dump_device_info(struct update_file* this,
         struct device_info* device_info) {
-    LOGI("===================================\n");
-    LOGI("Dump device xml\n");
-    LOGI("device type:     %s\n", device_info->type);
-    LOGI("device capacity: 0x%x\n", (uint32_t) device_info->capacity);
-    LOGI("partition count: %d\n", device_info->part_count);
+    LOGD("===================================\n");
+    LOGD("Dump device xml\n");
+    LOGD("device type:     %s\n", device_info->type);
+    LOGD("device capacity: 0x%x\n", (uint32_t) device_info->capacity);
+    LOGD("partition count: %d\n", device_info->part_count);
 
     struct list_head* pos;
     struct part_info* partition;
     list_for_each(pos, &device_info->list) {
         partition = list_entry(pos, struct part_info, head);
-        LOGI("-----------------------------------\n");
-        LOGI("part name:       %s\n", partition->name);
-        LOGI("part offset:     0x%x\n", (uint32_t) partition->offset);
-        LOGI("part size:       0x%x\n", (uint32_t) partition->size);
-        LOGI("part block name: %s\n", partition->block_name);
+        LOGD("-----------------------------------\n");
+        LOGD("part name:       %s\n", partition->name);
+        LOGD("part offset:     0x%x\n", (uint32_t) partition->offset);
+        LOGD("part size:       0x%x\n", (uint32_t) partition->size);
+        LOGD("part block name: %s\n", partition->block_name);
         if (partition->image_count) {
             struct list_head* pos_imageinfo;
             list_for_each(pos_imageinfo, &partition->list) {
                 struct image_info *image = list_entry(pos_imageinfo, struct image_info, head_part);
-                LOGI("image name:  %s\n", image->name);
+                LOGD("image name:      %s\n", image->name);
             }
         }
     }
-    LOGI("===================================\n");
+    LOGD("===================================\n");
 }
 
 static struct device_info* get_device_info_by_devtype(struct update_file* this,
@@ -652,11 +652,11 @@ static const char** get_device_type_list(struct update_file* this) {
 }
 
 static void dump_device_type_list(struct update_file* this) {
-    LOGI("===================================\n");
-    LOGI("Dump device type list\n");
+    LOGD("===================================\n");
+    LOGD("Dump device type list\n");
     for (int i = 0; device_type_list[i]; i++)
-        LOGI("type: %s\n", device_type_list[i]);
-    LOGI("===================================\n");
+        LOGD("type: %s\n", device_type_list[i]);
+    LOGD("===================================\n");
 }
 
 void construct_update_file(struct update_file* this) {
