@@ -20,6 +20,12 @@
 #include <types.h>
 #include <graphics/gr_drawer.h>
 
+enum update_stage_t {
+    UPDATING,
+    UPDATE_SUCCESS,
+    UPDATE_FAILURE
+};
+
 struct gui {
     void (*construct)(struct gui* this);
     void (*destruct)(struct gui* this);
@@ -28,9 +34,11 @@ struct gui {
     int (*deinit)(struct gui* this);
 
     int (*show_log)(struct gui* this, const char* fmt, ...);
-    int (*show_progress)(struct gui* this, uint8_t progress);
-    int (*show_image)(struct gui* this, const char* path, uint32_t pos_x,
-            uint32_t pos_y);
+    int (*start_show_progress)(struct gui* this);
+    int (*stop_show_progress)(struct gui* this);
+    int (*show_logo)(struct gui* this, uint32_t pos_x, uint32_t pos_y);
+    int (*show_tips)(struct gui* this, enum update_stage_t stage);
+    void (*clear)(struct gui* this);
 };
 
 void construct_gui(struct gui* this);

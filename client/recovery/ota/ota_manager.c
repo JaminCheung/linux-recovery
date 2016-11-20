@@ -43,8 +43,7 @@ static const char* prefix_volume_device_path = "/dev";
 static const char* prefix_storage_update_path = "recovery-update";
 static const char* prefix_update_pkg = "update";
 static const char* prefix_local_update_path = "/tmp/update";
-static const char* prefix_image_logo_path = "/res/image/logo.png";
-static const char* prefix_image_progress_path = "/res/image/progress_";
+
 static const int update_wbuffer_method = UPDATE_WBUFFER_ALLOWABLE_MINIMUM_SIZE;
 
 static void *main_task(void *param);
@@ -248,15 +247,21 @@ static void umount_all_storage(struct ota_manager* this) {
     }
 }
 
-static void recovery_finish(int error) {
+static void recovery_finish(struct ota_manager* this, int error) {
     LOGI("Recovery finish %s!\n", !error ? "success" : "failure");
 
     sync();
 
-    if (error)
+    if (error) {
+        this->gui->show_tips(this->gui, UPDATE_FAILURE);
+
         exit(-1);
-     else
+
+    } else {
+        this->gui->show_tips(this->gui, UPDATE_SUCCESS);
+
         exit(0);
+    }
 
     for (;;) {
         LOGE("Should not come here...\n");
@@ -1055,12 +1060,16 @@ static void *main_task(void* param) {
 
     int error = 0;
 
-    this->gui->show_image(this->gui, prefix_image_logo_path, 0, 0);
+    this->gui->show_logo(this->gui, 0, 0);
+    msleep(500);
 
     cold_boot("/sys/block");
     cold_boot("/sys/class/net");
 
     mount_all_storage(this);
+
+    this->gui->start_show_progress(this->gui);
+    this->gui->show_tips(this->gui, UPDATING);
 
     LOGI("Try update from storage\n");
 
@@ -1086,7 +1095,7 @@ static void *main_task(void* param) {
 
     _delete(this->uf);
 
-    recovery_finish(error);
+    recovery_finish(this, error);
 
     return NULL;
 }
