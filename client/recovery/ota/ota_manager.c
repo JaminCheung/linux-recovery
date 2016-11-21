@@ -22,6 +22,7 @@
 #include <fcntl.h>
 #include <sys/reboot.h>
 #include <dirent.h>
+
 #include <utils/log.h>
 #include <utils/assert.h>
 #include <utils/linux.h>
@@ -30,10 +31,13 @@
 #include <utils/file_ops.h>
 #include <utils/minizip.h>
 #include <utils/verifier.h>
+#include <utils/signal_handler.h>
 #include <netlink/netlink_event.h>
 #include <ota/ota_manager.h>
 
 #define LOG_TAG "ota_manager"
+
+#define ALARM_TIME_OUT  (20 * 60)   //20mins
 
 static const char* prefix_global_xml = "global.xml";
 static const char* prefix_device_xml = "device.xml";
@@ -46,7 +50,7 @@ static const char* prefix_local_update_path = "/tmp/update";
 
 static const int update_wbuffer_method = UPDATE_WBUFFER_ALLOWABLE_MINIMUM_SIZE;
 static int64_t next_write_offset;
-
+static struct gui* gui;
 static void *main_task(void *param);
 
 static inline int ensure_volume_mounted(struct ota_manager* this,
@@ -248,19 +252,19 @@ static void umount_all_storage(struct ota_manager* this) {
     }
 }
 
-static void recovery_finish(struct ota_manager* this, int error) {
+static void recovery_finish(int error) {
     LOGI("Recovery finish %s!\n", !error ? "success" : "failure");
 
     sync();
 
-    if (error) {
-        this->gui->show_tips(this->gui, UPDATE_FAILURE);
+    gui->stop_show_progress(gui);
 
+    if (error) {
+        gui->show_tips(gui, UPDATE_FAILURE);
         exit(-1);
 
     } else {
-        this->gui->show_tips(this->gui, UPDATE_SUCCESS);
-
+        gui->show_tips(gui, UPDATE_SUCCESS);
         exit(0);
     }
 
@@ -1058,12 +1062,20 @@ error:
     return -1;
 }
 
+static void signal_handler(int signal) {
+    recovery_finish( -1);
+}
+
 static void *main_task(void* param) {
     struct ota_manager* this = (struct ota_manager*) param;
 
     int error = 0;
 
-    this->gui->show_logo(this->gui, 0, 0);
+    this->sh->set_signal_handler(this->sh, SIGALRM, signal_handler);
+
+    alarm(ALARM_TIME_OUT);
+
+    gui->show_logo(gui, 0, 0);
     msleep(500);
 
     cold_boot("/sys/block");
@@ -1071,8 +1083,10 @@ static void *main_task(void* param) {
 
     mount_all_storage(this);
 
-    this->gui->start_show_progress(this->gui);
-    this->gui->show_tips(this->gui, UPDATING);
+    gui->clear(gui);
+    gui->start_show_progress(gui);
+    msleep(50);
+    gui->show_tips(gui, UPDATING);
 
     LOGI("Try update from storage\n");
 
@@ -1098,7 +1112,7 @@ static void *main_task(void* param) {
 
     _delete(this->uf);
 
-    recovery_finish(this, error);
+    recovery_finish(error);
 
     return NULL;
 }
@@ -1110,12 +1124,20 @@ static void load_configure(struct ota_manager* this,
     this->cf = cf;
 }
 
+static void load_signal_handler(struct ota_manager* this,
+        struct signal_handler* sh) {
+    assert_die_if(sh == NULL, "sh is NULL\n");
+
+    this->sh = sh;
+}
+
 void construct_ota_manager(struct ota_manager* this) {
     INIT_LIST_HEAD(&this->storage_dev_list);
 
     this->start = start;
     this->stop = stop;
     this->load_configure = load_configure;
+    this->load_signal_handler = load_signal_handler;
 
     /*
      * Instance netlink handler
@@ -1134,8 +1156,8 @@ void construct_ota_manager(struct ota_manager* this) {
     /*
      * Instance gui
      */
-    this->gui = _new(struct gui, gui);
-    this->gui->init(this->gui);
+    gui = _new(struct gui, gui);
+    gui->init(gui);
 
     /*
      * Instance net interface
@@ -1174,6 +1196,7 @@ void destruct_ota_manager(struct ota_manager* this) {
     this->start = NULL;
     this->stop = NULL;
     this->load_configure = NULL;
+    this->load_signal_handler = NULL;
 
     /*
      * Destruct netlink_handler
@@ -1192,9 +1215,9 @@ void destruct_ota_manager(struct ota_manager* this) {
     /*
      * Destruct graphics drawer
      */
-    this->gui->deinit(this->gui);
-    _delete(this->gui);
-    this->gui = NULL;
+    gui->deinit(gui);
+    _delete(gui);
+    gui = NULL;
 
     /*
      * Destruct block manager

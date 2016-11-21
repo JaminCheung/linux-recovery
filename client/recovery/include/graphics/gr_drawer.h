@@ -51,6 +51,8 @@ struct gr_drawer {
 
     int (*blank)(struct gr_drawer* this, uint8_t blank);
     void (*fill_screen)(struct gr_drawer* this);
+    int (*fill_rect)(struct gr_drawer* this, uint32_t x1, uint32_t y1,
+            uint32_t x2, uint32_t y2);
 };
 
 void construct_gr_drawer(struct gr_drawer* this);

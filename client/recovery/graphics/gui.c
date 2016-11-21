@@ -34,8 +34,8 @@
 static const char* prefix_image_logo_path = "/res/image/logo.png";
 static const char* prefix_image_progress_path = "/res/image/progress_";
 static const char* prefix_stage_updating = "Updating...";
-static const char* prefix_stage_update_success = "Update Success";
-static const char* prefix_stage_update_failure = "Update Failed";
+static const char* prefix_stage_update_success = "Update Success;)";
+static const char* prefix_stage_update_failure = "Update Failed;(";
 
 static uint32_t char_width;
 static uint32_t char_height;
@@ -131,9 +131,7 @@ static void *progress_loop(void* param) {
 
             if (file_exist(buf) == 0) {
 
-                msleep(100);
-
-                if (png_decode_image(prefix_image_logo_path, &surface) < 0) {
+                if (png_decode_image(buf, &surface) < 0) {
                     LOGW("Failed to decode image: %s\n", buf);
                     continue;
 
@@ -155,6 +153,8 @@ static void *progress_loop(void* param) {
 
                     free(surface);
                 }
+
+                msleep(200);
             }
         }
     }
@@ -219,6 +219,18 @@ static int show_tips(struct gui* this, enum update_stage_t stage) {
 
     const char* tips = NULL;
     uint32_t tips_len = 0;
+    uint32_t pos_x = 0;
+    uint32_t pos_y = 0;
+
+    pos_y = ((gr_drawer->get_fb_height(gr_drawer)
+            - progress_height) / 2 - 25);
+
+    gr_drawer->set_pen_color(gr_drawer, 0, 0, 0);
+    if (gr_drawer->fill_rect(gr_drawer, 0, pos_y,
+            gr_drawer->get_fb_width(gr_drawer), pos_y + char_height) < 0) {
+        LOGE("Failed to file rectangle\n");
+        return -1;
+    }
 
     switch (stage) {
     case UPDATING:
@@ -242,10 +254,8 @@ static int show_tips(struct gui* this, enum update_stage_t stage) {
 
     tips_len = strlen(tips);
 
-    uint32_t pos_x = (gr_drawer->get_fb_width(gr_drawer)
+     pos_x = (gr_drawer->get_fb_width(gr_drawer)
             - (char_width * tips_len)) / 2;
-    uint32_t pos_y = ((gr_drawer->get_fb_height(gr_drawer)
-            - progress_height) / 2 - 20);
 
     if (gr_drawer->draw_text(gr_drawer, pos_x, pos_y, tips, 0) < 0) {
         LOGE("Failed to draw text\n");

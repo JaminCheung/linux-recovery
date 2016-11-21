@@ -141,6 +141,38 @@ static void fill_screen(struct gr_drawer* this) {
     fb_manager->display(fb_manager);
 }
 
+static int fill_rect(struct gr_drawer* this, uint32_t x1, uint32_t y1,
+        uint32_t x2, uint32_t y2) {
+
+    if (outside(x1, y1) || outside(x2 - 1, y2 - 1)) {
+        LOGE("Rectangle size out bound of screen\n");
+        return -1;
+    }
+
+    uint8_t *buf = (uint8_t *) fb_manager->fbmem + y1 * fb_row_bytes +
+            x1 * fb_bytes_per_pixel;
+
+    uint32_t pixel = make_pixel(gr_current_r, gr_current_g, gr_current_b, 0);
+
+    for (int y = y1; y < y2; y++) {
+        uint8_t* px = buf;
+
+        for (int x = x1; x < x2; x++) {
+            for (int i = 0; i < fb_bytes_per_pixel; i++)
+                px[i] = pixel >> (fb_bits_per_pixel
+                        - (fb_bytes_per_pixel - i) * 8);
+
+            px += fb_bytes_per_pixel;
+        }
+
+        buf += fb_row_bytes;
+    }
+
+    fb_manager->display(fb_manager);
+
+    return 0;
+}
+
 static void text_blend(uint8_t* src_p, int src_row_bytes, uint8_t* dst_p,
         int dst_row_bytes, int width, int height) {
 
@@ -304,6 +336,7 @@ void construct_gr_drawer(struct gr_drawer* this) {
     this->set_pen_color = set_pen_color;
     this->display = display;
     this->get_font_size = get_font_size;
+    this->fill_rect = fill_rect;
 }
 
 void destruct_gr_drawer(struct gr_drawer* this) {
@@ -318,4 +351,5 @@ void destruct_gr_drawer(struct gr_drawer* this) {
     this->set_pen_color = NULL;
     this->display = NULL;
     this->get_font_size = NULL;
+    this->fill_rect = NULL;
 }

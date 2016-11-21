@@ -44,13 +44,14 @@ struct ota_manager {
     int (*start)(struct ota_manager* this);
     int (*stop)(struct ota_manager* this);
     void (*load_configure)(struct ota_manager* this, struct configure_file* cf);
+    void (*load_signal_handler)(struct ota_manager* this, struct signal_handler* sh);
     struct netlink_handler* nh;
     struct block_manager* mtd_bm;
     struct mount_manager* mm;
     struct configure_file* cf;
+    struct signal_handler* sh;
     struct update_file* uf;
     struct net_interface* ni;
-    struct gui* gui;
     struct list_head storage_dev_list;
 };
 

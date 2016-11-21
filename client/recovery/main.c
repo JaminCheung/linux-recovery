@@ -37,8 +37,8 @@ static const char* temporary_log_file = "/tmp/recovery.log";
 static const char* opt_string = "vh";
 
 static void print_version() {
-    fprintf(stderr, "Linux recovery updater. Version: %s. Build: %s %s\n", VERSION,
-            __DATE__, __TIME__);
+    fprintf(stderr, "Linux recovery updater. Version: %s Build: %s %s\n\n",
+            VERSION, __DATE__, __TIME__);
 }
 
 static void print_help() {
@@ -102,8 +102,10 @@ int main(int argc, char* argv[]) {
     }
 
 #ifndef LOCAL_DEBUG
-    redirect_stdio();
+    //redirect_stdio();
 #endif
+
+    print_version();
 
     if (init_gdata() < 0)
         return -1;
@@ -140,6 +142,7 @@ int main(int argc, char* argv[]) {
      */
     struct ota_manager *om = _new(struct ota_manager, ota_manager);
     om->load_configure(om, cf);
+    om->load_signal_handler(om, sh);
 
     nm->register_handler(nm, om->nh);
 

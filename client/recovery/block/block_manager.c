@@ -123,16 +123,19 @@ out:
 static const char* operation_to_string(enum bm_operation op) {
     switch(op) {
     case BM_OPERATION_ERASE:
-        return "Earsing";
+        return "Earse";
 
     case BM_OPERATION_WRITE:
-        return "Writing";
+        return "Write";
 
     case BM_OPERATION_READ:
-        return "Reading";
+        return "Read";
 
     case BM_OPERATION_ERASE_WRITE:
-        return "Earse writing";
+        return "Earse write";
+
+    case BM_OPERATION_FORMAT:
+        return "Format";
 
     default:
         return "Unknown";
