@@ -967,6 +967,7 @@ static int update_from_network(struct ota_manager* this) {
         }
 
         int index = 1;
+        next_write_offset = 0;
         struct list_head* pos_devinfo;
         list_for_each(pos_devinfo, &device_info->list) {
             struct part_info* part_info = list_entry(pos_devinfo,
