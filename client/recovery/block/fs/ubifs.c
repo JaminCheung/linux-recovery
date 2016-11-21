@@ -103,7 +103,6 @@ static void dump_ubi_params(struct ubi_params *params) {
     LOGI("volume size: %lld\n", params->vol_size);
     LOGI("override_ec: %d\n", params->override_ec);
     LOGI("ec: %lld\n", params->ec);
-    LOGI("update size: %lld\n", params->total_write_size);
     LOGI("vid header offset  = %d\n", params->vid_hdr_offs);
     LOGI("ubi version  = %d\n", params->ubi_ver);
     LOGI("ui address: %p\n", params->ui);
@@ -780,7 +779,7 @@ static int64_t ubi_write_volume(struct filesystem *fs,
          MTD_DEV_INFO_TO_PATH(mtd),
          eb, bytes / usable_leb_len);
     while (bytes > 0) {
-        set_process_info(fs, BM_OPERATION_ERASE_WRITE, params->has_writen_size, params->total_write_size);
+        set_process_info(fs, BM_OPERATION_ERASE_WRITE, fs->params->progress_size, fs->params->max_size);
         vid_hdr = (struct ubi_vid_hdr *)(&outbuf[ui->vid_hdr_offs]);
         ubigen_init_vid_hdr(ui, vi, vid_hdr, lnum, inbuf, usable_leb_len);
 
@@ -797,9 +796,9 @@ static int64_t ubi_write_volume(struct filesystem *fs,
         bytes -= usable_leb_len;
         inbuf += usable_leb_len;
         lnum += 1;
-        params->has_writen_size += usable_leb_len;
+        fs->params->progress_size += usable_leb_len;
     }
-    set_process_info(fs, BM_OPERATION_ERASE_WRITE, params->has_writen_size, params->total_write_size);
+    set_process_info(fs, BM_OPERATION_ERASE_WRITE, fs->params->progress_size, fs->params->max_size);
     params->vid_hdr_lnum = lnum;
     ubi->format_eb = eb;
     return  eb;
@@ -1170,8 +1169,6 @@ static int64_t ubifs_get_max_mapped_size_in_partition(struct filesystem *fs) {
              MTD_DEV_INFO_TO_PATH(mtd));
         goto out;
     }
-    ubi->has_writen_size = 0;
-    ubi->total_write_size = length;
 #ifdef UBI_OPEN_DEBUG
     dump_ubi_params(ubi);
 #endif

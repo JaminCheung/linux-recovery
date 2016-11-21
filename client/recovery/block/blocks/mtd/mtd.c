@@ -570,6 +570,8 @@ static struct bm_operate_prepare_info* mtd_get_prepare_info(
 
     prepare_info.context_handle = fs;
     FS_GET_PARAM(fs)->content_start = prepare_info.write_start;
+    FS_GET_PARAM(fs)->progress_size = 0;
+    FS_GET_PARAM(fs)->max_size = FS_GET_PARAM(fs)->length;
     FS_GET_PARAM(fs)->max_mapped_size = prepare_info.max_size_mapped_in_partition;
 
     this->prepared = &prepare_info;

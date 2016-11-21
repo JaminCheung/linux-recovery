@@ -45,6 +45,7 @@ static const char* prefix_update_pkg = "update";
 static const char* prefix_local_update_path = "/tmp/update";
 
 static const int update_wbuffer_method = UPDATE_WBUFFER_ALLOWABLE_MINIMUM_SIZE;
+static int64_t next_write_offset;
 
 static void *main_task(void *param);
 
@@ -341,6 +342,8 @@ static int merge_imginfo_into_partinfo(struct ota_manager* this,
         struct device_info* device_info,  struct update_info* update_info) {
 
     struct list_head* pos_devinfo;
+    struct list_head* pos_continue = NULL;
+
     list_for_each(pos_devinfo, &device_info->list){
         struct part_info *part_info = list_entry(pos_devinfo, struct part_info,
                 head);
@@ -351,7 +354,6 @@ static int merge_imginfo_into_partinfo(struct ota_manager* this,
         uint64_t part_info_right_boundary = part_info_left_boundary +
                 part_info->size;
 
-        static struct list_head* pos_continue;
         struct list_head* update_info_cur = (pos_continue == NULL)
                                 ? (&update_info->list)->next: pos_continue;
 
@@ -492,7 +494,6 @@ static int write_update_pkg(struct ota_manager* this,
             || !strcmp(update_info->devtype, "nor")) {
 
         struct block_manager* bm = this->mtd_bm;
-        static int64_t next_write_offset;
         int64_t cur_write_offset = 0;
 
         if (!strcmp(first_image->name, image_info->name)
@@ -506,7 +507,7 @@ static int write_update_pkg(struct ota_manager* this,
             }
 
             struct bm_operate_prepare_info* prepare_info =
-                    bm->prepare(bm, image_info->offset, 0, &option);
+                    bm->prepare(bm, image_info->offset, image_info->size, &option);
             if (prepare_info == NULL) {
                 LOGE("Failed to perpare, offset=0x%llx\n",
                         image_info->offset);
@@ -793,6 +794,7 @@ static int update_from_storage(struct ota_manager* this) {
                 this->uf->get_update_info_by_devtype(this->uf, devtype);
 
         int index = 1;
+        next_write_offset = 0;
         struct list_head* pos_devinfo;
         list_for_each(pos_devinfo, &device_info->list){
             struct part_info *part_info = list_entry(pos_devinfo, struct part_info, head);

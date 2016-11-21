@@ -660,7 +660,7 @@ int64_t mtd_basic_write(struct filesystem *fs) {
         }
 
         set_process_info(fs, BM_OPERATION_WRITE,
-                         fs->params->length - w_length, fs->params->length);
+                         fs->params->progress_size, fs->params->max_size);
 
 #ifdef BM_SYSINFO_SUPPORT
         if (bm->sysinfo) {
@@ -712,9 +712,10 @@ int64_t mtd_basic_write(struct filesystem *fs) {
         w_offset += mtd->min_io_size;
         w_buffer += pagelen;
         w_length -= writen;
+        fs->params->progress_size += writen;
     }
     set_process_info(fs, BM_OPERATION_WRITE,
-                     fs->params->length - w_length, fs->params->length);
+                     fs->params->progress_size, fs->params->max_size);
     if (pad_buffer)
         free(pad_buffer);
     return w_offset + mtd_start;

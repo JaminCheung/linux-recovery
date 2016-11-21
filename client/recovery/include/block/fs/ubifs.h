@@ -40,8 +40,6 @@ struct ubi_params {
     int64_t start_eb;
     int64_t layout_volume_start_eb;
     int64_t format_eb;
-    int64_t has_writen_size;
-    int64_t total_write_size;
     char *outbuf;
     struct ubi_mtd_device_info devinfo;
     struct ubigen_info *ui;

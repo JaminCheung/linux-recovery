@@ -32,6 +32,8 @@ struct fs_operation_params {
     char *buf;
     int64_t offset;
     int64_t length;
+    int64_t progress_size;
+    int64_t max_size;
     int64_t max_mapped_size;
     int64_t content_start;
     void *priv;
