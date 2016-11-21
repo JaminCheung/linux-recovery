@@ -48,6 +48,7 @@ enum bm_operation {
     BM_OPERATION_WRITE,
     BM_OPERATION_READ,
     BM_OPERATION_ERASE_WRITE,
+    BM_OPERATION_FORMAT,
 };
 
 enum bm_operation_method {
