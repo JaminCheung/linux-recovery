@@ -37,7 +37,7 @@
 
 #define LOG_TAG "ota_manager"
 
-#define ALARM_TIME_OUT  (20 * 60)   //20mins
+#define ALARM_TIME_OUT  (30 * 60)   //30mins
 
 static const char* prefix_global_xml = "global.xml";
 static const char* prefix_device_xml = "device.xml";
@@ -1076,7 +1076,7 @@ static void *main_task(void* param) {
     alarm(ALARM_TIME_OUT);
 
     gui->show_logo(gui, 0, 0);
-    msleep(500);
+    msleep(1000);
 
     cold_boot("/sys/block");
     cold_boot("/sys/class/net");

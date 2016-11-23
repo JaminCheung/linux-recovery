@@ -34,8 +34,8 @@
 static const char* prefix_image_logo_path = "/res/image/logo.png";
 static const char* prefix_image_progress_path = "/res/image/progress_";
 static const char* prefix_stage_updating = "Updating...";
-static const char* prefix_stage_update_success = "Update Success;)";
-static const char* prefix_stage_update_failure = "Update Failed;(";
+static const char* prefix_stage_update_success = "Update Success";
+static const char* prefix_stage_update_failure = "Update Failed";
 
 static uint32_t char_width;
 static uint32_t char_height;

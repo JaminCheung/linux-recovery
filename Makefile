@@ -18,7 +18,7 @@ SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 	else if [ -x /bin/bash ]; then echo /bin/bash; \
 	else echo sh; fi; fi)
 
-TARGET := recovery.tar.xz
+TARGET := linux-recovery.tar.xz
 
 OUTDIR := out
 CLIENT_DIR := $(OUTDIR)/client-side
@@ -33,9 +33,9 @@ all: clean $(TARGET)
 
 $(TARGET): client server tools document resource
 	@cd $(OUTDIR) &&  tar -cvJf ../$(TARGET) .
-	@echo -e "\n============================"
-	@echo -e "$(TARGET) is ready."
-	@echo -e "============================\n"
+	@echo -e "\n==================================="
+	@echo -e "  $(TARGET) is ready."
+	@echo -e "===================================\n"
 
 #
 # For client side
@@ -45,12 +45,14 @@ client:
 	@make clean -C client/recovery
 	@make -C client/recovery -j4
 	@cp -av client/root-nand.cpio $(CLIENT_DIR)
+	@cp -av client/root-nor.cpio $(CLIENT_DIR)
+	@cp -av client/root-mmc.cpio $(CLIENT_DIR)
 	@cp -av client/root-addition.tar.xz $(CLIENT_DIR)
 	@cp -av client/recovery/out/recovery $(CLIENT_DIR)
 
-	@echo -e "======================"
-	@echo -e "Client side is ready."
-	@echo -e "======================\n"
+	@echo -e "========================"
+	@echo -e "  Client side is ready."
+	@echo -e "========================\n"
 
 #
 # For server side
@@ -59,9 +61,9 @@ server:
 	@mkdir -p $(SERVER_DIR)
 	@cp -arv server/* $(SERVER_DIR)
 	@mkdir -p $(SERVER_DIR)/image
-	@echo -e "======================"
-	@echo -e "Server side is ready."
-	@echo -e "======================\n"
+	@echo -e "========================"
+	@echo -e "  Server side is ready."
+	@echo -e "========================\n"
 
 #
 #
@@ -74,18 +76,20 @@ tools:
 	@cp -av tools/dump_publickey/out/dumpkey.jar $(TOOLS_DIR)
 	@cp -arv server/otapackage/depmod/signature/makekey/* $(TOOLS_DIR)/
 
-	@echo -e "======================"
-	@echo -e "Host tools is ready."
-	@echo -e "======================\n"
+	@echo -e "========================"
+	@echo -e "  Host tools is ready."
+	@echo -e "========================\n"
 
 #
 # For document
 #
 document:
 	@mkdir -p $(DOC_DIR)
-	@echo -e "======================"
-	@echo -e "Document is ready."
-	@echo -e "======================\n"
+	@cp -av document/linux\ recovery设计说明.pdf $(DOC_DIR)
+	@cp -av document/linux\ recovery部署说明.pdf $(DOC_DIR)
+	@echo -e "========================"
+	@echo -e "  Document is ready."
+	@echo -e "========================\n"
 
 #
 # For resource
@@ -93,9 +97,9 @@ document:
 resource:
 	@mkdir -p $(RES_DIR)
 	@cp -av resource/* $(RES_DIR)
-	@echo -e "======================"
-	@echo -e "Resource is ready."
-	@echo -e "======================\n"
+	@echo -e "========================"
+	@echo -e "  Resource is ready."
+	@echo -e "========================\n"
 
 clean:
 	@rm -rf $(OUTDIR) $(TARGET)
