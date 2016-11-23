@@ -1063,6 +1063,7 @@ error:
 }
 
 static void signal_handler(int signal) {
+    LOGE("Update time out.\n");
     recovery_finish( -1);
 }
 
