@@ -193,7 +193,7 @@ static int show_logo(struct gui* this, uint32_t pos_x, uint32_t pos_y) {
     struct gr_surface* surface = NULL;
 
     if (file_exist(prefix_image_logo_path) < 0) {
-        LOGE("File not exist: %s\n", strerror(errno));
+        LOGE("File not exist: %s\n", prefix_image_logo_path);
         return -1;
     }
 
