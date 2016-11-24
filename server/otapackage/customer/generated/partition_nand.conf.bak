@@ -1,8 +1,0 @@
-[storageinfo]
-mediumtype=nand
-capacity=128MB
-[partition]
-item1=uboot,0x0,0x100000,mtdblock0
-item2=kernel,0x100000,0x800000,mtdblock1
-item3=rootfs,0x980000,0x2800000,mtdblock2
-item4=data,0x3180000,0x4e80000,mtdblock3
