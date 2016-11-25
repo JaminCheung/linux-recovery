@@ -25,7 +25,9 @@
 #define DEVNOR          0
 #define DEVNAND        1
 #define DEVTYPE         DEVNAND
-#define CHIP_ERASE     1     // 0: disable   1: enable
+#define FS_YAFFS         0x1234
+#define FS_TYPE           FS_YAFFS
+#define CHIP_ERASE     0     // 0: disable   1: enable
 #define FORMAT          0      //0: no format  1: format
 #define LOG_TAG         "testcase-bm_update"
 #define MOUNT_POINT     "/mnt/recovery_test/"
@@ -50,6 +52,8 @@ struct offset_tlb global_offset_tlb[] = {
     {0x340000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_NORMAL, "sn.txt"},
     {0x700000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_JFFS2, "system.jffs2_001"},
     {0xe00000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_JFFS2, "formator.jffs2_001"},
+#elif DEVTYPE == DEVNAND && FS_TYPE == FS_YAFFS
+    {0x3780000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_YAFFS2, "data.yaffs_001"},
 #elif DEVTYPE == DEVNAND
     {0x0, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_NORMAL, "x-loader-pad-with-sleep-lib.bin"},
     {0x100000, BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_NORMAL, "xImage_001"},
@@ -76,6 +80,19 @@ char *mtd_files [] = {
     "update013/system.jffs2_004",
     "update014/system.jffs2_005",
     "update015/formator.jffs2_001",
+#elif DEVTYPE == DEVNAND && FS_TYPE == FS_YAFFS
+    "update019/data.yaffs_001",
+    "update020/data.yaffs_002",
+    "update021/data.yaffs_003",
+    "update022/data.yaffs_004",
+    "update023/data.yaffs_005",
+    "update024/data.yaffs_006",
+    "update025/data.yaffs_007",
+    "update026/data.yaffs_008",
+    "update027/data.yaffs_009",
+    "update028/data.yaffs_010",
+    "update029/data.yaffs_011",
+    "update030/data.yaffs_012"
 #elif DEVTYPE == DEVNAND
     "update001/x-loader-pad-with-sleep-lib.bin",
     "update002/xImage_001",
@@ -123,7 +140,7 @@ char *mtd_files [] = {
 int64_t filesizes[100];
 
 static void bm_mtd_event_listener(struct block_manager *bm,
-                                  struct bm_event* event) {
+        struct bm_event* event, void* param){
 #if 0
     LOGI("block_manager parser\n");
     LOGI("block_manager name = %s\n", bm->name);
@@ -219,6 +236,10 @@ int test_update(void) {
 #if CHIP_ERASE == 1
     LOGI("chip erase is going on\n");
     ret = bm->chip_erase(bm);
+    if (ret < 0) {
+        LOGE("chip erase failed\n");
+        goto exit;
+    }
     LOGI("ret = %d\n", ret);
 #endif
     buf = malloc(CHUNKSIZE);
@@ -289,13 +310,21 @@ int test_update(void) {
 #if CHIP_ERASE == 0
             LOGI("%d: Erasing at 0x%llx\n", i , save->part_off);
             next_erase_offset = bm->erase(bm, save->part_off,
-                                          bm->get_prepare_max_mapped_size(bm));
+                bm->get_partition_size_by_offset(bm, save->part_off));
+            if (next_erase_offset < 0) {
+                LOGE("Block manager erase failed\n");
+                goto exit;
+            }
             LOGI("----> next erase offset is 0x%llx\n", next_erase_offset);
 #endif
             LOGI("%d: Writing at 0x%llx, write length is %d\n",
                  i, bm->get_prepare_write_start(bm), readsize);
             next_write_offset = bm->write(bm,
                                           bm->get_prepare_write_start(bm), buf, readsize);
+            if (next_write_offset < 0) {
+                LOGE("Block manager write failed\n");
+                goto exit;
+            }
             LOGI("----> next write offset is 0x%llx\n", next_write_offset);
 
             w++;
@@ -307,12 +336,20 @@ int test_update(void) {
                                 ? mac_write_offset : next_write_offset;
             LOGI("mac %d: Writing at 0x%llx\n", i, next_write_offset);
             next_write_offset = bm->write(bm, next_write_offset, buf, readsize);
+            if (next_write_offset < 0) {
+                LOGE("Block manager write failed\n");
+                goto exit;
+            }
             LOGI("----> next write offset is 0x%llx\n", next_write_offset);
             continue;
         }
 
         LOGI("%d: Writing at 0x%llx\n", i, next_write_offset);
         next_write_offset = bm->write(bm, next_write_offset, buf, readsize);
+        if (next_write_offset < 0) {
+            LOGE("Block manager write failed\n");
+            goto exit;
+        }
         LOGI("----> next write offset is 0x%llx\n", next_write_offset);
     }
     LOGI("====<finish start at update process %d,  in %d step \n", i, w);

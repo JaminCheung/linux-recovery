@@ -444,6 +444,10 @@ static struct filesystem* data_transfer_params_set(struct block_manager* this,
 
     struct filesystem *fs = NULL;
 
+    if (BM_GET_PREPARE_INFO(this) == NULL) {
+        LOGE("Cannot get prepare info\n");
+        return NULL;
+    }
     fs = BM_GET_PREPARE_INFO_CONTEXT(this);
     if (fs == NULL) {
         LOGE("Prepare info context_handle is lost\n");
