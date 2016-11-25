@@ -138,7 +138,7 @@ int mtd_bm_block_map_is_bad(struct filesystem *fs, int64_t eb) {
     struct mtd_block_map *mi = *BM_GET_MTD_BLOCK_MAP(bm, struct mtd_block_map);
 
     if (mi->es[eb] == MTD_BLK_BAD) {
-        LOGI("Skipping bad block at %llx", eb);
+        LOGI("Skipping bad block at %llx\n", eb);
         return true;
     }
     return false;
@@ -441,8 +441,6 @@ int64_t mtd_basic_erase(struct filesystem *fs) {
         set_process_info(fs, BM_OPERATION_ERASE, erased_bytes, total_bytes);
         if ((is_nand && !noskipbad)
                 && mtd_bm_block_map_is_bad(fs, MTD_EB_RELATIVE_TO_ABSOLUTE(mtd, eb))) {
-            LOGI("MTD \"%s\" skip bad block at %lld\n",
-                 MTD_DEV_INFO_TO_PATH(mtd), eb);
             eb++;
             bad_unlock_nerase_ebs++;
             continue;
