@@ -196,9 +196,11 @@ void destruct_block_manager(struct block_manager* this) {
     int retval;
 
 #ifdef BM_SYSINFO_SUPPORT
-    if (this->sysinfo->exit(this->sysinfo) < 0) {
-        LOGE("Failed to issue sysinfo exit\n");
-        goto out;
+    if (this->sysinfo) {
+        if (this->sysinfo->exit(this->sysinfo) < 0) {
+            LOGE("Failed to issue sysinfo exit\n");
+            goto out;
+        }
     }
 #endif
     // mmc_manager_destroy();

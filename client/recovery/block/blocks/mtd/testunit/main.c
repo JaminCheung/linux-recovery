@@ -25,7 +25,7 @@ extern int test_read(void);
 extern int test_sysinfo(void);
 extern int test_format(void);
 extern int test_update(void);
-
+extern int test_flag(void);
 int main(int argc, char **argv) {
 #if defined TEST_READ
     test_read();
@@ -35,6 +35,8 @@ int main(int argc, char **argv) {
     test_format();
 #elif defined TEST_UPDATE
     test_update();
+#elif defined TEST_FLAG
+    test_flag();
 #endif
 
     return 0;

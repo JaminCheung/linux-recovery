@@ -25,7 +25,8 @@
 #define    LOG_TAG     "sysinfo_manager"
 
 static struct sysinfo_layout layout[] = {
-    {SYSINFO_RESERVED_OFFSET,  SYSINFO_RESERVED_SIZE, NULL},
+    {SYSINFO_FLASHINFO_PARTINFO_OFFSET,  SYSINFO_FLASHINFO_PARTINFO_SIZE, NULL},
+    // {SYSINFO_FLAG_OFFSET,  SYSINFO_FLAG_SIZE, NULL},
 };
 
 static int is_id_valid(int id) {
@@ -72,7 +73,7 @@ out:
 }
 
 static int sysinfo_get_value(struct sysinfo_manager *this,
-                             int id, char *buf, char flag)
+                             int id, char **buf, char flag)
 {
     char** data = NULL;
     int64_t offset, len;
@@ -134,11 +135,11 @@ static int sysinfo_get_value(struct sysinfo_manager *this,
         //         printf("\n");
         // }
         if (buf) {
-            memcpy(buf, *data, len);
+            *buf = *data;
         }
         fs_destroy(&fs);
     } else if (flag == SYSINFO_OPERATION_RAM) {
-        memcpy(buf, *data, len);
+        *buf = *data;
     }
 
     return 0;
@@ -252,4 +253,7 @@ struct sysinfo_manager sysinfo = {
     .traversal_merge = sysinfo_traversal_merge,
     .init = sysinfo_init,
     .exit = sysinfo_exit,
+    .get_flag_size = sysinfo_get_flag_size,
+    .read_flag = sysinfo_read_flag,
+    .write_flag = sysinfo_write_flag,
 };

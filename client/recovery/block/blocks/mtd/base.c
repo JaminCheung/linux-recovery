@@ -453,7 +453,7 @@ int64_t mtd_basic_erase(struct filesystem *fs) {
                 continue;
             }
         }
-        LOGI("MTD %s: erase at block%lld  with fd%d\n", MTD_DEV_INFO_TO_PATH(mtd), eb, *fd);
+        LOGI("MTD %s: erase at block%lld with fd%d\n", MTD_DEV_INFO_TO_PATH(mtd), eb, *fd);
 
 #ifdef BM_SYSINFO_SUPPORT
         if (bm->sysinfo) {

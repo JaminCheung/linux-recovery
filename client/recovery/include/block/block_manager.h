@@ -21,16 +21,18 @@
 #include <types.h>
 
 #define BM_BLOCK_TYPE_MTD   "mtd"
+#define BM_BLOCK_TYPE_MTD_NAND "nand"
+#define BM_BLOCK_TYPE_MTD_NOR   "nor"
 #define BM_BLOCK_TYPE_MMC   "mmc"
 
 #define BM_BLOCK_MTD_ERRONO_START   0xffffff00
 #define BM_BLOCK_MTD_ERRONO_LIMIT   256
 
 #define BM_FILE_TYPE_NORMAL  "normal"
-#define BM_FILE_TYPE_JFFS2   "jffs2"
-#define BM_FILE_TYPE_UBIFS   "ubifs"
-#define BM_FILE_TYPE_YAFFS2  "yaffs2"
-#define BM_FILE_TYPE_CRAMFS  "cramfs"
+#define BM_FILE_TYPE_JFFS2        "jffs2"
+#define BM_FILE_TYPE_UBIFS       "ubifs"
+#define BM_FILE_TYPE_YAFFS2     "yaffs2"
+#define BM_FILE_TYPE_CRAMFS    "cramfs"
 
 #define BM_SYSINFO_SUPPORT
 
@@ -149,6 +151,7 @@ struct block_manager {
     int64_t (*get_capacity)(struct block_manager* this);
     int (*get_blocksize)(struct block_manager* this, int64_t offset);
     int (*get_iosize)(struct block_manager* this, int64_t offset);
+    char* (*get_block_type)(struct block_manager* this, int64_t offset);
     struct bm_operation_option operate_option;
     struct bm_operate_prepare_info *prepared;
     union bm_info desc;

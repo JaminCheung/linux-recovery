@@ -83,9 +83,9 @@ int read_sysinfo(struct block_manager *bm, char *buf) {
     struct bm_operate_prepare_info* prepared = NULL;
     static int called;
     int64_t test_offset, test_length, ret;
-    int64_t dump_start = SYSINFO_RESERVED_OFFSET, dump_length = SYSINFO_RESERVED_SIZE;
+    int64_t dump_start = SYSINFO_FLASHINFO_PARTINFO_OFFSET, dump_length = SYSINFO_FLASHINFO_PARTINFO_SIZE;
     LOGI("Reading at partition 1 <--> mtdblock0, have read %d times\n", called);
-    bm->set_operation_option(bm, &bm_option, 
+    bm->set_operation_option(bm, &bm_option,
             BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_NORMAL);
     prepared = bm->prepare(bm, 0, 0, &bm_option);
     if (prepared == NULL) {
@@ -142,7 +142,7 @@ int update_bootloader(struct block_manager *bm, char *buf) {
         fd = 0;
     }
 
-    bm->set_operation_option(bm, &bm_option, 
+    bm->set_operation_option(bm, &bm_option,
         BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_NORMAL);
     LOGI("set_operation_option: method = %d, filetype = %s\n",
          BM_OPERATION_METHOD_PARTITION, BM_FILE_TYPE_NORMAL);

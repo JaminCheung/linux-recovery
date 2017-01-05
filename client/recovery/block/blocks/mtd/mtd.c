@@ -155,7 +155,7 @@ static int64_t mtd_get_capacity(struct block_manager* this) {
     return size;
 }
 
-int mtd_get_blocksize_by_offset(struct block_manager* this, int64_t offset) {
+static int mtd_get_blocksize_by_offset(struct block_manager* this, int64_t offset) {
     struct mtd_dev_info* mtd = mtd_get_dev_info_by_offset(this, offset);
     if (mtd == NULL) {
         LOGE("Cannot get mtd devinfo at 0x%llx\n", offset);
@@ -165,7 +165,7 @@ int mtd_get_blocksize_by_offset(struct block_manager* this, int64_t offset) {
     return mtd->eb_size;
 }
 
-int mtd_get_pagesize_by_offset(struct block_manager* this, int64_t offset) {
+static int mtd_get_pagesize_by_offset(struct block_manager* this, int64_t offset) {
     struct mtd_dev_info* mtd = mtd_get_dev_info_by_offset(this, offset);
     if (mtd == NULL) {
         LOGE("Cannot get mtd devinfo at 0x%llx\n", offset);
@@ -173,6 +173,20 @@ int mtd_get_pagesize_by_offset(struct block_manager* this, int64_t offset) {
     }
 
     return mtd->min_io_size;
+}
+
+static char* mtd_get_block_type_by_offset(struct block_manager* this, int64_t offset) {
+    struct mtd_dev_info* mtd = mtd_get_dev_info_by_offset(this, offset);
+    if (mtd == NULL) {
+        LOGE("Cannot get mtd devinfo at 0x%llx\n", offset);
+        return NULL;
+    }
+    if (mtd_type_is_nand(mtd)) {
+        return BM_BLOCK_TYPE_MTD_NAND;
+    } else if (mtd_type_is_nor(mtd)){
+        return BM_BLOCK_TYPE_MTD_NOR;
+    }
+    return NULL;
 }
 
 static int mtd_install_filesystem(struct block_manager* this) {
@@ -698,6 +712,7 @@ static struct block_manager mtd_manager =  {
     .get_capacity = mtd_get_capacity,
     .get_blocksize = mtd_get_blocksize_by_offset,
     .get_iosize = mtd_get_pagesize_by_offset,
+    .get_block_type = mtd_get_block_type_by_offset,
 };
 
 int mtd_manager_init(void) {

@@ -28,7 +28,6 @@ struct mtd_part_char {
 
 void set_process_info(struct filesystem *fs, int type, int64_t eboff, int64_t ebcnt);
 int mtd_bm_block_map_set(struct filesystem *fs, int64_t eb, int status);
-int mtd_get_blocksize_by_offset(struct block_manager* this, int64_t offset);
 int mtd_type_is_nand(struct mtd_dev_info *mtd);
 int mtd_type_is_mlc_nand(struct mtd_dev_info *mtd);
 int mtd_type_is_nor(struct mtd_dev_info *mtd);

@@ -22,7 +22,6 @@
 #include <fcntl.h>
 #include <sys/reboot.h>
 #include <dirent.h>
-
 #include <utils/log.h>
 #include <utils/assert.h>
 #include <utils/linux.h>
@@ -34,6 +33,7 @@
 #include <utils/signal_handler.h>
 #include <netlink/netlink_event.h>
 #include <ota/ota_manager.h>
+#include <block/sysinfo/sysinfo_manager.h>
 
 #define LOG_TAG "ota_manager"
 
@@ -786,6 +786,12 @@ static int update_from_storage(struct ota_manager* this) {
         return -1;
     }
 
+    int sysinfo_write_flag_val = SYSINFO_FLAG_VALUE_UPDATE_START;
+    if (GET_SYSINFO_MANAGER()->write_flag(SYSINFO_FLAG_ID_UPDATE_DONE,
+                &sysinfo_write_flag_val) < 0) {
+        LOGE("Cannot write flag%d\n", SYSINFO_FLAG_ID_UPDATE_DONE);
+        goto error;
+    }
     const char** device_type_list = this->uf->get_device_type_list(this->uf);
     for (int i = 0; device_type_list[i]; i++) {
         const char* devtype = device_type_list[i];
@@ -800,6 +806,7 @@ static int update_from_storage(struct ota_manager* this) {
         int index = 1;
         next_write_offset = 0;
         struct list_head* pos_devinfo;
+
         list_for_each(pos_devinfo, &device_info->list){
             struct part_info *part_info = list_entry(pos_devinfo, struct part_info, head);
 
@@ -819,7 +826,7 @@ static int update_from_storage(struct ota_manager* this) {
                      * Create unzip dir
                      */
                     if (creat_unzip_dir() < 0)
-                        return -1;
+                        goto error;
 
                     memset(path, 0, sizeof(path));
                     sprintf(path, "%s/%s/%s/%s%03d.zip", volume->mount_point,
@@ -867,7 +874,12 @@ static int update_from_storage(struct ota_manager* this) {
             }
         }
     }
-
+    sysinfo_write_flag_val = SYSINFO_FLAG_VALUE_UPDATE_DONE;
+    if (GET_SYSINFO_MANAGER()->write_flag(SYSINFO_FLAG_ID_UPDATE_DONE,
+                &sysinfo_write_flag_val) < 0) {
+        LOGE("Cannot write flag%d\n", SYSINFO_FLAG_ID_UPDATE_DONE);
+        goto error;
+    }
     dir_delete(prefix_local_update_path);
 
     return 0;
@@ -921,6 +933,12 @@ static int update_from_network(struct ota_manager* this) {
     }
     this->uf->dump_device_type_list(this->uf);
 
+    int sysinfo_write_flag_val = SYSINFO_FLAG_VALUE_UPDATE_START;
+    if (GET_SYSINFO_MANAGER()->write_flag(SYSINFO_FLAG_ID_UPDATE_DONE,
+                &sysinfo_write_flag_val) < 0) {
+        LOGE("Cannot write flag%d\n", SYSINFO_FLAG_ID_UPDATE_DONE);
+         goto error;
+    }
     const char** device_type_list = this->uf->get_device_type_list(this->uf);
     for (int i = 0; device_type_list[i]; i++) {
         const char* devtype = device_type_list[i];
@@ -1051,7 +1069,12 @@ static int update_from_network(struct ota_manager* this) {
             }
         }
     }
-
+    sysinfo_write_flag_val = SYSINFO_FLAG_VALUE_UPDATE_DONE;
+    if (GET_SYSINFO_MANAGER()->write_flag(SYSINFO_FLAG_ID_UPDATE_DONE,
+                &sysinfo_write_flag_val) < 0) {
+        LOGE("Cannot write flag%d\n", SYSINFO_FLAG_ID_UPDATE_DONE);
+         goto error;
+    }
     dir_delete(prefix_local_update_path);
 
     return 0;
