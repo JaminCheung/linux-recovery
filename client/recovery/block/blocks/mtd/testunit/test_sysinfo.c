@@ -28,7 +28,7 @@
 
 
 static void bm_mtd_event_listener(struct block_manager *bm,
-                                  struct bm_event* event) {
+                                  struct bm_event* event, void* param) {
 #if 0
     LOGI("block_manager parser\n");
     LOGI("block_manager name = %s\n", bm->name);

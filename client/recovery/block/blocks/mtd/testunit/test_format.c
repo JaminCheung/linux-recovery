@@ -30,7 +30,7 @@
 #define FS_TYPE   UBIFS
 
 static void bm_mtd_event_listener(struct block_manager *bm,
-                                  struct bm_event* event) {
+                                  struct bm_event* event, void* param) {
     return;
 }
 
