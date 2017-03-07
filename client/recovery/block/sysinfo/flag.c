@@ -24,8 +24,9 @@
 
 #define    LOG_TAG     "sysinfo_flag"
 
-static char global_buffer[SYSINFO_FLAG_SIZE];
-
+/*
+ * The total size reserved for flag area is 1KB
+ */
 static struct sysinfo_flag_layout layout[] = {
     {SYSINFO_FLAG_UPDATE_DONE_OFFSET,  SYSINFO_FLAG_UPDATE_DONE_SIZE},
 };
@@ -66,122 +67,14 @@ out:
     return;
 }
 
-static int basic_read(int64_t offset, char *buf, int64_t length) {
-    struct bm_operate_prepare_info* prepared = NULL;
-    struct bm_operation_option bm_option;
-    struct block_manager *bm;
-    int64_t ret;
-
-    bm = GET_SYSINFO_MANAGER()->binder;
-    if (bm == NULL) {
-        LOGE("Bind your block manager firstly\n");
-        goto out;
+static int is_id_valid(int id) {
+    if (id < 0 || id >= ARRAY_SIZE(layout)) {
+        return false;
     }
-    bm->set_operation_option(bm, &bm_option,
-            BM_OPERATION_METHOD_RANDOM, BM_FILE_TYPE_NORMAL);
-    prepared = bm->prepare(bm, offset, length, &bm_option);
-    if (prepared == NULL) {
-        LOGE("Block manager prepare failed\n");
-        goto out;
-    }
-    LOGD("read at offset 0x%llx with length 0x%llx\n", offset, length);
-    ret = bm->read(bm, offset, buf, length);
-    if (ret < 0) {
-        LOGE("read at offset 0x%llx failed\n", offset);
-        goto out;
-    }
-    dump_data(offset, (unsigned char*)buf, length);
-
-    ret = bm->finish(bm);
-    if (ret < 0) {
-        LOGE("block finish failed\n");
-        goto out;
-    }
-    return 0;
-out:
-    return-1;
+    return true;
 }
 
-/* restriction:  write length must smaller than one block size */
-static int basic_write(int64_t offset, char *buf, int64_t length) {
-    struct bm_operate_prepare_info* prepared = NULL;
-    struct bm_operation_option bm_option;
-    struct block_manager *bm;
-    int64_t ret, blkaligned_addr;
-    char *tmpbuf = global_buffer;
-    uint32_t blksize;
-
-    bm = GET_SYSINFO_MANAGER()->binder;
-    if (bm == NULL) {
-        LOGE("Bind your block manager firstly\n");
-        goto out;
-    }
-    blksize = bm->get_blocksize(bm, 0);
-    bm->set_operation_option(bm, &bm_option,
-            BM_OPERATION_METHOD_RANDOM, BM_FILE_TYPE_NORMAL);
-
-    prepared = bm->prepare(bm, offset, length, &bm_option);
-    if (prepared == NULL) {
-        LOGE("Block manager prepare failed\n");
-        goto out;
-    }
-
-    tmpbuf = calloc(1, blksize);
-    if (tmpbuf == NULL) {
-        LOGE("Cannot alloc more memory\n");
-        goto out;
-    }
-
-    blkaligned_addr = offset & (~(blksize - 1));
-    LOGD("<1> read at offset 0x%llx with length 0x%x\n",
-                    blkaligned_addr,
-                    blksize);
-    ret = bm->read(bm, blkaligned_addr,
-                tmpbuf, blksize);
-    if (ret < 0) {
-        LOGE("read at offset 0x%llx failed\n", blkaligned_addr);
-        goto out;
-    }
-    LOGD("<2> erase at offset 0x%llx with length 0x%x\n",
-                    blkaligned_addr,
-                    blksize);
-    ret = bm->erase(bm, blkaligned_addr, blksize);
-    if (ret < 0) {
-        LOGE("erase at offset 0x%llx failed\n", blkaligned_addr);
-        goto out;
-    }
-    LOGD("<2.5> merge data at buffer offset 0x%llx with length %lld\n",
-                    offset - blkaligned_addr,
-                    length);
-    memcpy(tmpbuf + (offset - blkaligned_addr), buf, length);
-
-    LOGD("<3> write at offset 0x%llx with length 0x%x\n",
-                    blkaligned_addr,
-                    blksize);
-    ret = bm->write(bm, blkaligned_addr, tmpbuf, blksize);
-    if (ret < 0) {
-        LOGE("write at offset 0x%llx failed\n", blkaligned_addr);
-        goto out;
-    }
-    ret = bm->finish(bm);
-    if (ret < 0) {
-        LOGE("block finish failed\n");
-        goto out;
-    }
-    if (tmpbuf) {
-        free(tmpbuf);
-        tmpbuf = NULL;
-    }
-    return 0;
-out:
-    if (tmpbuf) {
-        free(tmpbuf);
-        tmpbuf = NULL;
-    }
-    return-1;
-}
-
-int64_t sysinfo_get_flag_size(int id) {
+static int64_t sysinfo_get_flag_size(int id) {
     if (id < 0 || id >= ARRAY_SIZE(layout)) {
         LOGE("id%d is overlowed with predefined value\n", id);
         return -1;
@@ -189,44 +82,72 @@ int64_t sysinfo_get_flag_size(int id) {
     return layout[id].length;
 }
 
-int sysinfo_read_flag(int id, void *flag) {
-    if (id < 0 || id >= ARRAY_SIZE(layout)) {
-        LOGE("id%d is overlowed with predefined value\n", id);
+static int sysinfo_read_flag(int id, void *flag) {
+    struct sysinfo_manager *sys_m = GET_SYSINFO_MANAGER();
+    char *sysinfo_buf = NULL;
+    struct sysinfo_flag_layout *l = NULL;
+    char mode;
+    if (!is_id_valid(id)) {
+        LOGE("id%d is not defined\n", id);
         return -1;
     }
     if (flag == NULL) {
         LOGE("Parameter flag is null\n");
         return -1;
     }
-    char *buf = global_buffer;
-    if (basic_read(SYSINFO_FLAG_OFFSET, buf, SYSINFO_FLAG_SIZE) < 0) {
-        LOGE("basic read is failed\n");
+
+    l =  &layout[id];
+    mode = SYSINFO_OPERATION_DEV;
+    if (sys_m->get_value(sys_m, SYSINFO_FLAG, &sysinfo_buf, mode) < 0) {
+            LOGE("Cannot get sysinfo by operation mode %d\n", mode);
+            return -1;
+    }
+    if (sysinfo_buf == NULL) {
+        LOGE("Cannot get sysinfo buffer\n");
         return -1;
     }
-    struct sysinfo_flag_layout *l = NULL;
-    l =  &layout[id];
-
-    memcpy(flag, buf + l->offset, l->length);
+    dump_data(sys_m->get_offset(sys_m, SYSINFO_FLAG),
+                        (unsigned char*)sysinfo_buf,
+                        sys_m->get_length(sys_m, SYSINFO_FLAG));
+    memcpy(flag, sysinfo_buf + l->offset, l->length);
     return 0;
 }
 
-int sysinfo_write_flag(int id, void *flag) {
-    if (id < 0 || id >= ARRAY_SIZE(layout)) {
-        LOGE("id%d is overlowed with predefined value\n", id);
+static int sysinfo_write_flag(int id, void *flag) {
+    struct sysinfo_manager *sys_m = GET_SYSINFO_MANAGER();
+    char *sysinfo_buf = NULL;
+    struct sysinfo_flag_layout *l = NULL;
+    char mode;
+    int reserve_org;
+    if (!is_id_valid(id)) {
+        LOGE("id%d is not defined\n", id);
         return -1;
     }
     if (flag == NULL) {
         LOGE("Parameter flag is null\n");
         return -1;
     }
-    char *buf = global_buffer;
-    struct sysinfo_flag_layout *l = NULL;
     l =  &layout[id];
-
-    memcpy(buf + l->offset, flag, l->length);
-    if (basic_write(SYSINFO_FLAG_OFFSET, buf, SYSINFO_FLAG_SIZE) < 0) {
-        LOGE("basic write is failed\n");
-        return -1;
+    mode = SYSINFO_OPERATION_RAM;
+    if (sys_m->get_value(sys_m, SYSINFO_FLAG, &sysinfo_buf, mode) < 0) {
+            LOGE("Cannot get value by operation mode %d\n", mode);
+            return -1;
     }
+    memcpy(sysinfo_buf + l->offset, flag, l->length);
+
+    mode = SYSINFO_OPERATION_DEV;
+    reserve_org = sys_m->get_reserve(sys_m, SYSINFO_FLAG);
+    sys_m->set_reserve(sys_m, SYSINFO_FLAG, SYSINFO_NO_RESERVED);
+    if (sys_m->set_value(sys_m, SYSINFO_FLAG, NULL, mode)) {
+            LOGE("Cannot set value by operation mode %d\n", mode);
+            return -1;
+    }
+    sys_m->set_reserve(sys_m, SYSINFO_FLAG, reserve_org);
     return 0;
 }
+
+struct sysinfo_flag sysinfo_flags = {
+    .get_size = sysinfo_get_flag_size,
+    .read = sysinfo_read_flag,
+    .write = sysinfo_write_flag,
+};

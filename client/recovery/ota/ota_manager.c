@@ -465,7 +465,6 @@ static int check_devive_update_info(struct ota_manager* this,
         return -1;
     }
     this->uf->dump_device_info(this->uf, device_info);
-
     return 0;
 }
 
@@ -672,6 +671,7 @@ static struct mounted_volume* find_valid_update_volume(struct ota_manager* this)
          * Parse global.xml
          */
         memset(path, 0, sizeof(path));
+
         sprintf(path, "%s/%s/%s", volume->mount_point, prefix_storage_update_path,
                 prefix_global_xml);
         if (file_exist(path) < 0)
@@ -787,8 +787,7 @@ static int update_from_storage(struct ota_manager* this) {
     }
 
     int sysinfo_write_flag_val = SYSINFO_FLAG_VALUE_UPDATE_START;
-    if (GET_SYSINFO_MANAGER()->write_flag(SYSINFO_FLAG_ID_UPDATE_DONE,
-                &sysinfo_write_flag_val) < 0) {
+    if (GET_SYSINFO_FLAG()->write(SYSINFO_FLAG_ID_UPDATE_DONE, &sysinfo_write_flag_val) < 0) {
         LOGE("Cannot write flag%d\n", SYSINFO_FLAG_ID_UPDATE_DONE);
         goto error;
     }
@@ -875,13 +874,12 @@ static int update_from_storage(struct ota_manager* this) {
         }
     }
     sysinfo_write_flag_val = SYSINFO_FLAG_VALUE_UPDATE_DONE;
-    if (GET_SYSINFO_MANAGER()->write_flag(SYSINFO_FLAG_ID_UPDATE_DONE,
-                &sysinfo_write_flag_val) < 0) {
+    if (GET_SYSINFO_FLAG()->write(SYSINFO_FLAG_ID_UPDATE_DONE, &sysinfo_write_flag_val) < 0) {
         LOGE("Cannot write flag%d\n", SYSINFO_FLAG_ID_UPDATE_DONE);
         goto error;
     }
-    dir_delete(prefix_local_update_path);
 
+    dir_delete(prefix_local_update_path);
     return 0;
 
 error:
@@ -934,7 +932,7 @@ static int update_from_network(struct ota_manager* this) {
     this->uf->dump_device_type_list(this->uf);
 
     int sysinfo_write_flag_val = SYSINFO_FLAG_VALUE_UPDATE_START;
-    if (GET_SYSINFO_MANAGER()->write_flag(SYSINFO_FLAG_ID_UPDATE_DONE,
+    if (GET_SYSINFO_FLAG()->write(SYSINFO_FLAG_ID_UPDATE_DONE,
                 &sysinfo_write_flag_val) < 0) {
         LOGE("Cannot write flag%d\n", SYSINFO_FLAG_ID_UPDATE_DONE);
          goto error;
@@ -1070,7 +1068,7 @@ static int update_from_network(struct ota_manager* this) {
         }
     }
     sysinfo_write_flag_val = SYSINFO_FLAG_VALUE_UPDATE_DONE;
-    if (GET_SYSINFO_MANAGER()->write_flag(SYSINFO_FLAG_ID_UPDATE_DONE,
+    if (GET_SYSINFO_FLAG()->write(SYSINFO_FLAG_ID_UPDATE_DONE,
                 &sysinfo_write_flag_val) < 0) {
         LOGE("Cannot write flag%d\n", SYSINFO_FLAG_ID_UPDATE_DONE);
          goto error;

@@ -82,6 +82,7 @@ struct filesystem* fs_derive(struct filesystem *origin);
 int fs_destroy(struct filesystem** fs);
 void fs_set_params(struct filesystem* fs, char *buf, int64_t offset,
                    int64_t length, int op_method, void *fs_priv, void *p);
+void fs_set_params_process(struct filesystem* fs, int64_t file_max_size);
 // void fs_set_parameter(struct filesystem* fs,
 //                       struct fs_operation_params *p);
 #endif

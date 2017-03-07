@@ -178,7 +178,6 @@ struct block_manager {
 #define BM_GET_PREPARE_INFO(bm)   (bm->prepared)
 #define BM_GET_PREPARE_INFO_CONTEXT(bm) (bm->prepared->context_handle)
 
-extern unsigned long recovery_errorno;
 void construct_block_manager(struct block_manager* this, const char *blockname,
                              bm_event_listener_t listener, void* param);
 void destruct_block_manager(struct block_manager* this);

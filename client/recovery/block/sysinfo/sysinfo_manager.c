@@ -25,8 +25,8 @@
 #define    LOG_TAG     "sysinfo_manager"
 
 static struct sysinfo_layout layout[] = {
-    {SYSINFO_FLASHINFO_PARTINFO_OFFSET,  SYSINFO_FLASHINFO_PARTINFO_SIZE, NULL},
-    // {SYSINFO_FLAG_OFFSET,  SYSINFO_FLAG_SIZE, NULL},
+    {SYSINFO_FLASHINFO_PARTINFO_OFFSET,  SYSINFO_FLASHINFO_PARTINFO_SIZE, NULL, SYSINFO_RESERVED},
+    {SYSINFO_FLAG_OFFSET,  SYSINFO_FLAG_SIZE, NULL, SYSINFO_RESERVED},
 };
 
 static int is_id_valid(int id) {
@@ -77,7 +77,6 @@ static int sysinfo_get_value(struct sysinfo_manager *this,
 {
     char** data = NULL;
     int64_t offset, len;
-
     offset = sysinfo_get_offset(this, id);
     len = sysinfo_get_length(this, id);
     if ((offset < 0) || (len < 0))
@@ -89,7 +88,7 @@ static int sysinfo_get_value(struct sysinfo_manager *this,
     if (*data == NULL) {
         *data = calloc(1, len);
         if (*data == NULL) {
-            LOGE("Cannot alloc any memory space, requested %lld\n", len);
+            LOGE("Cannot alloc any memory space, requested length %lld\n", len);
             goto out;
         }
     }
@@ -127,13 +126,6 @@ static int sysinfo_get_value(struct sysinfo_manager *this,
         } else if (!strcmp(bm->name, BM_BLOCK_TYPE_MMC)) {
 
         }
-        // for (int i = 0; i < len; i++) {
-        //     if ((i % 32) == 0)
-        //         printf("offset: 0x%08llx: ", offset);
-        //     printf(" %x ", (*data)[i]);
-        //     if (((i + 1) % 32) == 0)
-        //         printf("\n");
-        // }
         if (buf) {
             *buf = *data;
         }
@@ -147,6 +139,143 @@ out:
     return -1;
 }
 
+
+/*
+ * Write schedual is isssued as read one block data, update some of the data, rewrite to storage device
+ * Note: Max write size if less than block size
+ */
+static int sysinfo_set_value(struct sysinfo_manager *this,
+                             int id, char *buf, char flag)
+{
+    struct filesystem* fs = NULL;
+    char** data = NULL;
+    char *tmpbuf = NULL;
+    int64_t offset, len;
+
+    offset = sysinfo_get_offset(this, id);
+    len = sysinfo_get_length(this, id);
+    if ((offset < 0) || (len < 0))
+        goto out;
+    data = sysinfo_get_value_address(this, id);
+    if (data == NULL)
+        goto out;
+    if (*data == NULL) {
+        *data = calloc(1, len);
+        if (*data == NULL) {
+            LOGE("Cannot alloc any memory space, requested length %lld\n", len);
+            goto out;
+        }
+    }
+    if (buf)
+        memcpy(*data, buf, len);
+
+    if (flag == SYSINFO_OPERATION_DEV) {
+        struct block_manager *bm = (struct block_manager *)GET_SYSINFO_BINDER(this);
+        struct mtd_dev_info *mtd = NULL;
+        int64_t blkaligned_addr = 0;
+        fs = fs_new(BM_FILE_TYPE_NORMAL);
+        if (fs == NULL) {
+            LOGE("Cannot instance filesystem %s\n", BM_FILE_TYPE_NORMAL);
+            goto out;
+        }
+        if (bm == NULL) {
+            LOGE("Cannot get binder bm\n");
+            goto  out;
+        }
+
+        if (!strcmp(bm->name, BM_BLOCK_TYPE_MTD)) {
+            mtd = mtd_get_dev_info_by_offset(bm, offset);
+            if (mtd == NULL) {
+                LOGE("offset 0x%llx cannot be recognised by mtd\n", offset);
+                goto out;
+            }
+            tmpbuf = calloc(1, mtd->eb_size);
+            if (tmpbuf == NULL) {
+                LOGE("Cannot alloc any memory space, requested length %d\n", mtd->eb_size);
+                goto out;
+            }
+
+            if (len > mtd->eb_size) {
+                LOGE("Max write size cannot be more than %lld bytes\n", len);
+                goto out;
+            }
+            blkaligned_addr = offset & (~(mtd->eb_size - 1));
+            fs->set_params(fs, tmpbuf, blkaligned_addr,
+                       mtd->eb_size, BM_OPERATION_METHOD_RANDOM, mtd, bm);
+            if (fs->get_max_mapped_size_in_partition(fs) <= 0) {
+                LOGE("Cannot get max mapped size by fs \'%s\'\n", fs->name);
+                goto out;
+            }
+            if (fs->read(fs) < 0) {
+                LOGE("Cannot read at offset 0x%llx by length %d\n",
+                        offset, mtd->eb_size);
+                goto out;
+            }
+            memcpy(tmpbuf + offset - blkaligned_addr, *data, len);
+            if (fs->erase(fs) < 0) {
+                LOGE("Cannot erase at offset 0x%llx by length %d\n",
+                        offset, mtd->eb_size);
+                goto out;
+            }
+            fs_set_params_process(fs, mtd->eb_size);
+            if (fs->write(fs) < 0) {
+                LOGE("Cannot write at offset 0x%llx by length %d\n",
+                        offset, mtd->eb_size);
+                goto out;
+            }
+            free(tmpbuf);
+        } else if (!strcmp(bm->name, BM_BLOCK_TYPE_MMC)) {
+
+        }
+        // for (int i = 0; i < len; i++) {
+        //     if ((i % 32) == 0)
+        //         printf("offset: 0x%08llx: ", offset);
+        //     printf(" %x ", (*data)[i]);
+        //     if (((i + 1) % 32) == 0)
+        //         printf("\n");
+        // }
+        fs_destroy(&fs);
+    }
+
+    return 0;
+out:
+    if (tmpbuf) {
+        free(tmpbuf);
+    }
+    if (*data) {
+        free(*data);
+    }
+    if (fs) {
+        fs_destroy(&fs);
+    }
+    return -1;
+}
+
+
+static int sysinfo_get_reserve(struct sysinfo_manager *this, int id) {
+    struct sysinfo_layout *l = NULL;
+    if (!is_id_valid(id)) {
+        LOGE("id%d should not be recognised\n", id);
+        goto out;
+    }
+    l = &layout[id];
+    return l->reserve;
+out:
+    return -1;
+}
+
+static int sysinfo_set_reserve(struct sysinfo_manager *this, int id, int reserve) {
+    struct sysinfo_layout *l = NULL;
+    if (!is_id_valid(id)) {
+        LOGE("id%d should not be recognised\n", id);
+        goto out;
+    }
+    l = &layout[id];
+    l->reserve = reserve;
+    return 0;
+out:
+    return -1;
+}
 
 static int sysinfo_init(struct sysinfo_manager *this) {
     return 0;
@@ -184,6 +313,9 @@ static int sysinfo_traversal_save(struct sysinfo_manager *this,
         if ((end <= l_start) || (start >= l_end)) {
             continue;
         }
+        if (l->reserve != SYSINFO_RESERVED) {
+            continue;
+        }
         LOGI("sysinfo id%d will be saved\n", i);
         if (sysinfo_get_value(this, i, NULL, SYSINFO_OPERATION_DEV) < 0)
             goto out;
@@ -206,6 +338,9 @@ static int sysinfo_traversal_merge(struct sysinfo_manager *this,
         struct sysinfo_layout *l = &layout[i];
         int64_t l_start = l->offset;
         int64_t l_end = l_start + l->length;
+        if (l->reserve != SYSINFO_RESERVED) {
+            continue;
+        }
         if ((end <= l_start) || (start >= l_end))
             continue;
 
@@ -249,11 +384,11 @@ struct sysinfo_manager sysinfo = {
     .get_offset = sysinfo_get_offset,
     .get_length = sysinfo_get_length,
     .get_value = sysinfo_get_value,
+    .set_value  = sysinfo_set_value,
+    .get_reserve = sysinfo_get_reserve,
+    .set_reserve = sysinfo_set_reserve,
     .traversal_save = sysinfo_traversal_save,
     .traversal_merge = sysinfo_traversal_merge,
     .init = sysinfo_init,
     .exit = sysinfo_exit,
-    .get_flag_size = sysinfo_get_flag_size,
-    .read_flag = sysinfo_read_flag,
-    .write_flag = sysinfo_write_flag,
 };

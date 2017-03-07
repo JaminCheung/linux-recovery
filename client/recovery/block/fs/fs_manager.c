@@ -95,6 +95,11 @@ void fs_set_params(struct filesystem* fs, char *buf, int64_t offset,
     FS_SET_PRIVATE(fs, fs_priv);
 }
 
+void fs_set_params_process(struct filesystem* fs, int64_t file_max_size) {
+    FS_GET_PARAM(fs)->progress_size = 0;
+    FS_GET_PARAM(fs)->max_size = file_max_size;
+}
+
 int fs_register(struct list_head *head, struct filesystem* this) {
     struct filesystem *m;
     struct list_head *cell;
@@ -173,7 +178,7 @@ struct filesystem* fs_new(char *filetype) {
         LOGE("Filesystem \'%s\' is not supported yet\n", filetype);
         goto out;
     }
-    newer = calloc(sizeof(*newer), 1);
+    newer = calloc(1, sizeof(*newer));
     if (newer == NULL) {
         LOGE("Cannot allocate any space to filesystem\n");
         goto out;

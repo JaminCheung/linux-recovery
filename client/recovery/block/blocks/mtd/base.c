@@ -656,10 +656,8 @@ int64_t mtd_basic_write(struct filesystem *fs) {
             oobbuf = NULL;
             writeoob = 0;
         }
-
         set_process_info(fs, BM_OPERATION_WRITE,
                          fs->params->progress_size, fs->params->max_size);
-
 #ifdef BM_SYSINFO_SUPPORT
         if (bm->sysinfo) {
             ret = bm->sysinfo->traversal_merge(bm->sysinfo, w_buffer,
