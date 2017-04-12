@@ -268,6 +268,9 @@ static int show_tips(struct gui* this, enum update_stage_t stage) {
 }
 
 static void clear(struct gui* this) {
+    if (!g_data.has_fb)
+        return;
+
     gr_drawer->set_pen_color(gr_drawer, 0x00, 0x00, 0x00);
     gr_drawer->fill_screen(gr_drawer);
 
