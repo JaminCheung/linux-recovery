@@ -368,9 +368,7 @@ static int merge_imginfo_into_partinfo(struct ota_manager* this,
             struct image_info* image_info = list_entry(pos_update,
                     struct image_info, head);
             if (image_info->offset < part_info_left_boundary) {
-                LOGE("Image offset 0x%llx is lower then part info left boundary\n",
-                        image_info->offset);
-                goto out;
+                return 0;
             }
 
             if (image_info->offset >= part_info_right_boundary) {
