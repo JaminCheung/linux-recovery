@@ -47,7 +47,7 @@
 #define ETHTOOL_GLINK           0x0000000a
 #define SIOCETHTOOL             0x8946
 
-#define ICMP_MAX_RETRY          5
+#define ICMP_MAX_RETRY          20
 #define ICMP_MAXPACKET_SIZE     256
 #define ICMP_HEADSIZE           8
 #define ICMP_DATA_DEF_LEN       56

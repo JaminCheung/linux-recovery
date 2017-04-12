@@ -124,7 +124,7 @@ int download_file(const char* file, const char* path) {
     }
 
     if (!pid) {
-        error = execl("/usr/bin/wget", "wget", "-c", "-T", "20", "-q", file,
+        error = execl("/usr/bin/wget", "wget", "-c", "-T", "120", "-q", file,
                 "-P", path, (char*) 0);
         if (error < 0) {
             LOGE("execl() fail: %s\n", strerror(errno));

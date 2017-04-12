@@ -893,8 +893,8 @@ static int update_from_network(struct ota_manager* this) {
     /*
      * Check network
      */
-    LOGI("Checking network\n");
-    error = this->ni->icmp_echo(this->ni, this->cf->server_ip, 10000);
+    LOGI("Checking network: %s\n", this->cf->server_ip);
+    error = this->ni->icmp_echo(this->ni, this->cf->server_ip, 30000);
     if (error < 0) {
         LOGE("Server \"%s\" is unreachable\n", this->cf->server_ip);
         return -1;
