@@ -42,13 +42,18 @@ $(TARGET): client server tools document resource
 #
 client:
 	@mkdir -p $(CLIENT_DIR)
-	@make clean -C client/recovery
-	@make -C client/recovery -j4
 	@cp -av client/root-nand.cpio $(CLIENT_DIR)
 	@cp -av client/root-nor.cpio $(CLIENT_DIR)
 	@cp -av client/root-mmc.cpio $(CLIENT_DIR)
 	@cp -av client/root-addition.tar.xz $(CLIENT_DIR)
+
+	@make clean -C client/recovery
+	@make -C client/recovery -j4
 	@cp -av client/recovery/out/recovery $(CLIENT_DIR)
+
+	@make clean -C client/recovery
+	@make -C client/recovery DEBUG=1 -j4
+	@cp -av client/recovery/out/recovery $(CLIENT_DIR)/recovery-for-debug
 
 	@echo -e "========================"
 	@echo -e "  Client side is ready."

@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
     }
 
 #ifndef LOCAL_DEBUG
-    //redirect_stdio();
+    redirect_stdio();
 #endif
 
     print_version();
