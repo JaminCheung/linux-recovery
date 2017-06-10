@@ -1096,10 +1096,15 @@ static void *main_task(void* param) {
     alarm(ALARM_TIME_OUT);
 
     gui->show_logo(gui, 0, 0);
-    sleep(3);
+
+    sleep(2);
 
     cold_boot("/sys/block");
     cold_boot("/sys/class/net");
+
+    msleep(500);
+
+    this->mm->scan_mounted_volumes(this->mm);
 
     mount_all_storage(this);
 
