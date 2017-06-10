@@ -1096,7 +1096,7 @@ static void *main_task(void* param) {
     alarm(ALARM_TIME_OUT);
 
     gui->show_logo(gui, 0, 0);
-    msleep(1000);
+    sleep(3);
 
     cold_boot("/sys/block");
     cold_boot("/sys/class/net");
