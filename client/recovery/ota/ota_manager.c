@@ -1096,21 +1096,19 @@ static void *main_task(void* param) {
     alarm(ALARM_TIME_OUT);
 
     gui->show_logo(gui, 0, 0);
-
-    sleep(2);
+    msleep(2500);
 
     cold_boot("/sys/block");
     cold_boot("/sys/class/net");
-
-    msleep(500);
 
     this->mm->scan_mounted_volumes(this->mm);
 
     mount_all_storage(this);
 
     gui->clear(gui);
+
     gui->start_show_progress(gui);
-    msleep(50);
+
     gui->show_tips(gui, UPDATING);
 
     LOGI("Try update from storage\n");

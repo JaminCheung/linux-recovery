@@ -249,6 +249,7 @@ testunit:
 	make -C lib/serial//testunit all
 	make -C fb/testunit all
 	make -C graphics/testunit all
+	make -C input/testunit all
 	make -C block/blocks/mtd/testunit all
 
 testunit_clean:
@@ -262,6 +263,7 @@ testunit_clean:
 	make -C lib/serial//testunit clean
 	make -C fb/testunit clean
 	make -C graphics/testunit clean
+	make -C input/testunit clean
 	make -C block/blocks/mtd/testunit clean
 
 $(TARGET): $(OBJS) $(LIBS)

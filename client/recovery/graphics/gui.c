@@ -53,6 +53,40 @@ static struct gr_drawer* gr_drawer;
 static pthread_mutex_t progress_lock;
 static pthread_cond_t progress_cond;
 static uint8_t start_progress;
+static struct gr_surface** surface_progress;
+static uint32_t frame_count;
+
+static int load_progress_image(void) {
+    char buf[256] = {0};
+
+    /*
+     * Get progress frame count
+     */
+    for (int i = 0;;i++) {
+        sprintf(buf, "%s%02d.png", prefix_image_progress_path, i);
+        if (file_exist(buf) < 0) {
+            frame_count = i;
+            break;
+        }
+    }
+
+    if (frame_count == 0)
+        return -1;
+
+    surface_progress = calloc(frame_count, sizeof(int));
+    for (int i = 0; i < frame_count; i++) {
+        memset(buf, 0, sizeof(buf));
+        sprintf(buf, "%s%02d.png", prefix_image_progress_path, i);
+        if (file_exist(buf) == 0) {
+            if (png_decode_image(buf, &surface_progress[i]) < 0) {
+                LOGE("Failed to decode image: %s\n", buf);
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
 
 static int show_log(struct gui* this, const char* fmt, ...) {
     if (!g_data.has_fb)
@@ -99,23 +133,6 @@ static int show_log(struct gui* this, const char* fmt, ...) {
 }
 
 static void *progress_loop(void* param) {
-    struct gr_surface* surface = NULL;
-    uint32_t frame_count = 0;
-    char buf[256] = {0};
-
-    /*
-     * Get progress frame count
-     */
-    for (int i = 0;;i++) {
-        sprintf(buf, "%s%02d.png", prefix_image_progress_path, i);
-        if (file_exist(buf) < 0) {
-            frame_count = i;
-            break;
-        }
-    }
-
-    if (frame_count == 0)
-        return NULL;
 
     for (;;) {
         for (int i = 0; i < frame_count; i++) {
@@ -125,37 +142,21 @@ static void *progress_loop(void* param) {
                 pthread_cond_wait(&progress_cond, &progress_lock);
             pthread_mutex_unlock(&progress_lock);
 
-            memset(buf, 0, sizeof(buf));
+            progress_width = surface_progress[i]->width;
+            progress_height = surface_progress[i]->height;
 
-            sprintf(buf, "%s%02d.png", prefix_image_progress_path, i);
-
-            if (file_exist(buf) == 0) {
-
-                if (png_decode_image(buf, &surface) < 0) {
-                    LOGW("Failed to decode image: %s\n", buf);
-                    continue;
-
-                } else {
-                    progress_width = surface->width;
-                    progress_height = surface->height;
-
-                    uint32_t pos_x = (gr_drawer->get_fb_width(gr_drawer)
-                            - progress_width) / 2;
-                    uint32_t pos_y = (gr_drawer->get_fb_height(gr_drawer)
-                            - progress_height) / 2;
-
-                    if (gr_drawer->draw_png(gr_drawer, surface, pos_x, pos_y)
-                            < 0) {
-                        LOGW("Failed to draw png image: %s\n", buf);
-                        free(surface);
-                        continue;
-                    }
-
-                    free(surface);
-                }
-
-                msleep(200);
+            uint32_t pos_x = (gr_drawer->get_fb_width(gr_drawer)
+                    - progress_width) / 2;
+            uint32_t pos_y = (gr_drawer->get_fb_height(gr_drawer)
+                    - progress_height) / 2;
+            if (gr_drawer->draw_png(gr_drawer, surface_progress[i], pos_x, pos_y)
+                    < 0) {
+                LOGW("Failed to draw png image number: %d\n", i);
+                continue;
             }
+
+            msleep(200);
+
         }
     }
 
@@ -190,27 +191,32 @@ static int show_logo(struct gui* this, uint32_t pos_x, uint32_t pos_y) {
     if (!g_data.has_fb)
         return 0;
 
+    int error = 0;
     struct gr_surface* surface = NULL;
 
     if (file_exist(prefix_image_logo_path) < 0) {
         LOGE("File not exist: %s\n", prefix_image_logo_path);
-        return -1;
+        error = -1;
+        goto out;
     }
 
     if (png_decode_image(prefix_image_logo_path, &surface) < 0) {
         LOGE("Failed to decode image: %s\n", prefix_image_logo_path);
-        return -1;
+        error = -1;
+        goto out;
     }
 
     if (gr_drawer->draw_png(gr_drawer, surface, pos_x, pos_y) < 0) {
         LOGE("Failed to draw png image: %s\n", prefix_image_logo_path);
-        free(surface);
-        return -1;
+        error = -1;
+        goto out;
     }
 
-    free(surface);
+out:
+    if (surface)
+        free(surface);
 
-    return 0;
+    return error;
 }
 
 static int show_tips(struct gui* this, enum update_stage_t stage) {
@@ -302,6 +308,10 @@ static int init(struct gui* this) {
     text_cols = gr_drawer->get_fb_width(gr_drawer) / char_width;
     if (text_cols > kMaxCols - 1)
         text_cols = kMaxCols - 1;
+
+
+    if (load_progress_image() < 0)
+        return -1;
 
     pthread_t tid;
     pthread_attr_t attr;
