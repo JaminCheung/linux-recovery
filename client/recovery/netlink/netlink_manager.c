@@ -34,6 +34,8 @@
 #define LOG_TAG "netlink_manager"
 
 static int start(struct netlink_manager *this) {
+    assert_die_if(this->listener == NULL, "netlink listener is NULL\n");
+
     int retval = 0;
 
     retval = this->listener->start_listener(this->listener);
@@ -46,6 +48,8 @@ static int start(struct netlink_manager *this) {
 }
 
 static int stop(struct netlink_manager *this) {
+    assert_die_if(this->listener == NULL, "netlink listener is NULL\n");
+
     if (!this->listener->stop_listener(this->listener)) {
         LOGE("Unable to stop netlink_listener: %s\n", strerror(errno));
         return -1;
@@ -62,12 +66,17 @@ static int stop(struct netlink_manager *this) {
 
 static void register_handler(struct netlink_manager* this,
         struct netlink_handler *handler) {
-    assert_die_if(handler == NULL, "handler is NULL\n");
+    assert_die_if(handler == NULL, "netlink handler is NULL\n");
+    assert_die_if(this->listener == NULL, "netlink listener is NULL\n");
+
     this->listener->register_handler(this->listener, handler);
 }
 
 static void unregister_handler(struct netlink_manager* this,
         struct netlink_handler *handler) {
+    assert_die_if(handler == NULL, "netlink handler is NULL\n");
+    assert_die_if(this->listener == NULL, "netlink listener is NULL\n");
+
     this->listener->unregister_handler(this->listener, handler);
 }
 
