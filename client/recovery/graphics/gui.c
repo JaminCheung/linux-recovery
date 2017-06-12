@@ -28,9 +28,7 @@
 
 #define LOG_TAG "gui"
 
-#define PROGRESS_SPACE_TO_TIPS  30
-#define PROGGRESS_SPACE         15
-#define TIPS_SPACE              (PROGRESS_SPACE_TO_TIPS - PROGGRESS_SPACE)
+#define PROGRESS_SPACE_TO_TIPS  26
 
 #define kMaxCols   96
 #define kMaxRows   96
@@ -151,8 +149,11 @@ static void *progress_loop(void* param) {
 
             uint32_t pos_x = (gr_drawer->get_fb_width(gr_drawer)
                     - progress_width) / 2;
+
             uint32_t pos_y = (gr_drawer->get_fb_height(gr_drawer)
-                    - progress_height) / 2 + PROGGRESS_SPACE;
+                    - (char_height + progress_height
+                            + PROGRESS_SPACE_TO_TIPS)) / 2 + char_height + PROGRESS_SPACE_TO_TIPS;
+
             if (gr_drawer->draw_png(gr_drawer, surface_progress[i], pos_x, pos_y)
                     < 0) {
                 LOGW("Failed to draw png image number: %d\n", i);
@@ -232,12 +233,13 @@ static int show_tips(struct gui* this, enum update_stage_t stage) {
     uint32_t pos_x = 0;
     uint32_t pos_y = 0;
 
-    pos_y = ((gr_drawer->get_fb_height(gr_drawer)
-            - progress_height) / 2 - (TIPS_SPACE + char_height / 2));
+    pos_y = (gr_drawer->get_fb_height(gr_drawer)
+            - (char_height + progress_height
+                    + PROGRESS_SPACE_TO_TIPS)) / 2;
 
     gr_drawer->set_pen_color(gr_drawer, 0, 0, 0);
     if (gr_drawer->fill_rect(gr_drawer, 0, pos_y,
-            gr_drawer->get_fb_width(gr_drawer), pos_y + progress_height) < 0) {
+            gr_drawer->get_fb_width(gr_drawer), pos_y + char_height) < 0) {
         LOGE("Failed to file rectangle\n");
         return -1;
     }
