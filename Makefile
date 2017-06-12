@@ -108,4 +108,4 @@ resource:
 	@echo -e "========================\n"
 
 clean:
-	@rm -rvf $(OUTDIR) $(TARGET)*.tar.xz
+	@rm -rf $(OUTDIR) $(TARGET)*.tar.xz
