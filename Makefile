@@ -18,8 +18,7 @@ SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 	else if [ -x /bin/bash ]; then echo /bin/bash; \
 	else echo sh; fi; fi)
 
-TARGET := linux-recovery.tar.xz
-
+TARGET := linux-recovery
 OUTDIR := out
 CLIENT_DIR := $(OUTDIR)/client-side
 SERVER_DIR := $(OUTDIR)/server-side
@@ -32,9 +31,11 @@ RES_DIR := $(OUTDIR)/resource
 all: clean $(TARGET)
 
 $(TARGET): client server tools document resource
-	@cd $(OUTDIR) &&  tar -cvJf ../$(TARGET) .
+	F=`basename $(shell pwd)`; \
+	cd $(OUTDIR) && tar --force-local --exclude=.git -Jcvf ../`date "+$$F-%Y-%m-%d-%T.tar.xz"` .
+
 	@echo -e "\n==================================="
-	@echo -e "  $(TARGET) is ready."
+	@echo -e "  $(TARGET).tar.xz is ready."
 	@echo -e "===================================\n"
 
 #
@@ -107,4 +108,4 @@ resource:
 	@echo -e "========================\n"
 
 clean:
-	@rm -rf $(OUTDIR) $(TARGET)
+	@rm -rvf $(OUTDIR) $(TARGET)*.tar.xz

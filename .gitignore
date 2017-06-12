@@ -9,4 +9,5 @@ core.*
 *.d.*
 out
 *.pyc
-linux-recovery.tar.xz
+.pydevproject
+linux-recovery*.tar.xz
